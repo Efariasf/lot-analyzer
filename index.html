@@ -144,6 +144,10 @@
         </div>
         <p style="font-size:11px;color:var(--muted);margin-top:4px">Lote, año, marca y modelo se llenan automáticamente</p>
       </div>
+      <input type="hidden" id="lot-hidden">
+      <input type="hidden" id="year-hidden">
+      <input type="hidden" id="make-hidden">
+      <input type="hidden" id="model-hidden">
 
       <div class="field"><label>VIN</label><input id="vin" placeholder="JTDKN3DU1C5464267"></div>
       <div class="grid2">
@@ -168,15 +172,16 @@
         <label style="margin-bottom:8px">Tipo de daño (selecciona todos los que apliquen)</label>
         <div class="damage-grid" id="damage-grid">
           <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Granizo"><span>Granizo</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Colisión frontal"><span>Colisión frontal</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Colisión trasera"><span>Colisión trasera</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Colisión lateral"><span>Colisión lateral</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Daño frontal"><span>Daño frontal</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Daño trasero"><span>Daño trasero</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Daño lateral"><span>Daño lateral</span></label>
           <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Volcado"><span>Volcado</span></label>
           <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Inundación/Agua"><span>Inundación/Agua</span></label>
           <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Fuego"><span>Fuego</span></label>
           <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Vandalismo"><span>Vandalismo</span></label>
           <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Mecánico"><span>Mecánico</span></label>
           <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Undercarriage"><span>Undercarriage</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Minor Dent/Scratches"><span>Minor Dent/Scratches</span></label>
           <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Normal Wear"><span>Normal Wear</span></label>
         </div>
       </div>
@@ -246,6 +251,10 @@
         <div class="field"><label>Oferta mínima ($)</label><input id="offer-min" type="number" placeholder="4500"></div>
         <div class="field"><label>Oferta máxima ($)</label><input id="offer-max" type="number" placeholder="5500"></div>
       </div>
+      <div class="grid2">
+        <div class="field"><label>Buy Now ($) <span style="color:var(--muted);font-weight:400">— opcional</span></label><input id="buy-now" type="number" placeholder="8500"></div>
+        <div class="field"><label>Reserve Price ($) <span style="color:var(--muted);font-weight:400">— opcional</span></label><input id="reserve-price" type="number" placeholder="6000"></div>
+      </div>
       <div class="btn-row">
         <button class="btn btn-accent" id="gen-btn" onclick="generateAnalysis()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -313,19 +322,18 @@ document.addEventListener('paste', function(e) {
 function parsePaste(text) {
   if (!text.trim()) return;
   const line = text.trim();
-  // Formato esperado: 49180866 - 2012 TOYOTA PRIUS FOUR
   const match = line.match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
   if (match) {
     const parts = match[3].trim().split(/\s+/);
-    document.getElementById('lot').value = match[1];
-    document.getElementById('year').value = match[2];
-    document.getElementById('make').value = parts[0];
-    document.getElementById('model').value = parts.slice(1).join(' ');
+    document.getElementById('lot-hidden').value = match[1];
+    document.getElementById('year-hidden').value = match[2];
+    document.getElementById('make-hidden').value = parts[0];
+    document.getElementById('model-hidden').value = parts.slice(1).join(' ');
   }
 }
 
 function clearParsed() {
-  ['lot','year','make','model'].forEach(id => document.getElementById(id).value = '');
+  ['lot-hidden','year-hidden','make-hidden','model-hidden'].forEach(id => document.getElementById(id).value = '');
 }
 
 function toggleDamage(label) {
@@ -393,13 +401,14 @@ async function generateAnalysis() {
       body: JSON.stringify({
         mode: 'generate',
         fields: {
-          lot: get('lot'), year: get('year'), make: get('make'), model: get('model'),
+          lot: get('lot-hidden'), year: get('year-hidden'), make: get('make-hidden'), model: get('model-hidden'),
           vin: get('vin'), titleType: get('title-type'), auction: get('auction'),
           miles: get('miles'), milesStatus: get('miles-status'),
           damages: getSelectedDamages(),
           dashLights: get('dash-lights'), dashCustom: get('lights-custom'),
           observations: get('observations'),
-          offerMin: get('offer-min'), offerMax: get('offer-max')
+          offerMin: get('offer-min'), offerMax: get('offer-max'),
+          buyNow: get('buy-now'), reservePrice: get('reserve-price')
         }
       })
     });
@@ -427,7 +436,7 @@ function saveToHistory() {
   if (!currentOutput) return;
   const entry = {
     id: Date.now(),
-    title: `${document.getElementById('lot').value} · ${document.getElementById('year').value} ${document.getElementById('make').value} ${document.getElementById('model').value}`,
+    title: `${document.getElementById('lot-hidden').value} · ${document.getElementById('year-hidden').value} ${document.getElementById('make-hidden').value} ${document.getElementById('model-hidden').value}`,
     date: new Date().toLocaleDateString('es-PA'),
     text: currentOutput
   };
@@ -463,7 +472,7 @@ function deleteHistoryItem(id) {
 
 function resetAll() {
   resetImage();
-  ['quick-paste','lot','year','make','model','vin','miles','observations','offer-min','offer-max','lights-custom']
+  ['quick-paste','lot-hidden','year-hidden','make-hidden','model-hidden','vin','miles','observations','offer-min','offer-max','buy-now','reserve-price','lights-custom']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb => {
     cb.checked = false; cb.closest('.damage-option').classList.remove('checked');
