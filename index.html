@@ -472,7 +472,7 @@ function deleteHistoryItem(id) {
 
 function resetAll() {
   resetImage();
-  ['quick-paste','lot-hidden','year-hidden','make-hidden','model-hidden','vin','miles','observations','offer-min','offer-max','buy-now','reserve-price','lights-custom']
+  ['quick-paste'n','make-hidden','model-hidden','vin','miles','observations','offer-min','offer-max','buy-now','reserve-price','lights-custom']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb => {
     cb.checked = false; cb.closest('.damage-option').classList.remove('checked');
