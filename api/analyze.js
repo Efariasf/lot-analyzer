@@ -13,6 +13,8 @@ export default async function handler(req, res) {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, offerMin, offerMax, reportLink } = fields;
 
+    const REPORT_LINK = 'https://t.me/reporteexpressbot';
+
     const damageList = Array.isArray(damages) && damages.length > 0 ? damages : [];
     const damageText = damageList.length > 0 ? damageList.join(', ') : 'No especificado';
 
@@ -22,6 +24,9 @@ export default async function handler(req, res) {
       'airbag': 'Luz de airbag/SRS encendida — posible detonación de airbags o falla en el sistema de seguridad.',
       'transmission': 'Luz de transmisión encendida — posible falla en la caja automática.',
       'abs': 'Luz de ABS encendida — posible falla en el sistema de frenos antibloqueo.',
+      'battery': 'Luz de batería encendida — podría indicar falla en el alternador, batería o sistema eléctrico.',
+      'oil': 'Luz de aceite encendida — podría indicar baja presión de aceite o falla en el sistema de lubricación.',
+      'temperature': 'Luz de temperatura encendida — podría indicar sobrecalentamiento del motor.',
       'multiple': 'Múltiples luces del tablero encendidas — puede indicar fallas mecánicas o electrónicas.',
       'custom': dashCustom ? `${dashCustom} encendido — podría indicar algún tipo de falla mecánica o electrónica.` : ''
     };
@@ -64,7 +69,7 @@ Ofertaría entre $${offerMin} a $${offerMax}
 
 VIN: ${vin}
 Solicite su REPORTE aquí:
-${reportLink}
+${REPORT_LINK}
 
 Es siempre recomendable revisar el Reporte de Carfax para verificar el tipo de título, millas, servicios realizados, accidentes reportados, y propietarios anteriores.
 CARFAX NO DA INFORMACIÓN DE DAÑOS MECÁNICOS NI OCULTOS`;
