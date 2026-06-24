@@ -47,7 +47,6 @@
   .upload-zone p { color: var(--muted); font-size: 13px; }
   .upload-zone span { font-size: 11px; color: #555; }
   .preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 10px; display: none; }
-  .hint { font-size: 11px; color: var(--muted); margin-top: 8px; text-align: center; }
 
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .field { margin-bottom: 8px; }
@@ -59,6 +58,14 @@
   .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
   .field select option { background: var(--surface2); }
   .field textarea { resize: vertical; min-height: 80px; }
+
+  /* Checkboxes de daños */
+  .damage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .damage-option { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; cursor: pointer; transition: .15s; }
+  .damage-option:hover { border-color: var(--accent); }
+  .damage-option input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+  .damage-option span { font-size: 13px; color: var(--text); }
+  .damage-option.checked { border-color: var(--accent); background: rgba(232,255,77,.07); }
 
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: .15s; font-family: inherit; }
   .btn:active { transform: scale(.97); }
@@ -85,13 +92,12 @@
   .history-title { font-size: 13px; font-weight: 600; }
   .history-date { font-size: 11px; color: var(--muted); }
   .history-preview { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
-
   .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
 
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: .3s; pointer-events: none; z-index: 99; white-space: nowrap; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  @media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } .content { padding: 12px; } }
+  @media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } .damage-grid { grid-template-columns: 1fr 1fr; } .content { padding: 12px; } }
 </style>
 </head>
 <body>
@@ -118,16 +124,15 @@
 </div>
 
 <div class="content">
-
   <div id="tab-analyzer">
 
     <!-- PASO 1: FOTO -->
     <div class="card">
-      <div class="card-title"><span class="step-num">1</span> Foto del lote (referencia)</div>
+      <div class="card-title"><span class="step-num">1</span> Foto del lote</div>
       <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <p>Toca para subir la foto del lote</p>
-        <span>JPG, PNG — para ver mientras llenas los datos</span>
+        <span>JPG, PNG — referencia visual</span>
       </div>
       <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(event)">
       <img id="preview" class="preview">
@@ -163,12 +168,42 @@
           <select id="miles-status"><option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option></select>
         </div>
       </div>
-      <div class="field"><label>Tipo de daño principal</label>
-        <select id="damage-type">
-          <option>Granizo</option><option>Colisión frontal</option><option>Colisión trasera</option>
-          <option>Colisión lateral</option><option>Volcado</option><option>Inundación/Agua</option>
-          <option>Fuego</option><option>Vandalismo</option><option>Mecánico</option><option>Normal Wear</option>
-        </select>
+
+      <!-- DAÑOS MÚLTIPLES -->
+      <div class="field">
+        <label style="margin-bottom:8px;">Tipo de daño (selecciona todos los que apliquen)</label>
+        <div class="damage-grid" id="damage-grid">
+          <label class="damage-option" onclick="toggleDamage(this)">
+            <input type="checkbox" value="Granizo"> <span>Granizo</span>
+          </label>
+          <label class="damage-option" onclick="toggleDamage(this)">
+            <input type="checkbox" value="Colisión frontal"> <span>Colisión frontal</span>
+          </label>
+          <label class="damage-option" onclick="toggleDamage(this)">
+            <input type="checkbox" value="Colisión trasera"> <span>Colisión trasera</span>
+          </label>
+          <label class="damage-option" onclick="toggleDamage(this)">
+            <input type="checkbox" value="Colisión lateral"> <span>Colisión lateral</span>
+          </label>
+          <label class="damage-option" onclick="toggleDamage(this)">
+            <input type="checkbox" value="Volcado"> <span>Volcado</span>
+          </label>
+          <label class="damage-option" onclick="toggleDamage(this)">
+            <input type="checkbox" value="Inundación/Agua"> <span>Inundación/Agua</span>
+          </label>
+          <label class="damage-option" onclick="toggleDamage(this)">
+            <input type="checkbox" value="Fuego"> <span>Fuego</span>
+          </label>
+          <label class="damage-option" onclick="toggleDamage(this)">
+            <input type="checkbox" value="Vandalismo"> <span>Vandalismo</span>
+          </label>
+          <label class="damage-option" onclick="toggleDamage(this)">
+            <input type="checkbox" value="Mecánico"> <span>Mecánico</span>
+          </label>
+          <label class="damage-option" onclick="toggleDamage(this)">
+            <input type="checkbox" value="Normal Wear"> <span>Normal Wear</span>
+          </label>
+        </div>
       </div>
     </div>
 
@@ -198,7 +233,7 @@
         <div class="field"><label>Oferta mínima ($)</label><input id="offer-min" type="number" placeholder="4500"></div>
         <div class="field"><label>Oferta máxima ($)</label><input id="offer-max" type="number" placeholder="5500"></div>
       </div>
-      <div class="field"><label>Link del reporte (opcional)</label><input id="report-link" placeholder="https://t.me/reportee..."></div>
+      <div class="field"><label>Link del reporte</label><input id="report-link" placeholder="https://t.me/reportee..."></div>
       <div class="btn-row">
         <button class="btn btn-accent" id="gen-btn" onclick="generateAnalysis()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -232,7 +267,6 @@
   <div id="tab-history" style="display:none">
     <div id="history-list"></div>
   </div>
-
 </div>
 
 <div class="toast" id="toast"></div>
@@ -241,6 +275,17 @@
 let currentOutput = '';
 let lotHistory = [];
 try { lotHistory = JSON.parse(localStorage.getItem('lot-history') || '[]'); } catch(e){}
+
+function toggleDamage(label) {
+  const cb = label.querySelector('input[type="checkbox"]');
+  cb.checked = !cb.checked;
+  label.classList.toggle('checked', cb.checked);
+}
+
+function getSelectedDamages() {
+  const checked = document.querySelectorAll('#damage-grid input[type="checkbox"]:checked');
+  return Array.from(checked).map(cb => cb.value);
+}
 
 function toggleCustomLights() {
   document.getElementById('lights-custom-row').style.display =
@@ -280,7 +325,9 @@ function hideError(id) { document.getElementById(id).style.display = 'none'; }
 
 async function generateAnalysis() {
   const get = id => document.getElementById(id).value;
+  const damages = getSelectedDamages();
   hideError('error-gen');
+
   document.getElementById('output-card').style.display = 'block';
   document.getElementById('output-loading').style.display = 'flex';
   document.getElementById('output-text').textContent = '';
@@ -292,7 +339,8 @@ async function generateAnalysis() {
     const fields = {
       lot: get('lot'), year: get('year'), make: get('make'), model: get('model'),
       vin: get('vin'), titleType: get('title-type'), auction: get('auction'),
-      miles: get('miles'), milesStatus: get('miles-status'), damage: get('damage-type'),
+      miles: get('miles'), milesStatus: get('miles-status'),
+      damages: damages,
       dashLights: get('dash-lights'), dashCustom: get('lights-custom'),
       observations: get('observations'), offerMin: get('offer-min'),
       offerMax: get('offer-max'), reportLink: get('report-link')
@@ -380,6 +428,10 @@ function resetAll() {
   resetImage();
   ['lot','year','make','model','vin','miles','observations','offer-min','offer-max','report-link','lights-custom']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.damage-option').classList.remove('checked');
+  });
   currentOutput = '';
   document.getElementById('output-card').style.display = 'none';
 }
