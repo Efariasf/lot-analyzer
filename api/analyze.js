@@ -11,7 +11,10 @@ export default async function handler(req, res) {
 
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
-            damage, dashLights, dashCustom, observations, offerMin, offerMax, reportLink } = fields;
+            damages, dashLights, dashCustom, observations, offerMin, offerMax, reportLink } = fields;
+
+    const damageList = Array.isArray(damages) && damages.length > 0 ? damages : [];
+    const damageText = damageList.length > 0 ? damageList.join(', ') : 'No especificado';
 
     const lightsMap = {
       'none': '',
@@ -24,20 +27,43 @@ export default async function handler(req, res) {
     };
 
     const lightsText = lightsMap[dashLights] || '';
+    const isTitleClean = titleType === 'Clean';
 
-    const prompt = `Eres un broker experto de subastas de vehículos salvage (Copart, IAAI, Manheim). Redacta un análisis profesional en español para enviar por WhatsApp a un cliente. Debe ser CONCISO (máximo 5-6 oraciones antes de la oferta). Texto plano, sin markdown, sin asteriscos, sin guiones al inicio, sin emojis.
+    const hasHail = damageList.includes('Granizo');
+    const otherRiskDamages = ['Inundación/Agua', 'Vandalismo', 'Colisión frontal', 'Colisión trasera', 'Colisión lateral', 'Volcado', 'Fuego'];
+    const hasOtherRisk = damageList.some(d => otherRiskDamages.includes(d));
 
-Usa EXACTAMENTE esta estructura (respeta los saltos de línea):
+    let salvageWarning = '';
+
+    if (isTitleClean) {
+      if (hasHail && !hasOtherRisk) {
+        // Solo granizo
+        salvageWarning = `Daño por granizo suele recibir automáticamente un título salvage al momento de registrarse. Sin embargo, en Texas normalmente conserva un título clean. Aun así, recomendamos contactar al DMV para confirmar si, al momento de registrar el vehículo, mantendría el título clean o si podría cambiar a salvage.`;
+      } else if (hasHail && hasOtherRisk) {
+        // Granizo + otros daños
+        salvageWarning = `Dado que presenta daño por granizo y ${damageList.filter(d => otherRiskDamages.includes(d)).join(', ')}, existe una alta probabilidad de que el título cambie a salvage al momento de registrarse, dependiendo del estado. En Texas el granizo normalmente conserva título clean, pero los daños adicionales pueden cambiar esto. Recomendamos contactar al DMV para confirmarlo antes de adquirirlo.`;
+      } else if (hasOtherRisk) {
+        // Otros daños sin granizo
+        salvageWarning = `Dado que presenta daño por ${damageText}, existe la posibilidad de que al momento de registrar el vehículo el título cambie a salvage dependiendo del estado donde sea registrado. Recomendamos contactar al DMV local para confirmar esto antes de adquirirlo.`;
+      }
+    }
+
+    const prompt = `Eres un broker experto de subastas de vehículos salvage (Copart, IAAI, Manheim). Redacta un análisis profesional en español para enviar por WhatsApp a un cliente. Debe ser CONCISO. Texto plano, sin markdown, sin asteriscos, sin guiones al inicio, sin emojis.
+
+Usa EXACTAMENTE esta estructura respetando los saltos de línea. NO modifiques ni parafrasees el texto entre corchetes que diga INSERTAR TAL CUAL, cópialo exactamente:
 
 ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
-[2-3 oraciones: explica el tipo de título "${titleType}" en ${auction}, el daño "${damage}", millas ${miles} (${milesStatus}), y estado general. Todo fluido en un párrafo.]
+[2-3 oraciones: explica el tipo de título "${titleType}" en ${auction}, los daños "${damageText}", millas ${miles} (${milesStatus}), y estado general. Todo fluido en un párrafo.]
+${salvageWarning ? `INSERTAR TAL CUAL: ${salvageWarning}` : ''}
 ${lightsText ? `[1 oración sobre: ${lightsText}]` : ''}
 ${observations ? `[Mejora y redacta profesionalmente esto que observó el broker: ${observations}]` : ''}
 
 Ofertaría entre $${offerMin} a $${offerMax}
 
 VIN: ${vin}
-${reportLink ? `Solicite su REPORTE aquí:\n${reportLink}\n` : ''}
+Solicite su REPORTE aquí:
+${reportLink}
+
 Es siempre recomendable revisar el Reporte de Carfax para verificar el tipo de título, millas, servicios realizados, accidentes reportados, y propietarios anteriores.
 CARFAX NO DA INFORMACIÓN DE DAÑOS MECÁNICOS NI OCULTOS`;
 
