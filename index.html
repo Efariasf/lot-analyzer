@@ -17,7 +17,6 @@
     --accent: #e8ff4d;
     --accent-dark: #c8df2d;
     --danger: #ff5c5c;
-    --success: #4dff91;
     --radius: 10px;
     --radius-sm: 6px;
   }
@@ -42,12 +41,13 @@
   .card-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
   .step-num { background: var(--accent); color: #000; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
 
-  .upload-zone { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 28px 16px; text-align: center; cursor: pointer; transition: .15s; }
+  .upload-zone { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 20px 16px; text-align: center; cursor: pointer; transition: .15s; }
   .upload-zone:hover { border-color: var(--accent); background: rgba(232,255,77,.04); }
-  .upload-zone svg { width: 32px; height: 32px; color: var(--muted); margin-bottom: 8px; }
+  .upload-zone svg { width: 28px; height: 28px; color: var(--muted); margin-bottom: 6px; }
   .upload-zone p { color: var(--muted); font-size: 13px; }
   .upload-zone span { font-size: 11px; color: #555; }
   .preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 10px; display: none; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 8px; text-align: center; }
 
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .field { margin-bottom: 8px; }
@@ -58,7 +58,7 @@
   }
   .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
   .field select option { background: var(--surface2); }
-  .field textarea { resize: vertical; min-height: 65px; }
+  .field textarea { resize: vertical; min-height: 80px; }
 
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: .15s; font-family: inherit; }
   .btn:active { transform: scale(.97); }
@@ -79,7 +79,6 @@
   @keyframes blink { 0%,100%{opacity:.2} 50%{opacity:1} }
 
   .error { background: rgba(255,92,92,.1); border: 1px solid rgba(255,92,92,.3); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; color: var(--danger); margin-top: 8px; display: none; }
-  .chip { background: rgba(232,255,77,.12); color: var(--accent); font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; display: none; }
 
   .history-item { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; }
   .history-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
@@ -120,33 +119,26 @@
 
 <div class="content">
 
-  <!-- ANALYZER TAB -->
   <div id="tab-analyzer">
 
+    <!-- PASO 1: FOTO -->
     <div class="card">
-      <div class="card-title"><span class="step-num">1</span> Foto del lote</div>
+      <div class="card-title"><span class="step-num">1</span> Foto del lote (referencia)</div>
       <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <p>Toca para subir la foto del lote</p>
-        <span>JPG, PNG — Copart / IAAI / Manheim</span>
+        <span>JPG, PNG — para ver mientras llenas los datos</span>
       </div>
       <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(event)">
       <img id="preview" class="preview">
-      <div class="btn-row" id="analyze-row" style="display:none">
-        <button class="btn btn-accent" id="analyze-btn" onclick="analyzeImage()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-          Extraer datos con IA
-        </button>
+      <div id="change-row" style="display:none; margin-top:8px;">
         <button class="btn btn-outline" onclick="resetImage()">Cambiar foto</button>
       </div>
-      <div class="error" id="error-img"></div>
     </div>
 
+    <!-- PASO 2: DATOS -->
     <div class="card">
-      <div class="card-title">
-        <span class="step-num">2</span> Datos del vehículo
-        <span class="chip" id="ai-chip">✦ Completado por IA</span>
-      </div>
+      <div class="card-title"><span class="step-num">2</span> Datos del vehículo</div>
       <div class="grid2">
         <div class="field"><label>Número de lote</label><input id="lot" placeholder="55373136"></div>
         <div class="field"><label>Año</label><input id="year" placeholder="2019"></div>
@@ -171,10 +163,6 @@
           <select id="miles-status"><option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option></select>
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><span class="step-num">3</span> Tu análisis</div>
       <div class="field"><label>Tipo de daño principal</label>
         <select id="damage-type">
           <option>Granizo</option><option>Colisión frontal</option><option>Colisión trasera</option>
@@ -182,6 +170,11 @@
           <option>Fuego</option><option>Vandalismo</option><option>Mecánico</option><option>Normal Wear</option>
         </select>
       </div>
+    </div>
+
+    <!-- PASO 3: TU ANALISIS -->
+    <div class="card">
+      <div class="card-title"><span class="step-num">3</span> Tu punto de vista</div>
       <div class="field"><label>Luces del tablero</label>
         <select id="dash-lights" onchange="toggleCustomLights()">
           <option value="none">Sin luces encendidas</option>
@@ -197,8 +190,9 @@
         <label>Especificar luces</label>
         <input id="lights-custom" placeholder="Ej: luz de batería, aceite...">
       </div>
-      <div class="field"><label>Observaciones (puntos clave tuyos)</label>
-        <textarea id="observations" placeholder="Ej: Enciende bien, transmisión engrena, carrocería en buen estado..."></textarea>
+      <div class="field">
+        <label>Tus observaciones — escríbelas como quieras, la IA las mejora</label>
+        <textarea id="observations" placeholder="Ej: enciende bien, transmision engrena, granizo en techo y capo, interior bien, llantas buenas..."></textarea>
       </div>
       <div class="grid2">
         <div class="field"><label>Oferta mínima ($)</label><input id="offer-min" type="number" placeholder="4500"></div>
@@ -214,6 +208,7 @@
       <div class="error" id="error-gen"></div>
     </div>
 
+    <!-- PASO 4: OUTPUT -->
     <div class="card" id="output-card" style="display:none">
       <div class="card-title"><span class="step-num">4</span> Listo para WhatsApp</div>
       <div class="loading" id="output-loading" style="display:none">
@@ -233,7 +228,7 @@
 
   </div>
 
-  <!-- HISTORY TAB -->
+  <!-- HISTORIAL -->
   <div id="tab-history" style="display:none">
     <div id="history-list"></div>
   </div>
@@ -243,11 +238,8 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let imageBase64 = null;
-let imageMediaType = 'image/jpeg';
 let currentOutput = '';
 let lotHistory = [];
-
 try { lotHistory = JSON.parse(localStorage.getItem('lot-history') || '[]'); } catch(e){}
 
 function toggleCustomLights() {
@@ -263,82 +255,28 @@ function showTab(t, el) {
   if (t === 'history') renderHistory();
 }
 
-function showError(id, msg) {
-  const el = document.getElementById(id);
-  el.textContent = msg; el.style.display = 'block';
-}
-function hideError(id) { document.getElementById(id).style.display = 'none'; }
-
 function handleFile(e) {
   const file = e.target.files[0];
   if (!file) return;
-  hideError('error-img');
-  imageMediaType = ['image/jpeg','image/png','image/gif','image/webp'].includes(file.type) ? file.type : 'image/jpeg';
   const reader = new FileReader();
   reader.onload = ev => {
-    imageBase64 = ev.target.result.split(',')[1];
     document.getElementById('preview').src = ev.target.result;
     document.getElementById('preview').style.display = 'block';
     document.getElementById('dropzone').style.display = 'none';
-    document.getElementById('analyze-row').style.display = 'flex';
+    document.getElementById('change-row').style.display = 'block';
   };
-  reader.onerror = () => showError('error-img', 'No se pudo leer el archivo.');
   reader.readAsDataURL(file);
 }
 
 function resetImage() {
-  imageBase64 = null;
   document.getElementById('preview').style.display = 'none';
   document.getElementById('dropzone').style.display = 'block';
-  document.getElementById('analyze-row').style.display = 'none';
+  document.getElementById('change-row').style.display = 'none';
   document.getElementById('fileInput').value = '';
-  hideError('error-img');
 }
 
-async function callAPI(body) {
-  const res = await fetch('/api/analyze', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Error desconocido');
-  return data.result;
-}
-
-async function analyzeImage() {
-  if (!imageBase64) { showError('error-img', 'Primero sube una imagen.'); return; }
-  hideError('error-img');
-  const btn = document.getElementById('analyze-btn');
-  btn.disabled = true; btn.textContent = 'Analizando...';
-  try {
-    const result = await callAPI({ imageBase64, mediaType: imageMediaType, mode: 'extract' });
-    const clean = result.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-    const set = (id, val) => { if (val) document.getElementById(id).value = val; };
-    set('lot', parsed.lot); set('year', parsed.year); set('make', parsed.make);
-    set('model', parsed.model); set('vin', parsed.vin); set('miles', parsed.miles);
-    set('observations', parsed.initial_observations);
-    const setSelect = (id, val) => {
-      if (!val) return;
-      const sel = document.getElementById(id);
-      for (let o of sel.options) if (o.value === val || o.text === val) { sel.value = o.value; break; }
-    };
-    setSelect('miles-status', parsed.miles_status);
-    setSelect('title-type', parsed.title_type);
-    setSelect('auction', parsed.auction);
-    if (parsed.damage) {
-      const sel = document.getElementById('damage-type');
-      for (let o of sel.options) if (o.text.toLowerCase().includes((parsed.damage || '').toLowerCase())) { sel.value = o.value; break; }
-    }
-    document.getElementById('ai-chip').style.display = 'inline';
-    showToast('Datos extraídos ✓');
-  } catch(err) {
-    showError('error-img', `Error: ${err.message}`);
-  }
-  btn.disabled = false;
-  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Extraer datos con IA';
-}
+function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
+function hideError(id) { document.getElementById(id).style.display = 'none'; }
 
 async function generateAnalysis() {
   const get = id => document.getElementById(id).value;
@@ -349,6 +287,7 @@ async function generateAnalysis() {
   document.getElementById('output-btns').style.display = 'none';
   const btn = document.getElementById('gen-btn');
   btn.disabled = true;
+
   try {
     const fields = {
       lot: get('lot'), year: get('year'), make: get('make'), model: get('model'),
@@ -358,13 +297,24 @@ async function generateAnalysis() {
       observations: get('observations'), offerMin: get('offer-min'),
       offerMax: get('offer-max'), reportLink: get('report-link')
     };
-    currentOutput = await callAPI({ mode: 'generate', fields });
+
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'generate', fields })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error desconocido');
+
+    currentOutput = data.result.trim();
     document.getElementById('output-text').textContent = currentOutput;
     document.getElementById('output-btns').style.display = 'flex';
   } catch(err) {
     showError('error-gen', `Error: ${err.message}`);
     document.getElementById('output-card').style.display = 'none';
   }
+
   document.getElementById('output-loading').style.display = 'none';
   btn.disabled = false;
 }
@@ -432,7 +382,6 @@ function resetAll() {
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   currentOutput = '';
   document.getElementById('output-card').style.display = 'none';
-  document.getElementById('ai-chip').style.display = 'none';
 }
 
 function showToast(msg) {
