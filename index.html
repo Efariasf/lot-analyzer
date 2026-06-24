@@ -122,8 +122,8 @@
       <div class="card-title"><span class="step-num">1</span> Foto del lote</div>
       <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <p>Toca para subir la foto del lote</p>
-        <span>JPG, PNG — referencia visual</span>
+        <p>Pega la foto con <strong>Ctrl+V</strong> o toca para subir</p>
+        <span>Copia la imagen en Copart y pega aquí</span>
       </div>
       <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(event)">
       <img id="preview" class="preview">
@@ -287,6 +287,28 @@
 let currentOutput = '';
 let lotHistory = [];
 try { lotHistory = JSON.parse(localStorage.getItem('lot-history') || '[]'); } catch(e){}
+
+// Pegar imagen con Ctrl+V
+document.addEventListener('paste', function(e) {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      const file = items[i].getAsFile();
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        document.getElementById('preview').src = ev.target.result;
+        document.getElementById('preview').style.display = 'block';
+        document.getElementById('dropzone').style.display = 'none';
+        document.getElementById('change-row').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+      e.preventDefault();
+      break;
+    }
+  }
+});
 
 function parsePaste(text) {
   if (!text.trim()) return;
