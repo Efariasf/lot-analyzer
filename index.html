@@ -55,7 +55,11 @@
   .damage-option span { font-size: 13px; color: var(--text); }
   .damage-option.checked { border-color: var(--accent); background: rgba(232,255,77,.07); }
 
-  .lights-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 4px; }
+  .mech-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .mech-option { display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 6px; cursor: pointer; transition: .15s; color: var(--muted); text-align: center; }
+  .mech-option:hover { border-color: var(--accent); color: var(--text); }
+  .mech-option.selected { border-color: var(--accent); background: rgba(232,255,77,.07); color: var(--accent); }
+  .mech-option span { font-size: 11px; line-height: 1.2; color: inherit; }
   .light-option { display: flex; flex-direction: column; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 4px; cursor: pointer; transition: .15s; color: var(--muted); }
   .light-option:hover { border-color: var(--accent); color: var(--text); }
   .light-option.selected { border-color: var(--accent); background: rgba(232,255,77,.07); color: var(--accent); }
@@ -153,8 +157,11 @@
       <div class="grid2">
         <div class="field"><label>Tipo de título</label>
           <select id="title-type">
-            <option>Clean</option><option>Salvage</option><option>Rebuilt</option>
-            <option>Parts Only</option><option>Certificate of Destruction</option>
+            <option>Clean</option>
+            <option>Salvage</option>
+            <option>Rebuilt</option>
+            <option>Parts Only</option>
+            <option>Certificate of Destruction / Junk</option>
           </select>
         </div>
         <div class="field"><label>Subasta</label>
@@ -192,7 +199,23 @@
       <div class="card-title"><span class="step-num">3</span> Tu punto de vista</div>
 
       <div class="field">
-        <label style="margin-bottom:8px">Luces del tablero</label>
+        <label style="margin-bottom:8px">Estado mecánico</label>
+        <input type="hidden" id="mechanical-status" value="">
+        <div class="mech-grid">
+          <div class="mech-option" data-value="no-enciende" onclick="selectMech(this)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/></svg>
+            <span>No enciende</span>
+          </div>
+          <div class="mech-option" data-value="enciende-no-rueda" onclick="selectMech(this)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
+            <span>Enciende, no rueda</span>
+          </div>
+          <div class="mech-option" data-value="enciende-rueda" onclick="selectMech(this)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>
+            <span>Enciende y rueda</span>
+          </div>
+        </div>
+      </div>
         <input type="hidden" id="dash-lights" value="none">
         <div class="lights-grid">
           <div class="light-option selected" data-value="none" onclick="selectLight(this)">
@@ -346,6 +369,12 @@ function getSelectedDamages() {
   return Array.from(document.querySelectorAll('#damage-grid input[type="checkbox"]:checked')).map(cb => cb.value);
 }
 
+function selectMech(el) {
+  document.querySelectorAll('.mech-option').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('mechanical-status').value = el.dataset.value;
+}
+
 function selectLight(el) {
   document.querySelectorAll('.light-option').forEach(x => x.classList.remove('selected'));
   el.classList.add('selected');
@@ -407,6 +436,7 @@ async function generateAnalysis() {
           damages: getSelectedDamages(),
           dashLights: get('dash-lights'), dashCustom: get('lights-custom'),
           observations: get('observations'),
+          mechanicalStatus: get('mechanical-status'),
           offerMin: get('offer-min'), offerMax: get('offer-max'),
           buyNow: get('buy-now'), reservePrice: get('reserve-price')
         }
@@ -472,7 +502,7 @@ function deleteHistoryItem(id) {
 
 function resetAll() {
   resetImage();
-  ['quick-paste','lot-hidden','year-hidden','make-hidden','model-hidden','vin','miles','observations','offer-min','offer-max','buy-now','reserve-price','lights-custom']
+  ['quick-paste','lot-hidden','year-hidden','make-hidden','model-hidden','vin','miles','observations','offer-min','offer-max','buy-now','reserve-price','lights-custom','mechanical-status']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb => {
     cb.checked = false; cb.closest('.damage-option').classList.remove('checked');
