@@ -93,7 +93,6 @@ REGLAS IMPORTANTES:
 - NUNCA uses frases como "catalogado como tal", "sugiere", "se menciona", "podría indicar" para los daños visibles.
 - NUNCA digas que el vehículo "rueda correctamente" ni uses la palabra "correctamente".
 - NUNCA uses "Dado que presenta daño por Daño" — usa solo el tipo sin repetir la palabra daño.
-- Sé directo, profesional y seguro en cada afirmación.
 
 Usa EXACTAMENTE esta estructura (respeta saltos de línea, NO modifiques los textos marcados INSERTAR TAL CUAL):
 
