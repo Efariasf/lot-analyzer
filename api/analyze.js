@@ -49,6 +49,7 @@ export default async function handler(req, res) {
       'custom': dashCustom ? `${dashCustom} encendido — podría indicar algún tipo de falla mecánica o electrónica.` : ''
     };
     const lightsText = lightsMap[dashLights] || '';
+    const noLightsText = dashLights === 'none' ? 'No presenta luces de motor ni airbag encendidas en el tablero.' : '';
 
     const isTitleClean = titleType === 'Clean';
     const hasHail = damageList.includes('Granizo');
@@ -83,9 +84,9 @@ ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
 [2-3 oraciones: título "${titleType}" en ${auction} — explica qué significa sin mencionar historial, daños "${damageTextClean}", millas ${miles} (${milesStatus}), estado general.]
 ${salvageWarning ? `INSERTAR TAL CUAL: ${salvageWarning}` : ''}
 ${destructionWarning ? `INSERTAR TAL CUAL: ${destructionWarning}` : ''}
-${lightsText ? `[1 oración sobre: ${lightsText}]` : ''}
+${lightsText ? `INSERTAR TAL CUAL: ${lightsText}` : `INSERTAR TAL CUAL: ${noLightsText}`}
 ${mechText ? `INSERTAR TAL CUAL: ${mechText}` : ''}
-${observations ? `[Mejora y redacta profesionalmente estas observaciones del broker: ${observations}]` : ''}
+${observations ? `[Integra estas observaciones del broker de forma natural, SIN repetir lo que ya se mencionó arriba sobre daños, luces o estado mecánico: ${observations}]` : ''}
 
 Ofertaría entre $${offerMin} a $${offerMax}
 ${buyNowText}${reserveText}
