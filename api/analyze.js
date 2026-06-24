@@ -11,9 +11,13 @@ export default async function handler(req, res) {
 
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
-            damages, dashLights, dashCustom, observations, offerMin, offerMax, reportLink } = fields;
+            damages, dashLights, dashCustom, observations, offerMin, offerMax,
+            buyNow, reservePrice } = fields;
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
+
+    const buyNowText = buyNow ? `\nTiene precio de compra inmediata (Buy Now) de $${buyNow}.` : '';
+    const reserveText = reservePrice ? `\nTiene precio de reserva de $${reservePrice}.` : '';
 
     const damageList = Array.isArray(damages) && damages.length > 0 ? damages : [];
     const damageText = damageList.length > 0 ? damageList.join(', ') : 'No especificado';
@@ -66,6 +70,7 @@ ${lightsText ? `[1 oración sobre: ${lightsText}]` : ''}
 ${observations ? `[Mejora y redacta profesionalmente esto que observó el broker: ${observations}]` : ''}
 
 Ofertaría entre $${offerMin} a $${offerMax}
+${buyNowText}${reserveText}
 
 VIN: ${vin}
 Solicite su REPORTE aquí:
