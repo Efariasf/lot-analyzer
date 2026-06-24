@@ -92,6 +92,9 @@ textarea{resize:vertical;min-height:70px}
 .history-date{font-size:11px;color:var(--muted)}
 .history-preview{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
 .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
+  .toggle-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;transition:.15s;font-family:inherit}
+  .toggle-btn:hover{border-color:var(--accent);color:var(--text)}
+  .toggle-btn.active{border-color:var(--accent);background:rgba(232,255,77,.1);color:var(--accent)}
 
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--text);color:var(--bg);padding:9px 18px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;z-index:99;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -134,6 +137,12 @@ textarea{resize:vertical;min-height:70px}
   <input type="hidden" id="year-hidden">
   <input type="hidden" id="make-hidden">
   <input type="hidden" id="model-hidden">
+
+  <!-- TOGGLES -->
+  <div style="display:flex;gap:6px;margin-bottom:10px">
+    <button id="btn-copartgo" class="toggle-btn" onclick="toggleFlag('copartgo')" title="Vehículo publicado por el vendedor via app Copart GO">CopartGO</button>
+    <button id="btn-externallot" class="toggle-btn" onclick="toggleFlag('externallot')" title="Vehículo no está físicamente en Copart">Lote Externo</button>
+  </div>
 
   <div class="mb6"><input id="vin" placeholder="VIN"></div>
 
@@ -293,6 +302,11 @@ textarea{resize:vertical;min-height:70px}
 let currentOutput='',lotHistory=[];
 try{lotHistory=JSON.parse(localStorage.getItem('lot-history')||'[]')}catch(e){}
 
+function toggleFlag(flag){
+  const btn=document.getElementById("btn-"+flag);
+  btn.classList.toggle("active");
+}
+
 function parsePaste(text){
   if(!text.trim())return;
   const m=text.trim().match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
@@ -361,7 +375,9 @@ async function generateAnalysis(){
         observations:get('observations'),
         mechanicalStatus:get('mechanical-status'),
         offerMin:get('offer-min'),offerMax:get('offer-max'),
-        buyNow:get('buy-now'),reservePrice:get('reserve-price')
+        buyNow:get('buy-now'),reservePrice:get('reserve-price'),
+        copartGo: document.getElementById('btn-copartgo').classList.contains('active'),
+        externalLot: document.getElementById('btn-externallot').classList.contains('active')
       }})
     });
     const data=await res.json();
@@ -423,6 +439,7 @@ function resetAll(){
   document.getElementById('lights-custom-row').style.display='none';
   document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
   document.getElementById('mechanical-status').value='';
+  document.querySelectorAll('.toggle-btn').forEach(x=>x.classList.remove('active'));
   currentOutput='';
   document.getElementById('output-card').style.display='none';
   window.scrollTo(0,0);
