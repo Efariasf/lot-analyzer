@@ -28,7 +28,7 @@ export default async function handler(req, res) {
       : '';
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
-    const buyNowText = buyNow ? `\nTiene precio de compra inmediata (Buy Now) de $${buyNow}.` : '';
+    const buyNowText = buyNow ? `\nEl vehículo tiene un precio de compra inmediata (Buy Now) de $${buyNow}, ese es el precio mínimo que acepta el vendedor para cerrar la venta de inmediato.` : '';
     const reserveText = reservePrice ? `\nTiene precio de reserva de $${reservePrice}.` : '';
 
     const damageList = Array.isArray(damages) && damages.length > 0 ? damages : [];
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       'battery': 'Luz de batería encendida — podría indicar falla en el alternador, batería o sistema eléctrico.',
       'oil': 'Luz de aceite encendida — podría indicar baja presión de aceite o falla en el sistema de lubricación.',
       'temperature': 'Luz de temperatura encendida — podría indicar sobrecalentamiento del motor.',
-      'multiple': 'Múltiples luces del tablero encendidas — esto podría estar indicando algún tipo de falla o daño mecánico.',
+      'multiple': 'Múltiples luces del tablero encendidas — esto podría indicar algún tipo de daño eléctrico o falla mecánica en el vehículo.',
       'custom': dashCustom ? `${dashCustom} encendido — podría indicar algún tipo de falla mecánica o electrónica.` : ''
     };
     const lightsText = lightsMap[dashLights] || '';
