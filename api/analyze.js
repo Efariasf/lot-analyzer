@@ -12,15 +12,29 @@ export default async function handler(req, res) {
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
-            offerMin, offerMax, buyNow, reservePrice } = fields;
+            offerMin, offerMax, buyNow, reservePrice, copartGo, externalLot } = fields;
 
-    // Estado mecánico — solo indicamos lo que Copart dice, sin garantizar nada
     const mechMap = {
       'no-enciende': 'El vehículo no enciende.',
       'enciende-no-rueda': 'Copart verificó que el motor enciende, sin embargo el vehículo no rueda, lo que podría indicar algún tipo de falla mecánica como transmisión u otro problema relacionado.',
       'enciende-rueda': 'Copart verificó que el motor enciende y la transmisión engrana.'
     };
     const mechText = mechMap[mechanicalStatus] || '';
+
+    const milesStatusMap = {
+      'Actuales': '',
+      'No actuales (TMU)': 'Las millas aparecen como No Actuales (TMU — True Mileage Unknown), lo que significa que las millas reales son desconocidas. Esto ocurre cuando el odómetro pudo haber sido alterado o el vehículo sufrió un daño importante que impide comprobar el millaje real. Considérelo al momento de evaluar el vehículo.',
+      'Exentas': 'Las millas aparecen como Exentas (Exempt), lo que significa que legalmente no se puede certificar que el número del tablero sea el real. Esto ocurre generalmente porque al momento del accidente el vehículo quedó sin batería, el tablero se dañó, o la aseguradora no pudo encenderlo para verificar. No necesariamente implica fraude — muchas veces el número del tablero es cercano al real, pero por protección legal los papeles se procesan como Exento. Le recomendamos revisar el Carfax para ver las millas registradas en el último servicio antes del accidente.'
+    };
+    const milesWarning = milesStatusMap[milesStatus] || '';
+
+    const copartGoWarning = copartGo
+      ? 'Este vehículo está listado como CopartGO, lo que significa que fue publicado directamente por el vendedor (negocio o particular) usando la app móvil de Copart. El informe de condición lo completó el propio vendedor con respuestas de Sí/No y NO representa la opinión de Copart, quien no inspeccionó el vehículo ni se hace responsable de la exactitud del informe.'
+      : '';
+
+    const externalLotWarning = externalLot
+      ? 'Este es un Lote Externo, lo que significa que el vehículo NO se encuentra físicamente en una ubicación de Copart. Está en una ubicación designada para previsualizar y retirar indicada en el lote. Tome esto en cuenta para la logística de retiro.'
+      : '';
 
     const isDestruction = titleType === 'Certificate of Destruction / Junk';
     const destructionWarning = isDestruction
@@ -82,8 +96,11 @@ Usa EXACTAMENTE esta estructura (respeta saltos de línea, NO modifiques los tex
 
 ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
 [2-3 oraciones: título "${titleType}" en ${auction} — explica qué significa sin mencionar historial, daños "${damageTextClean}", millas ${miles} (${milesStatus}), estado general.]
+${milesWarning ? `INSERTAR TAL CUAL: ${milesWarning}` : ''}
 ${salvageWarning ? `INSERTAR TAL CUAL: ${salvageWarning}` : ''}
 ${destructionWarning ? `INSERTAR TAL CUAL: ${destructionWarning}` : ''}
+${copartGoWarning ? `INSERTAR TAL CUAL: ${copartGoWarning}` : ''}
+${externalLotWarning ? `INSERTAR TAL CUAL: ${externalLotWarning}` : ''}
 ${lightsText ? `INSERTAR TAL CUAL: ${lightsText}` : `INSERTAR TAL CUAL: ${noLightsText}`}
 ${mechText ? `INSERTAR TAL CUAL: ${mechText}` : ''}
 ${observations ? `[Integra estas observaciones del broker de forma natural, SIN repetir lo que ya se mencionó arriba sobre daños, luces o estado mecánico: ${observations}]` : ''}
