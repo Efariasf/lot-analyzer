@@ -87,15 +87,18 @@ export default async function handler(req, res) {
 
 REGLAS IMPORTANTES:
 - Varía el vocabulario y la estructura de las oraciones en cada análisis — nunca uses las mismas frases de siempre.
-- Título Clean significa solo que NO fue declarado pérdida total por aseguradora. NO menciones historial ni reportes previos.
+- Título Clean significa que NO fue declarado pérdida total por la aseguradora — explícalo así, sin mencionar historial ni reportes previos.
+- Título Salvage significa que el daño fue lo suficientemente severo para que la aseguradora lo declarara pérdida total — dilo con confianza, no uses palabras como "sugiere" o "podría".
+- Los daños que el broker indicó son REALES y CONFIRMADOS — afírmalos con seguridad, nunca uses "se menciona" ni "podría tener".
+- NUNCA uses frases como "catalogado como tal", "sugiere", "se menciona", "podría indicar" para los daños visibles.
 - NUNCA digas que el vehículo "rueda correctamente" ni uses la palabra "correctamente".
 - NUNCA uses "Dado que presenta daño por Daño" — usa solo el tipo sin repetir la palabra daño.
-- Sé directo y profesional.
+- Sé directo, profesional y seguro en cada afirmación.
 
 Usa EXACTAMENTE esta estructura (respeta saltos de línea, NO modifiques los textos marcados INSERTAR TAL CUAL):
 
 ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
-[2-3 oraciones: título "${titleType}" en ${auction} — explica qué significa sin mencionar historial, daños "${damageTextClean}", millas ${miles} (${milesStatus}), estado general.]
+[2-3 oraciones: título "${titleType}" en ${auction} — si es Salvage, di que el daño fue suficientemente severo para que la aseguradora lo declarara pérdida total; si es Clean, di que no fue declarado pérdida total. Afirma los daños "${damageTextClean}" con seguridad. Millas ${miles} (${milesStatus}). Estado general conciso.]
 ${milesWarning ? `INSERTAR TAL CUAL: ${milesWarning}` : ''}
 ${salvageWarning ? `INSERTAR TAL CUAL: ${salvageWarning}` : ''}
 ${destructionWarning ? `INSERTAR TAL CUAL: ${destructionWarning}` : ''}
