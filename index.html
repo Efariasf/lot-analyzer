@@ -7,95 +7,96 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="manifest" href="manifest.json">
 <style>
-  :root {
-    --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #242424;
-    --border: #2e2e2e; --text: #f0f0f0; --muted: #888;
-    --accent: #e8ff4d; --accent-dark: #c8df2d;
-    --danger: #ff5c5c; --radius: 10px; --radius-sm: 6px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; min-height: 100vh; }
+:root {
+  --bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#2e2e2e;
+  --text:#f0f0f0;--muted:#666;--accent:#e8ff4d;--accent-dark:#c8df2d;
+  --danger:#ff5c5c;--r:8px;--rs:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh}
 
-  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
-  .header-left { display: flex; align-items: center; gap: 10px; }
-  .logo { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-  .logo svg { width: 18px; height: 18px; }
-  .header h1 { font-size: 16px; font-weight: 600; }
-  .header p { font-size: 11px; color: var(--muted); }
-  .ai-badge { background: #1a1a2e; border: 1px solid #333; color: #a78bfa; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.logo{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;margin-right:8px}
+.logo svg{width:16px;height:16px}
+.header-left{display:flex;align-items:center}
+.header h1{font-size:15px;font-weight:600}
+.header p{font-size:11px;color:var(--muted)}
+.ai-badge{background:#1a1a2e;border:1px solid #333;color:#a78bfa;font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500}
 
-  .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); }
-  .tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; font-weight: 500; color: var(--muted); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; transition: .15s; }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:11px;text-align:center;font-size:13px;font-weight:500;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 
-  .content { padding: 16px; max-width: 600px; margin: 0 auto; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
-  .card-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-  .step-num { background: var(--accent); color: #000; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+.content{padding:12px;max-width:600px;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.section-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:12px}
+.section-label:first-child{margin-top:0}
 
-  .upload-zone { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 20px 16px; text-align: center; cursor: pointer; transition: .15s; }
-  .upload-zone:hover { border-color: var(--accent); background: rgba(232,255,77,.04); }
-  .upload-zone svg { width: 28px; height: 28px; color: var(--muted); margin-bottom: 6px; }
-  .upload-zone p { color: var(--muted); font-size: 13px; }
-  .upload-zone span { font-size: 11px; color: #555; }
-  .preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 10px; display: none; }
+/* INPUTS */
+input,select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-size:13px;padding:8px 10px;font-family:inherit;transition:.15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+select option{background:var(--surface2)}
+textarea{resize:vertical;min-height:70px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.mb6{margin-bottom:6px}
 
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .field { margin-bottom: 8px; }
-  .field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; font-weight: 500; }
-  .field input, .field select, .field textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; padding: 8px 10px; font-family: inherit; transition: .15s; }
-  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
-  .field select option { background: var(--surface2); }
-  .field textarea { resize: vertical; min-height: 80px; }
+/* PASTE FIELD */
+.paste-wrap{display:flex;gap:6px;margin-bottom:4px}
+.paste-wrap input{border-color:var(--accent);flex:1}
+.paste-hint{font-size:11px;color:var(--muted);margin-bottom:10px}
 
-  .damage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .damage-option { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; cursor: pointer; transition: .15s; }
-  .damage-option:hover { border-color: var(--accent); }
-  .damage-option input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
-  .damage-option span { font-size: 13px; color: var(--text); }
-  .damage-option.checked { border-color: var(--accent); background: rgba(232,255,77,.07); }
+/* DAMAGE */
+.damage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.dmg{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:6px 8px;cursor:pointer;transition:.15s}
+.dmg:hover{border-color:var(--accent)}
+.dmg input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer;flex-shrink:0}
+.dmg span{font-size:12px;color:var(--text);line-height:1.2}
+.dmg.checked{border-color:var(--accent);background:rgba(232,255,77,.07)}
 
-  .mech-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .mech-option { display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 6px; cursor: pointer; transition: .15s; color: var(--muted); text-align: center; }
-  .mech-option:hover { border-color: var(--accent); color: var(--text); }
-  .mech-option.selected { border-color: var(--accent); background: rgba(232,255,77,.07); color: var(--accent); }
-  .mech-option span { font-size: 11px; line-height: 1.2; color: inherit; }
-  .light-option { display: flex; flex-direction: column; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 4px; cursor: pointer; transition: .15s; color: var(--muted); }
-  .light-option:hover { border-color: var(--accent); color: var(--text); }
-  .light-option.selected { border-color: var(--accent); background: rgba(232,255,77,.07); color: var(--accent); }
-  .light-option svg { width: 32px; height: 32px; }
-  .light-option span { font-size: 10px; text-align: center; line-height: 1.2; color: inherit; }
+/* MECH */
+.mech-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px}
+.mech{display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:8px 6px;cursor:pointer;transition:.15s;color:var(--muted)}
+.mech:hover{border-color:var(--accent);color:var(--text)}
+.mech.selected{border-color:var(--accent);background:rgba(232,255,77,.07);color:var(--accent)}
+.mech span{font-size:12px;color:inherit}
 
-  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: .15s; font-family: inherit; }
-  .btn:active { transform: scale(.97); }
-  .btn-accent { background: var(--accent); color: #000; }
-  .btn-accent:hover { background: var(--accent-dark); }
-  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
-  .btn-outline:hover { background: var(--surface2); }
-  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-  .btn:disabled { opacity: .5; cursor: not-allowed; }
+/* LIGHTS */
+.lights-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:6px}
+.light{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:7px 3px;cursor:pointer;transition:.15s;color:var(--muted)}
+.light:hover{border-color:var(--accent);color:var(--text)}
+.light.selected{border-color:var(--accent);background:rgba(232,255,77,.07);color:var(--accent)}
+.light svg{width:28px;height:28px}
+.light span{font-size:10px;text-align:center;line-height:1.2;color:inherit}
 
-  .output { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: var(--text); min-height: 80px; }
-  .loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; padding: 8px 0; }
-  .dots { display: flex; gap: 4px; }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: blink 1s infinite; }
-  .dot:nth-child(2) { animation-delay: .2s; }
-  .dot:nth-child(3) { animation-delay: .4s; }
-  @keyframes blink { 0%,100%{opacity:.2} 50%{opacity:1} }
+/* BTNS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:9px 16px;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn-accent{background:var(--accent);color:#000;width:100%;justify-content:center;padding:11px}
+.btn-accent:hover{background:var(--accent-dark)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{background:var(--surface2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-row{display:flex;gap:6px;margin-top:8px}
 
-  .error { background: rgba(255,92,92,.1); border: 1px solid rgba(255,92,92,.3); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; color: var(--danger); margin-top: 8px; display: none; }
+.output{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:12px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--text);margin-bottom:8px}
+.loading{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;padding:6px 0}
+.dots{display:flex;gap:4px}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:blink 1s infinite}
+.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
+.error{background:rgba(255,92,92,.1);border:1px solid rgba(255,92,92,.3);border-radius:var(--rs);padding:8px 10px;font-size:12px;color:var(--danger);margin-top:6px;display:none}
 
-  .history-item { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; }
-  .history-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
-  .history-title { font-size: 13px; font-weight: 600; }
-  .history-date { font-size: 11px; color: var(--muted); }
-  .history-preview { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
-  .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
+.history-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px}
+.history-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px}
+.history-title{font-size:13px;font-weight:600}
+.history-date{font-size:11px;color:var(--muted)}
+.history-preview{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+.empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
 
-  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: .3s; pointer-events: none; z-index: 99; white-space: nowrap; }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--text);color:var(--bg);padding:9px 18px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;z-index:99;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-  @media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } .lights-grid { grid-template-columns: repeat(4, 1fr); } .content { padding: 12px; } }
+@media(max-width:480px){.damage-grid{grid-template-columns:repeat(2,1fr)}.lights-grid{grid-template-columns:repeat(5,1fr)}.content{padding:8px}}
 </style>
 </head>
 <body>
@@ -119,406 +120,318 @@
 </div>
 
 <div class="content">
-  <div id="tab-analyzer">
+<div id="tab-analyzer">
 
-    <!-- PASO 1: FOTO -->
-    <div class="card">
-      <div class="card-title"><span class="step-num">1</span> Foto del lote</div>
-      <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <p>Pega la foto con <strong>Ctrl+V</strong> o toca para subir</p>
-        <span>Copia la imagen en Copart y pega aquí</span>
-      </div>
-      <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(event)">
-      <img id="preview" class="preview">
-      <div id="change-row" style="display:none;margin-top:8px">
-        <button class="btn btn-outline" onclick="resetImage()">Cambiar foto</button>
-      </div>
-    </div>
+<div class="card">
+  <!-- LOTE -->
+  <div class="section-label">Lote y vehículo</div>
+  <div class="paste-wrap">
+    <input id="quick-paste" placeholder="49180866 - 2012 TOYOTA PRIUS FOUR" oninput="parsePaste(this.value)">
+    <button class="btn btn-outline" style="padding:8px 12px;font-size:12px" onclick="document.getElementById('quick-paste').value='';clearParsed()">✕</button>
+  </div>
+  <p class="paste-hint">Lote, año, marca y modelo se llenan automáticamente</p>
+  <input type="hidden" id="lot-hidden">
+  <input type="hidden" id="year-hidden">
+  <input type="hidden" id="make-hidden">
+  <input type="hidden" id="model-hidden">
 
-    <!-- PASO 2: DATOS -->
-    <div class="card">
-      <div class="card-title"><span class="step-num">2</span> Datos del vehículo</div>
+  <div class="mb6"><input id="vin" placeholder="VIN"></div>
 
-      <div class="field" style="margin-bottom:14px">
-        <label>Pega el lote y título de Copart/IAAI aquí</label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input id="quick-paste" placeholder="Ej: 49180866 - 2012 TOYOTA PRIUS FOUR" style="flex:1;background:var(--surface2);border:1.5px solid var(--accent);border-radius:var(--radius-sm);color:var(--text);font-size:13px;padding:8px 10px;font-family:inherit" oninput="parsePaste(this.value)">
-          <button class="btn btn-outline" style="padding:8px 12px;font-size:12px;white-space:nowrap" onclick="document.getElementById('quick-paste').value='';clearParsed()">✕</button>
-        </div>
-        <p style="font-size:11px;color:var(--muted);margin-top:4px">Lote, año, marca y modelo se llenan automáticamente</p>
-      </div>
-      <input type="hidden" id="lot-hidden">
-      <input type="hidden" id="year-hidden">
-      <input type="hidden" id="make-hidden">
-      <input type="hidden" id="model-hidden">
-
-      <div class="field"><label>VIN</label><input id="vin" placeholder="JTDKN3DU1C5464267"></div>
-      <div class="grid2">
-        <div class="field"><label>Tipo de título</label>
-          <select id="title-type">
-            <option>Clean</option>
-            <option>Salvage</option>
-            <option>Rebuilt</option>
-            <option>Parts Only</option>
-            <option>Certificate of Destruction / Junk</option>
-          </select>
-        </div>
-        <div class="field"><label>Subasta</label>
-          <select id="auction"><option>Copart</option><option>IAAI</option><option>Manheim</option></select>
-        </div>
-      </div>
-      <div class="grid2">
-        <div class="field"><label>Millas</label><input id="miles" placeholder="166,069"></div>
-        <div class="field"><label>Estado de millas</label>
-          <select id="miles-status"><option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option></select>
-        </div>
-      </div>
-
-      <div class="field">
-        <label style="margin-bottom:8px">Tipo de daño (selecciona todos los que apliquen)</label>
-        <div class="damage-grid" id="damage-grid">
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Granizo"><span>Granizo</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Daño frontal"><span>Daño frontal</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Daño trasero"><span>Daño trasero</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Daño lateral"><span>Daño lateral</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Volcado"><span>Volcado</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Inundación/Agua"><span>Inundación/Agua</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Fuego"><span>Fuego</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Vandalismo"><span>Vandalismo</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Mecánico"><span>Mecánico</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Undercarriage"><span>Undercarriage</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Minor Dent/Scratches"><span>Minor Dent/Scratches</span></label>
-          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Normal Wear"><span>Normal Wear</span></label>
-        </div>
-      </div>
-    </div>
-
-    <!-- PASO 3: ANÁLISIS -->
-    <div class="card">
-      <div class="card-title"><span class="step-num">3</span> Tu punto de vista</div>
-
-      <div class="field">
-        <label style="margin-bottom:8px">Estado mecánico</label>
-        <input type="hidden" id="mechanical-status" value="">
-        <div class="mech-grid">
-          <div class="mech-option" data-value="no-enciende" onclick="selectMech(this)">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/></svg>
-            <span>No enciende</span>
-          </div>
-          <div class="mech-option" data-value="enciende-no-rueda" onclick="selectMech(this)">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
-            <span>Enciende, no rueda</span>
-          </div>
-          <div class="mech-option" data-value="enciende-rueda" onclick="selectMech(this)">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>
-            <span>Enciende y rueda</span>
-          </div>
-        </div>
-      </div>
-        <input type="hidden" id="dash-lights" value="none">
-        <div class="lights-grid">
-          <div class="light-option selected" data-value="none" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="16" stroke="#555" stroke-width="2" stroke-dasharray="4 3"/><line x1="12" y1="12" x2="28" y2="28" stroke="#555" stroke-width="2.5" stroke-linecap="round"/></svg>
-            <span>Sin luces</span>
-          </div>
-          <div class="light-option" data-value="check-engine" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><path d="M8 28 L14 16 Q16 12 20 12 Q24 12 26 16 L32 28 Q33 30 31 30 L9 30 Q7 30 8 28Z" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="24" r="1.5" fill="currentColor"/><line x1="20" y1="19" x2="20" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            <span>Check Engine</span>
-          </div>
-          <div class="light-option" data-value="airbag" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="10" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="20" r="2.5" fill="currentColor"/><text x="20" y="36" text-anchor="middle" font-size="7" fill="currentColor" font-family="sans-serif" font-weight="bold">SRS</text></svg>
-            <span>Airbag/SRS</span>
-          </div>
-          <div class="light-option" data-value="abs" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2"/><text x="20" y="24" text-anchor="middle" font-size="9" fill="currentColor" font-family="sans-serif" font-weight="bold">ABS</text></svg>
-            <span>ABS</span>
-          </div>
-          <div class="light-option" data-value="transmission" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><rect x="10" y="14" width="20" height="12" rx="2" stroke="currentColor" stroke-width="2"/><line x1="15" y1="14" x2="15" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="14" x2="20" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="25" y1="14" x2="25" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="10" y1="20" x2="30" y2="20" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="26" x2="20" y2="32" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="33" r="1.5" fill="currentColor"/></svg>
-            <span>Transmisión</span>
-          </div>
-          <div class="light-option" data-value="battery" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><rect x="7" y="14" width="24" height="14" rx="2" stroke="currentColor" stroke-width="2"/><rect x="31" y="18" width="3" height="6" rx="1" fill="currentColor"/><line x1="13" y1="19" x2="13" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="11" y1="21" x2="15" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="23" y1="21" x2="27" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            <span>Batería</span>
-          </div>
-          <div class="light-option" data-value="oil" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><path d="M14 28 L14 18 Q14 14 18 14 L22 14 Q24 14 25 16 L28 20 Q30 22 28 24 L26 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 28 Q14 32 18 32 L22 32 Q26 32 26 28 L26 24 L14 24 Z" stroke="currentColor" stroke-width="2"/><line x1="14" y1="10" x2="14" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="11" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            <span>Aceite</span>
-          </div>
-          <div class="light-option" data-value="temperature" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><path d="M20 8 Q24 10 24 16 L24 26 Q24 32 20 34 Q16 32 16 26 L16 16 Q16 10 20 8Z" stroke="currentColor" stroke-width="2"/><line x1="24" y1="14" x2="27" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="24" y1="18" x2="27" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="20" cy="28" r="3" fill="currentColor"/></svg>
-            <span>Temperatura</span>
-          </div>
-          <div class="light-option" data-value="multiple" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><circle cx="12" cy="20" r="5" stroke="currentColor" stroke-width="2"/><circle cx="28" cy="20" r="5" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="12" r="5" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="28" r="5" stroke="currentColor" stroke-width="2"/></svg>
-            <span>Múltiples</span>
-          </div>
-          <div class="light-option" data-value="custom" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"/><text x="20" y="25" text-anchor="middle" font-size="16" fill="currentColor" font-family="sans-serif">?</text></svg>
-            <span>Otras</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="field" id="lights-custom-row" style="display:none">
-        <label>Especificar luces</label>
-        <input id="lights-custom" placeholder="Ej: luz de TPMS, ESP...">
-      </div>
-
-      <div class="field">
-        <label>Tus observaciones — escríbelas como quieras, la IA las mejora</label>
-        <textarea id="observations" placeholder="Ej: enciende bien, transmision engrena, granizo en techo y capo, interior bien, llantas buenas..."></textarea>
-      </div>
-      <div class="grid2">
-        <div class="field"><label>Oferta mínima ($)</label><input id="offer-min" type="number" placeholder="4500"></div>
-        <div class="field"><label>Oferta máxima ($)</label><input id="offer-max" type="number" placeholder="5500"></div>
-      </div>
-      <div class="grid2">
-        <div class="field"><label>Buy Now ($) <span style="color:var(--muted);font-weight:400">— opcional</span></label><input id="buy-now" type="number" placeholder="8500"></div>
-        <div class="field"><label>Reserve Price ($) <span style="color:var(--muted);font-weight:400">— opcional</span></label><input id="reserve-price" type="number" placeholder="6000"></div>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-accent" id="gen-btn" onclick="generateAnalysis()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          Generar análisis
-        </button>
-      </div>
-      <div class="error" id="error-gen"></div>
-    </div>
-
-    <!-- PASO 4: OUTPUT -->
-    <div class="card" id="output-card" style="display:none">
-      <div class="card-title"><span class="step-num">4</span> Listo para WhatsApp</div>
-      <div class="loading" id="output-loading" style="display:none">
-        <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-        <span>Redactando análisis...</span>
-      </div>
-      <div class="output" id="output-text"></div>
-      <div class="btn-row" id="output-btns" style="display:none">
-        <button class="btn btn-accent" onclick="copyOutput()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copiar para WhatsApp
-        </button>
-        <button class="btn btn-outline" onclick="saveToHistory()">Guardar</button>
-        <button class="btn btn-outline" onclick="resetAll()">Nuevo</button>
-      </div>
-    </div>
-
+  <div class="grid2">
+    <select id="title-type">
+      <option>Clean</option>
+      <option>Salvage</option>
+      <option>Rebuilt</option>
+      <option>Parts Only</option>
+      <option>Certificate of Destruction / Junk</option>
+    </select>
+    <select id="auction"><option>Copart</option><option>IAAI</option><option>Manheim</option></select>
+  </div>
+  <div class="grid2">
+    <input id="miles" placeholder="Millas (ej: 80,422)">
+    <select id="miles-status"><option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option></select>
   </div>
 
-  <!-- HISTORIAL -->
-  <div id="tab-history" style="display:none">
-    <div id="history-list"></div>
+  <!-- DAÑOS -->
+  <div class="section-label">Tipo de daño</div>
+  <div class="damage-grid" id="damage-grid">
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Granizo"><span>Granizo</span></label>
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño frontal"><span>Daño frontal</span></label>
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño trasero"><span>Daño trasero</span></label>
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño lateral"><span>Daño lateral</span></label>
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Volcado"><span>Volcado</span></label>
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Inundación/Agua"><span>Inundación/Agua</span></label>
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Fuego"><span>Fuego</span></label>
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Vandalismo"><span>Vandalismo</span></label>
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Mecánico"><span>Mecánico</span></label>
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Undercarriage"><span>Undercarriage</span></label>
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Minor Dent/Scratches"><span>Minor Dent/Scratches</span></label>
+    <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Normal Wear"><span>Normal Wear</span></label>
   </div>
 </div>
 
+<div class="card">
+  <!-- ESTADO MECÁNICO -->
+  <div class="section-label">Estado mecánico</div>
+  <input type="hidden" id="mechanical-status" value="">
+  <div class="mech-grid">
+    <div class="mech" data-value="no-enciende" onclick="selectMech(this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/></svg>
+      <span>No enciende</span>
+    </div>
+    <div class="mech" data-value="enciende-no-rueda" onclick="selectMech(this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
+      <span>Enciende, no rueda</span>
+    </div>
+    <div class="mech" data-value="enciende-rueda" onclick="selectMech(this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>
+      <span>Enciende y rueda</span>
+    </div>
+  </div>
+
+  <!-- LUCES -->
+  <div class="section-label">Luces del tablero</div>
+  <input type="hidden" id="dash-lights" value="none">
+  <div class="lights-grid">
+    <div class="light selected" data-value="none" onclick="selectLight(this)">
+      <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="16" stroke="#555" stroke-width="2" stroke-dasharray="4 3"/><line x1="12" y1="12" x2="28" y2="28" stroke="#555" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <span>Sin luces</span>
+    </div>
+    <div class="light" data-value="check-engine" onclick="selectLight(this)">
+      <svg viewBox="0 0 40 40" fill="none"><path d="M8 28 L14 16 Q16 12 20 12 Q24 12 26 16 L32 28 Q33 30 31 30 L9 30 Q7 30 8 28Z" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="24" r="1.5" fill="currentColor"/><line x1="20" y1="19" x2="20" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Check Engine</span>
+    </div>
+    <div class="light" data-value="airbag" onclick="selectLight(this)">
+      <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="10" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="20" r="2.5" fill="currentColor"/><text x="20" y="36" text-anchor="middle" font-size="7" fill="currentColor" font-family="sans-serif" font-weight="bold">SRS</text></svg>
+      <span>Airbag/SRS</span>
+    </div>
+    <div class="light" data-value="abs" onclick="selectLight(this)">
+      <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2"/><text x="20" y="24" text-anchor="middle" font-size="9" fill="currentColor" font-family="sans-serif" font-weight="bold">ABS</text></svg>
+      <span>ABS</span>
+    </div>
+    <div class="light" data-value="transmission" onclick="selectLight(this)">
+      <svg viewBox="0 0 40 40" fill="none"><rect x="10" y="14" width="20" height="12" rx="2" stroke="currentColor" stroke-width="2"/><line x1="15" y1="14" x2="15" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="14" x2="20" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="25" y1="14" x2="25" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="10" y1="20" x2="30" y2="20" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span>Transmisión</span>
+    </div>
+    <div class="light" data-value="battery" onclick="selectLight(this)">
+      <svg viewBox="0 0 40 40" fill="none"><rect x="7" y="14" width="24" height="14" rx="2" stroke="currentColor" stroke-width="2"/><rect x="31" y="18" width="3" height="6" rx="1" fill="currentColor"/><line x1="13" y1="19" x2="13" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="11" y1="21" x2="15" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="23" y1="21" x2="27" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Batería</span>
+    </div>
+    <div class="light" data-value="oil" onclick="selectLight(this)">
+      <svg viewBox="0 0 40 40" fill="none"><path d="M14 28 L14 18 Q14 14 18 14 L22 14 Q24 14 25 16 L28 20 Q30 22 28 24 L26 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 28 Q14 32 18 32 L22 32 Q26 32 26 28 L26 24 L14 24 Z" stroke="currentColor" stroke-width="2"/></svg>
+      <span>Aceite</span>
+    </div>
+    <div class="light" data-value="temperature" onclick="selectLight(this)">
+      <svg viewBox="0 0 40 40" fill="none"><path d="M20 8 Q24 10 24 16 L24 26 Q24 32 20 34 Q16 32 16 26 L16 16 Q16 10 20 8Z" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="28" r="3" fill="currentColor"/></svg>
+      <span>Temperatura</span>
+    </div>
+    <div class="light" data-value="multiple" onclick="selectLight(this)">
+      <svg viewBox="0 0 40 40" fill="none"><circle cx="12" cy="20" r="5" stroke="currentColor" stroke-width="2"/><circle cx="28" cy="20" r="5" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="12" r="5" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="28" r="5" stroke="currentColor" stroke-width="2"/></svg>
+      <span>Múltiples</span>
+    </div>
+    <div class="light" data-value="custom" onclick="selectLight(this)">
+      <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"/><text x="20" y="25" text-anchor="middle" font-size="16" fill="currentColor" font-family="sans-serif">?</text></svg>
+      <span>Otras</span>
+    </div>
+  </div>
+  <div id="lights-custom-row" style="display:none;margin-bottom:6px">
+    <input id="lights-custom" placeholder="Especificar luces (ej: TPMS, ESP...)">
+  </div>
+
+  <!-- OBSERVACIONES -->
+  <div class="section-label">Tus observaciones</div>
+  <div class="mb6">
+    <textarea id="observations" placeholder="Escríbelas como quieras, la IA las mejora (ej: enciende bien, transmision engrena, granizo en techo y capo...)"></textarea>
+  </div>
+
+  <!-- OFERTA -->
+  <div class="section-label">Oferta</div>
+  <div class="grid2">
+    <input id="offer-min" type="number" placeholder="Mínimo ($)">
+    <input id="offer-max" type="number" placeholder="Máximo ($)">
+  </div>
+  <div class="grid2">
+    <input id="buy-now" type="number" placeholder="Buy Now ($) — opcional">
+    <input id="reserve-price" type="number" placeholder="Reserve Price ($) — opcional">
+  </div>
+
+  <button class="btn btn-accent" id="gen-btn" onclick="generateAnalysis()" style="margin-top:10px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    Generar análisis
+  </button>
+  <div class="error" id="error-gen"></div>
+</div>
+
+<!-- OUTPUT -->
+<div class="card" id="output-card" style="display:none">
+  <div class="loading" id="output-loading" style="display:none">
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <span>Redactando análisis...</span>
+  </div>
+  <div class="output" id="output-text"></div>
+  <div class="btn-row" id="output-btns" style="display:none">
+    <button class="btn btn-accent" onclick="copyOutput()" style="flex:1">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Copiar para WhatsApp
+    </button>
+    <button class="btn btn-outline" onclick="saveToHistory()">Guardar</button>
+    <button class="btn btn-outline" onclick="resetAll()">Nuevo</button>
+  </div>
+</div>
+
+</div>
+
+<!-- HISTORIAL -->
+<div id="tab-history" style="display:none">
+  <div id="history-list"></div>
+</div>
+
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
-let currentOutput = '';
-let lotHistory = [];
-try { lotHistory = JSON.parse(localStorage.getItem('lot-history') || '[]'); } catch(e){}
+let currentOutput='',lotHistory=[];
+try{lotHistory=JSON.parse(localStorage.getItem('lot-history')||'[]')}catch(e){}
 
-// Pegar imagen con Ctrl+V
-document.addEventListener('paste', function(e) {
-  const items = e.clipboardData && e.clipboardData.items;
-  if (!items) return;
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].type.indexOf('image') !== -1) {
-      const file = items[i].getAsFile();
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        document.getElementById('preview').src = ev.target.result;
-        document.getElementById('preview').style.display = 'block';
-        document.getElementById('dropzone').style.display = 'none';
-        document.getElementById('change-row').style.display = 'block';
-      };
-      reader.readAsDataURL(file);
-      e.preventDefault();
-      break;
-    }
-  }
-});
-
-function parsePaste(text) {
-  if (!text.trim()) return;
-  const line = text.trim();
-  const match = line.match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
-  if (match) {
-    const parts = match[3].trim().split(/\s+/);
-    document.getElementById('lot-hidden').value = match[1];
-    document.getElementById('year-hidden').value = match[2];
-    document.getElementById('make-hidden').value = parts[0];
-    document.getElementById('model-hidden').value = parts.slice(1).join(' ');
+function parsePaste(text){
+  if(!text.trim())return;
+  const m=text.trim().match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
+  if(m){
+    const p=m[3].trim().split(/\s+/);
+    document.getElementById('lot-hidden').value=m[1];
+    document.getElementById('year-hidden').value=m[2];
+    document.getElementById('make-hidden').value=p[0];
+    document.getElementById('model-hidden').value=p.slice(1).join(' ');
   }
 }
+function clearParsed(){['lot-hidden','year-hidden','make-hidden','model-hidden'].forEach(id=>document.getElementById(id).value='')}
 
-function clearParsed() {
-  ['lot-hidden','year-hidden','make-hidden','model-hidden'].forEach(id => document.getElementById(id).value = '');
+function toggleDamage(label){
+  const cb=label.querySelector('input[type="checkbox"]');
+  cb.checked=!cb.checked;
+  label.classList.toggle('checked',cb.checked);
+}
+function getSelectedDamages(){
+  return Array.from(document.querySelectorAll('#damage-grid input[type="checkbox"]:checked')).map(cb=>cb.value);
 }
 
-function toggleDamage(label) {
-  const cb = label.querySelector('input[type="checkbox"]');
-  cb.checked = !cb.checked;
-  label.classList.toggle('checked', cb.checked);
-}
-
-function getSelectedDamages() {
-  return Array.from(document.querySelectorAll('#damage-grid input[type="checkbox"]:checked')).map(cb => cb.value);
-}
-
-function selectMech(el) {
-  document.querySelectorAll('.mech-option').forEach(x => x.classList.remove('selected'));
+function selectMech(el){
+  document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
   el.classList.add('selected');
-  document.getElementById('mechanical-status').value = el.dataset.value;
+  document.getElementById('mechanical-status').value=el.dataset.value;
 }
-
-function selectLight(el) {
-  document.querySelectorAll('.light-option').forEach(x => x.classList.remove('selected'));
+function selectLight(el){
+  document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
   el.classList.add('selected');
-  const val = el.dataset.value;
-  document.getElementById('dash-lights').value = val;
-  document.getElementById('lights-custom-row').style.display = val === 'custom' ? 'block' : 'none';
+  const val=el.dataset.value;
+  document.getElementById('dash-lights').value=val;
+  document.getElementById('lights-custom-row').style.display=val==='custom'?'block':'none';
 }
 
-function showTab(t, el) {
-  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+function showTab(t,el){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('tab-analyzer').style.display = t === 'analyzer' ? 'block' : 'none';
-  document.getElementById('tab-history').style.display = t === 'history' ? 'block' : 'none';
-  if (t === 'history') renderHistory();
+  document.getElementById('tab-analyzer').style.display=t==='analyzer'?'block':'none';
+  document.getElementById('tab-history').style.display=t==='history'?'block':'none';
+  if(t==='history')renderHistory();
 }
 
-function handleFile(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    document.getElementById('preview').src = ev.target.result;
-    document.getElementById('preview').style.display = 'block';
-    document.getElementById('dropzone').style.display = 'none';
-    document.getElementById('change-row').style.display = 'block';
-  };
-  reader.readAsDataURL(file);
-}
+function showError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block'}
+function hideError(id){document.getElementById(id).style.display='none'}
 
-function resetImage() {
-  document.getElementById('preview').style.display = 'none';
-  document.getElementById('dropzone').style.display = 'block';
-  document.getElementById('change-row').style.display = 'none';
-  document.getElementById('fileInput').value = '';
-}
-
-function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
-function hideError(id) { document.getElementById(id).style.display = 'none'; }
-
-async function generateAnalysis() {
-  const get = id => document.getElementById(id).value;
+async function generateAnalysis(){
+  const get=id=>document.getElementById(id).value;
   hideError('error-gen');
-  document.getElementById('output-card').style.display = 'block';
-  document.getElementById('output-loading').style.display = 'flex';
-  document.getElementById('output-text').textContent = '';
-  document.getElementById('output-btns').style.display = 'none';
-  const btn = document.getElementById('gen-btn');
-  btn.disabled = true;
-  try {
-    const res = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        mode: 'generate',
-        fields: {
-          lot: get('lot-hidden'), year: get('year-hidden'), make: get('make-hidden'), model: get('model-hidden'),
-          vin: get('vin'), titleType: get('title-type'), auction: get('auction'),
-          miles: get('miles'), milesStatus: get('miles-status'),
-          damages: getSelectedDamages(),
-          dashLights: get('dash-lights'), dashCustom: get('lights-custom'),
-          observations: get('observations'),
-          mechanicalStatus: get('mechanical-status'),
-          offerMin: get('offer-min'), offerMax: get('offer-max'),
-          buyNow: get('buy-now'), reservePrice: get('reserve-price')
-        }
-      })
+  document.getElementById('output-card').style.display='block';
+  document.getElementById('output-loading').style.display='flex';
+  document.getElementById('output-text').textContent='';
+  document.getElementById('output-btns').style.display='none';
+  const btn=document.getElementById('gen-btn');
+  btn.disabled=true;
+  try{
+    const res=await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mode:'generate',fields:{
+        lot:get('lot-hidden'),year:get('year-hidden'),make:get('make-hidden'),model:get('model-hidden'),
+        vin:get('vin'),titleType:get('title-type'),auction:get('auction'),
+        miles:get('miles'),milesStatus:get('miles-status'),
+        damages:getSelectedDamages(),
+        dashLights:get('dash-lights'),dashCustom:get('lights-custom'),
+        observations:get('observations'),
+        mechanicalStatus:get('mechanical-status'),
+        offerMin:get('offer-min'),offerMax:get('offer-max'),
+        buyNow:get('buy-now'),reservePrice:get('reserve-price')
+      }})
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error desconocido');
-    currentOutput = data.result.trim();
-    document.getElementById('output-text').textContent = currentOutput;
-    document.getElementById('output-btns').style.display = 'flex';
-  } catch(err) {
-    showError('error-gen', `Error: ${err.message}`);
-    document.getElementById('output-card').style.display = 'none';
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Error desconocido');
+    currentOutput=data.result.trim();
+    document.getElementById('output-text').textContent=currentOutput;
+    document.getElementById('output-btns').style.display='flex';
+  }catch(err){
+    showError('error-gen',`Error: ${err.message}`);
+    document.getElementById('output-card').style.display='none';
   }
-  document.getElementById('output-loading').style.display = 'none';
-  btn.disabled = false;
+  document.getElementById('output-loading').style.display='none';
+  btn.disabled=false;
 }
 
-function copyOutput() {
-  if (!currentOutput) return;
+function copyOutput(){
+  if(!currentOutput)return;
   navigator.clipboard.writeText(currentOutput)
-    .then(() => showToast('¡Copiado para WhatsApp ✓'))
-    .catch(() => { const ta = document.createElement('textarea'); ta.value = currentOutput; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast('¡Copiado ✓'); });
+    .then(()=>showToast('¡Copiado para WhatsApp ✓'))
+    .catch(()=>{const ta=document.createElement('textarea');ta.value=currentOutput;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('¡Copiado ✓')});
 }
 
-function saveToHistory() {
-  if (!currentOutput) return;
-  const entry = {
-    id: Date.now(),
-    title: `${document.getElementById('lot-hidden').value} · ${document.getElementById('year-hidden').value} ${document.getElementById('make-hidden').value} ${document.getElementById('model-hidden').value}`,
-    date: new Date().toLocaleDateString('es-PA'),
-    text: currentOutput
+function saveToHistory(){
+  if(!currentOutput)return;
+  const entry={
+    id:Date.now(),
+    title:`${document.getElementById('lot-hidden').value} · ${document.getElementById('year-hidden').value} ${document.getElementById('make-hidden').value} ${document.getElementById('model-hidden').value}`,
+    date:new Date().toLocaleDateString('es-PA'),
+    text:currentOutput
   };
   lotHistory.unshift(entry);
-  try { localStorage.setItem('lot-history', JSON.stringify(lotHistory)); } catch(e){}
+  try{localStorage.setItem('lot-history',JSON.stringify(lotHistory))}catch(e){}
   showToast('Guardado ✓');
 }
 
-function renderHistory() {
-  const container = document.getElementById('history-list');
-  if (!lotHistory.length) { container.innerHTML = '<div class="empty">No hay análisis guardados aún</div>'; return; }
-  container.innerHTML = lotHistory.map(h => `
+function renderHistory(){
+  const c=document.getElementById('history-list');
+  if(!lotHistory.length){c.innerHTML='<div class="empty">No hay análisis guardados aún</div>';return}
+  c.innerHTML=lotHistory.map(h=>`
     <div class="history-item">
       <div class="history-header"><span class="history-title">${h.title}</span><span class="history-date">${h.date}</span></div>
       <div class="history-preview">${h.text.substring(0,100)}...</div>
       <div class="btn-row">
-        <button class="btn btn-outline" style="font-size:12px;padding:6px 12px" onclick="copyHistoryItem(${h.id})">Copiar</button>
-        <button class="btn btn-outline" style="font-size:12px;padding:6px 12px;color:var(--danger)" onclick="deleteHistoryItem(${h.id})">Eliminar</button>
+        <button class="btn btn-outline" style="font-size:12px;padding:6px 10px" onclick="copyHistoryItem(${h.id})">Copiar</button>
+        <button class="btn btn-outline" style="font-size:12px;padding:6px 10px;color:var(--danger)" onclick="deleteHistoryItem(${h.id})">Eliminar</button>
       </div>
     </div>`).join('');
 }
+function copyHistoryItem(id){const item=lotHistory.find(h=>h.id===id);if(item)navigator.clipboard.writeText(item.text).then(()=>showToast('Copiado ✓'))}
+function deleteHistoryItem(id){lotHistory=lotHistory.filter(h=>h.id!==id);try{localStorage.setItem('lot-history',JSON.stringify(lotHistory))}catch(e){}renderHistory()}
 
-function copyHistoryItem(id) {
-  const item = lotHistory.find(h => h.id === id);
-  if (item) navigator.clipboard.writeText(item.text).then(() => showToast('Copiado ✓'));
-}
-
-function deleteHistoryItem(id) {
-  lotHistory = lotHistory.filter(h => h.id !== id);
-  try { localStorage.setItem('lot-history', JSON.stringify(lotHistory)); } catch(e){}
-  renderHistory();
-}
-
-function resetAll() {
-  resetImage();
+function resetAll(){
   ['quick-paste','lot-hidden','year-hidden','make-hidden','model-hidden','vin','miles','observations','offer-min','offer-max','buy-now','reserve-price','lights-custom','mechanical-status']
-    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
-  document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb => {
-    cb.checked = false; cb.closest('.damage-option').classList.remove('checked');
-  });
-  document.querySelectorAll('.light-option').forEach(x => x.classList.remove('selected'));
-  document.querySelector('.light-option[data-value="none"]').classList.add('selected');
-  document.getElementById('dash-lights').value = 'none';
-  document.getElementById('lights-custom-row').style.display = 'none';
-  currentOutput = '';
-  document.getElementById('output-card').style.display = 'none';
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb=>{cb.checked=false;cb.closest('.dmg').classList.remove('checked')});
+  document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
+  document.querySelector('.light[data-value="none"]').classList.add('selected');
+  document.getElementById('dash-lights').value='none';
+  document.getElementById('lights-custom-row').style.display='none';
+  document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
+  document.getElementById('mechanical-status').value='';
+  currentOutput='';
+  document.getElementById('output-card').style.display='none';
+  window.scrollTo(0,0);
 }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
 }
 </script>
 </body>
