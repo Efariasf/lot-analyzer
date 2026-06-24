@@ -8,17 +8,10 @@
 <link rel="manifest" href="manifest.json">
 <style>
   :root {
-    --bg: #0f0f0f;
-    --surface: #1a1a1a;
-    --surface2: #242424;
-    --border: #2e2e2e;
-    --text: #f0f0f0;
-    --muted: #888;
-    --accent: #e8ff4d;
-    --accent-dark: #c8df2d;
-    --danger: #ff5c5c;
-    --radius: 10px;
-    --radius-sm: 6px;
+    --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #242424;
+    --border: #2e2e2e; --text: #f0f0f0; --muted: #888;
+    --accent: #e8ff4d; --accent-dark: #c8df2d;
+    --danger: #ff5c5c; --radius: 10px; --radius-sm: 6px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; min-height: 100vh; }
@@ -36,7 +29,6 @@
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
   .content { padding: 16px; max-width: 600px; margin: 0 auto; }
-
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
   .card-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
   .step-num { background: var(--accent); color: #000; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
@@ -51,21 +43,24 @@
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .field { margin-bottom: 8px; }
   .field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; font-weight: 500; }
-  .field input, .field select, .field textarea {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
-    color: var(--text); font-size: 13px; padding: 8px 10px; font-family: inherit; transition: .15s;
-  }
+  .field input, .field select, .field textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; padding: 8px 10px; font-family: inherit; transition: .15s; }
   .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
   .field select option { background: var(--surface2); }
   .field textarea { resize: vertical; min-height: 80px; }
 
-  /* Checkboxes de daños */
   .damage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .damage-option { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; cursor: pointer; transition: .15s; }
   .damage-option:hover { border-color: var(--accent); }
   .damage-option input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
   .damage-option span { font-size: 13px; color: var(--text); }
   .damage-option.checked { border-color: var(--accent); background: rgba(232,255,77,.07); }
+
+  .lights-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 4px; }
+  .light-option { display: flex; flex-direction: column; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 4px; cursor: pointer; transition: .15s; color: var(--muted); }
+  .light-option:hover { border-color: var(--accent); color: var(--text); }
+  .light-option.selected { border-color: var(--accent); background: rgba(232,255,77,.07); color: var(--accent); }
+  .light-option svg { width: 32px; height: 32px; }
+  .light-option span { font-size: 10px; text-align: center; line-height: 1.2; color: inherit; }
 
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: .15s; font-family: inherit; }
   .btn:active { transform: scale(.97); }
@@ -77,7 +72,6 @@
   .btn:disabled { opacity: .5; cursor: not-allowed; }
 
   .output { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: var(--text); min-height: 80px; }
-
   .loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; padding: 8px 0; }
   .dots { display: flex; gap: 4px; }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: blink 1s infinite; }
@@ -97,15 +91,7 @@
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: .3s; pointer-events: none; z-index: 99; white-space: nowrap; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* Luces del tablero */
-  .lights-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  .light-option { display: flex; flex-direction: column; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 4px; cursor: pointer; transition: .15s; color: var(--muted); }
-  .light-option:hover { border-color: var(--accent); color: var(--text); }
-  .light-option.selected { border-color: var(--accent); background: rgba(232,255,77,.07); color: var(--accent); }
-  .light-option svg { width: 32px; height: 32px; }
-  .light-option span { font-size: 10px; text-align: center; line-height: 1.2; color: inherit; }
-
-  @media (max-width: 480px) { .lights-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } .lights-grid { grid-template-columns: repeat(4, 1fr); } .content { padding: 12px; } }
 </style>
 </head>
 <body>
@@ -118,17 +104,14 @@
         <path d="m4.93 4.93 2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/>
       </svg>
     </div>
-    <div>
-      <h1>Analizador de Lotes</h1>
-      <p>Copart · IAAI · Manheim</p>
-    </div>
+    <div><h1>Analizador de Lotes</h1><p>Copart · IAAI · Manheim</p></div>
   </div>
   <span class="ai-badge">✦ IA</span>
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="showTab('analyzer', this)">Analizar</button>
-  <button class="tab" onclick="showTab('history', this)">Historial</button>
+  <button class="tab active" onclick="showTab('analyzer',this)">Analizar</button>
+  <button class="tab" onclick="showTab('history',this)">Historial</button>
 </div>
 
 <div class="content">
@@ -144,7 +127,7 @@
       </div>
       <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(event)">
       <img id="preview" class="preview">
-      <div id="change-row" style="display:none; margin-top:8px;">
+      <div id="change-row" style="display:none;margin-top:8px">
         <button class="btn btn-outline" onclick="resetImage()">Cambiar foto</button>
       </div>
     </div>
@@ -153,23 +136,16 @@
     <div class="card">
       <div class="card-title"><span class="step-num">2</span> Datos del vehículo</div>
 
-      <!-- CAMPO DE PEGADO RÁPIDO -->
-      <div class="field" style="margin-bottom:14px;">
-        <label>Pega el título y lote de Copart/IAAI aquí</label>
-        <div style="display:flex;gap:6px;align-items:flex-start">
-          <textarea id="quick-paste" rows="2" placeholder="Ej: 49180866 - 2012 TOYOTA PRIUS FOUR" style="flex:1;font-size:13px;background:var(--surface2);border:1px solid var(--accent);border-radius:var(--radius-sm);color:var(--text);padding:8px 10px;font-family:inherit;resize:none;" oninput="parsePaste(this.value)"></textarea>
-          <button class="btn btn-outline" style="padding:8px 12px;font-size:12px;white-space:nowrap" onclick="document.getElementById('quick-paste').value='';clearParsed()">✕ Limpiar</button>
+      <div class="field" style="margin-bottom:14px">
+        <label>Pega el lote y título de Copart/IAAI aquí</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="quick-paste" placeholder="Ej: 49180866 - 2012 TOYOTA PRIUS FOUR" style="flex:1;background:var(--surface2);border:1.5px solid var(--accent);border-radius:var(--radius-sm);color:var(--text);font-size:13px;padding:8px 10px;font-family:inherit" oninput="parsePaste(this.value)">
+          <button class="btn btn-outline" style="padding:8px 12px;font-size:12px;white-space:nowrap" onclick="document.getElementById('quick-paste').value='';clearParsed()">✕</button>
         </div>
-        <p style="font-size:11px;color:var(--muted);margin-top:4px;">Los campos se llenan automáticamente al pegar</p>
+        <p style="font-size:11px;color:var(--muted);margin-top:4px">Lote, año, marca y modelo se llenan automáticamente</p>
       </div>
 
-      <div class="grid2">
-        <div class="field"><label>Número de lote</label><input id="lot" placeholder="55373136"></div>
-        <div class="field"><label>Año</label><input id="year" placeholder="2019"></div>
-        <div class="field"><label>Marca</label><input id="make" placeholder="Chevrolet"></div>
-        <div class="field"><label>Modelo</label><input id="model" placeholder="Camaro LS"></div>
-      </div>
-      <div class="field"><label>VIN</label><input id="vin" placeholder="1G1FB1RS4K0110401"></div>
+      <div class="field"><label>VIN</label><input id="vin" placeholder="JTDKN3DU1C5464267"></div>
       <div class="grid2">
         <div class="field"><label>Tipo de título</label>
           <select id="title-type">
@@ -182,167 +158,86 @@
         </div>
       </div>
       <div class="grid2">
-        <div class="field"><label>Millas</label><input id="miles" placeholder="80,422"></div>
+        <div class="field"><label>Millas</label><input id="miles" placeholder="166,069"></div>
         <div class="field"><label>Estado de millas</label>
           <select id="miles-status"><option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option></select>
         </div>
       </div>
 
-      <!-- DAÑOS MÚLTIPLES -->
       <div class="field">
-        <label style="margin-bottom:8px;">Tipo de daño (selecciona todos los que apliquen)</label>
+        <label style="margin-bottom:8px">Tipo de daño (selecciona todos los que apliquen)</label>
         <div class="damage-grid" id="damage-grid">
-          <label class="damage-option" onclick="toggleDamage(this)">
-            <input type="checkbox" value="Granizo"> <span>Granizo</span>
-          </label>
-          <label class="damage-option" onclick="toggleDamage(this)">
-            <input type="checkbox" value="Colisión frontal"> <span>Colisión frontal</span>
-          </label>
-          <label class="damage-option" onclick="toggleDamage(this)">
-            <input type="checkbox" value="Colisión trasera"> <span>Colisión trasera</span>
-          </label>
-          <label class="damage-option" onclick="toggleDamage(this)">
-            <input type="checkbox" value="Colisión lateral"> <span>Colisión lateral</span>
-          </label>
-          <label class="damage-option" onclick="toggleDamage(this)">
-            <input type="checkbox" value="Volcado"> <span>Volcado</span>
-          </label>
-          <label class="damage-option" onclick="toggleDamage(this)">
-            <input type="checkbox" value="Inundación/Agua"> <span>Inundación/Agua</span>
-          </label>
-          <label class="damage-option" onclick="toggleDamage(this)">
-            <input type="checkbox" value="Fuego"> <span>Fuego</span>
-          </label>
-          <label class="damage-option" onclick="toggleDamage(this)">
-            <input type="checkbox" value="Vandalismo"> <span>Vandalismo</span>
-          </label>
-          <label class="damage-option" onclick="toggleDamage(this)">
-            <input type="checkbox" value="Mecánico"> <span>Mecánico</span>
-          </label>
-          <label class="damage-option" onclick="toggleDamage(this)">
-            <input type="checkbox" value="Normal Wear"> <span>Normal Wear</span>
-          </label>
-          <label class="damage-option" onclick="toggleDamage(this)">
-            <input type="checkbox" value="Undercarriage"> <span>Undercarriage</span>
-          </label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Granizo"><span>Granizo</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Colisión frontal"><span>Colisión frontal</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Colisión trasera"><span>Colisión trasera</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Colisión lateral"><span>Colisión lateral</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Volcado"><span>Volcado</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Inundación/Agua"><span>Inundación/Agua</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Fuego"><span>Fuego</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Vandalismo"><span>Vandalismo</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Mecánico"><span>Mecánico</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Undercarriage"><span>Undercarriage</span></label>
+          <label class="damage-option" onclick="toggleDamage(this)"><input type="checkbox" value="Normal Wear"><span>Normal Wear</span></label>
         </div>
       </div>
     </div>
 
-    <!-- PASO 3: TU ANALISIS -->
+    <!-- PASO 3: ANÁLISIS -->
     <div class="card">
       <div class="card-title"><span class="step-num">3</span> Tu punto de vista</div>
-      <div class="field">
-        <label style="margin-bottom:8px;">Luces del tablero</label>
-        <input type="hidden" id="dash-lights" value="none">
-        <div class="lights-grid" id="lights-grid">
 
+      <div class="field">
+        <label style="margin-bottom:8px">Luces del tablero</label>
+        <input type="hidden" id="dash-lights" value="none">
+        <div class="lights-grid">
           <div class="light-option selected" data-value="none" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="16" stroke="#555" stroke-width="2" stroke-dasharray="4 3"/>
-              <line x1="12" y1="12" x2="28" y2="28" stroke="#555" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="16" stroke="#555" stroke-width="2" stroke-dasharray="4 3"/><line x1="12" y1="12" x2="28" y2="28" stroke="#555" stroke-width="2.5" stroke-linecap="round"/></svg>
             <span>Sin luces</span>
           </div>
-
           <div class="light-option" data-value="check-engine" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 28 L14 16 Q16 12 20 12 Q24 12 26 16 L32 28 Q33 30 31 30 L9 30 Q7 30 8 28Z" stroke="currentColor" stroke-width="2" fill="none"/>
-              <path d="M15 18 Q17 14 20 14 Q23 14 25 18" stroke="currentColor" stroke-width="1.5" fill="none"/>
-              <circle cx="20" cy="24" r="1.5" fill="currentColor"/>
-              <line x1="20" y1="19" x2="20" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
+            <svg viewBox="0 0 40 40" fill="none"><path d="M8 28 L14 16 Q16 12 20 12 Q24 12 26 16 L32 28 Q33 30 31 30 L9 30 Q7 30 8 28Z" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="24" r="1.5" fill="currentColor"/><line x1="20" y1="19" x2="20" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             <span>Check Engine</span>
           </div>
-
           <div class="light-option" data-value="airbag" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="10" stroke="currentColor" stroke-width="2"/>
-              <path d="M20 10 Q26 14 26 20 Q26 26 20 30 Q14 26 14 20 Q14 14 20 10Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-              <circle cx="20" cy="20" r="2.5" fill="currentColor"/>
-              <line x1="20" y1="6" x2="20" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <text x="20" y="36" text-anchor="middle" font-size="7" fill="currentColor" font-family="sans-serif" font-weight="bold">SRS</text>
-            </svg>
-            <span>Airbag / SRS</span>
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="10" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="20" r="2.5" fill="currentColor"/><text x="20" y="36" text-anchor="middle" font-size="7" fill="currentColor" font-family="sans-serif" font-weight="bold">SRS</text></svg>
+            <span>Airbag/SRS</span>
           </div>
-
           <div class="light-option" data-value="abs" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2"/>
-              <text x="20" y="24" text-anchor="middle" font-size="9" fill="currentColor" font-family="sans-serif" font-weight="bold">ABS</text>
-            </svg>
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2"/><text x="20" y="24" text-anchor="middle" font-size="9" fill="currentColor" font-family="sans-serif" font-weight="bold">ABS</text></svg>
             <span>ABS</span>
           </div>
-
           <div class="light-option" data-value="transmission" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="10" y="14" width="20" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
-              <line x1="15" y1="14" x2="15" y2="26" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="20" y1="14" x2="20" y2="26" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="25" y1="14" x2="25" y2="26" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="10" y1="20" x2="30" y2="20" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="20" y1="26" x2="20" y2="32" stroke="currentColor" stroke-width="2"/>
-              <circle cx="20" cy="33" r="1.5" fill="currentColor"/>
-            </svg>
+            <svg viewBox="0 0 40 40" fill="none"><rect x="10" y="14" width="20" height="12" rx="2" stroke="currentColor" stroke-width="2"/><line x1="15" y1="14" x2="15" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="14" x2="20" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="25" y1="14" x2="25" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="10" y1="20" x2="30" y2="20" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="26" x2="20" y2="32" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="33" r="1.5" fill="currentColor"/></svg>
             <span>Transmisión</span>
           </div>
-
           <div class="light-option" data-value="battery" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="7" y="14" width="24" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
-              <rect x="31" y="18" width="3" height="6" rx="1" fill="currentColor"/>
-              <line x1="13" y1="19" x2="13" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <line x1="11" y1="21" x2="15" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <line x1="23" y1="21" x2="27" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
+            <svg viewBox="0 0 40 40" fill="none"><rect x="7" y="14" width="24" height="14" rx="2" stroke="currentColor" stroke-width="2"/><rect x="31" y="18" width="3" height="6" rx="1" fill="currentColor"/><line x1="13" y1="19" x2="13" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="11" y1="21" x2="15" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="23" y1="21" x2="27" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             <span>Batería</span>
           </div>
-
           <div class="light-option" data-value="oil" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M14 28 L14 18 Q14 14 18 14 L22 14 Q24 14 25 16 L28 20 Q30 22 28 24 L26 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
-              <path d="M14 28 Q14 32 18 32 L22 32 Q26 32 26 28 L26 24 L14 24 Z" stroke="currentColor" stroke-width="2" fill="none"/>
-              <line x1="14" y1="10" x2="14" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <line x1="11" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
+            <svg viewBox="0 0 40 40" fill="none"><path d="M14 28 L14 18 Q14 14 18 14 L22 14 Q24 14 25 16 L28 20 Q30 22 28 24 L26 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 28 Q14 32 18 32 L22 32 Q26 32 26 28 L26 24 L14 24 Z" stroke="currentColor" stroke-width="2"/><line x1="14" y1="10" x2="14" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="11" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             <span>Aceite</span>
           </div>
-
           <div class="light-option" data-value="temperature" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 8 Q24 10 24 16 L24 26 Q24 32 20 34 Q16 32 16 26 L16 16 Q16 10 20 8Z" stroke="currentColor" stroke-width="2" fill="none"/>
-              <line x1="24" y1="14" x2="27" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="24" y1="18" x2="27" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="24" y1="22" x2="27" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <circle cx="20" cy="28" r="3" fill="currentColor"/>
-            </svg>
+            <svg viewBox="0 0 40 40" fill="none"><path d="M20 8 Q24 10 24 16 L24 26 Q24 32 20 34 Q16 32 16 26 L16 16 Q16 10 20 8Z" stroke="currentColor" stroke-width="2"/><line x1="24" y1="14" x2="27" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="24" y1="18" x2="27" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="20" cy="28" r="3" fill="currentColor"/></svg>
             <span>Temperatura</span>
           </div>
-
           <div class="light-option" data-value="multiple" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="20" r="5" stroke="currentColor" stroke-width="2"/>
-              <circle cx="28" cy="20" r="5" stroke="currentColor" stroke-width="2"/>
-              <circle cx="20" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
-              <circle cx="20" cy="28" r="5" stroke="currentColor" stroke-width="2"/>
-            </svg>
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="12" cy="20" r="5" stroke="currentColor" stroke-width="2"/><circle cx="28" cy="20" r="5" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="12" r="5" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="28" r="5" stroke="currentColor" stroke-width="2"/></svg>
             <span>Múltiples</span>
           </div>
-
           <div class="light-option" data-value="custom" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"/>
-              <text x="20" y="25" text-anchor="middle" font-size="16" fill="currentColor" font-family="sans-serif">?</text>
-            </svg>
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"/><text x="20" y="25" text-anchor="middle" font-size="16" fill="currentColor" font-family="sans-serif">?</text></svg>
             <span>Otras</span>
           </div>
-
         </div>
       </div>
+
       <div class="field" id="lights-custom-row" style="display:none">
         <label>Especificar luces</label>
         <input id="lights-custom" placeholder="Ej: luz de TPMS, ESP...">
       </div>
+
       <div class="field">
         <label>Tus observaciones — escríbelas como quieras, la IA las mejora</label>
         <textarea id="observations" placeholder="Ej: enciende bien, transmision engrena, granizo en techo y capo, interior bien, llantas buenas..."></textarea>
@@ -393,6 +288,24 @@ let currentOutput = '';
 let lotHistory = [];
 try { lotHistory = JSON.parse(localStorage.getItem('lot-history') || '[]'); } catch(e){}
 
+function parsePaste(text) {
+  if (!text.trim()) return;
+  const line = text.trim();
+  // Formato esperado: 49180866 - 2012 TOYOTA PRIUS FOUR
+  const match = line.match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
+  if (match) {
+    const parts = match[3].trim().split(/\s+/);
+    document.getElementById('lot').value = match[1];
+    document.getElementById('year').value = match[2];
+    document.getElementById('make').value = parts[0];
+    document.getElementById('model').value = parts.slice(1).join(' ');
+  }
+}
+
+function clearParsed() {
+  ['lot','year','make','model'].forEach(id => document.getElementById(id).value = '');
+}
+
 function toggleDamage(label) {
   const cb = label.querySelector('input[type="checkbox"]');
   cb.checked = !cb.checked;
@@ -400,37 +313,16 @@ function toggleDamage(label) {
 }
 
 function getSelectedDamages() {
-  const checked = document.querySelectorAll('#damage-grid input[type="checkbox"]:checked');
-  return Array.from(checked).map(cb => cb.value);
+  return Array.from(document.querySelectorAll('#damage-grid input[type="checkbox"]:checked')).map(cb => cb.value);
 }
 
-function parsePaste(text) {
-  if (!text.trim()) return;
-  const line = text.trim().split('\n')[0].trim();
-
-  // Formato: 49180866 - 2012 TOYOTA PRIUS FOUR
-  const match = line.match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(\S+)\s+(.+)$/);
-  if (match) {
-    document.getElementById('lot').value = match[1].trim();
-    document.getElementById('year').value = match[2].trim();
-    document.getElementById('make').value = match[3].trim();
-    document.getElementById('model').value = match[4].trim();
-  }
-}
-
-function clearParsed() {
-  ['lot','year','make','model','vin'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-}
+function selectLight(el) {
   document.querySelectorAll('.light-option').forEach(x => x.classList.remove('selected'));
   el.classList.add('selected');
   const val = el.dataset.value;
   document.getElementById('dash-lights').value = val;
   document.getElementById('lights-custom-row').style.display = val === 'custom' ? 'block' : 'none';
 }
-
-function toggleCustomLights() {}
 
 function showTab(t, el) {
   document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
@@ -465,37 +357,32 @@ function hideError(id) { document.getElementById(id).style.display = 'none'; }
 
 async function generateAnalysis() {
   const get = id => document.getElementById(id).value;
-  const damages = getSelectedDamages();
   hideError('error-gen');
-
   document.getElementById('output-card').style.display = 'block';
   document.getElementById('output-loading').style.display = 'flex';
   document.getElementById('output-text').textContent = '';
   document.getElementById('output-btns').style.display = 'none';
   const btn = document.getElementById('gen-btn');
   btn.disabled = true;
-
   try {
-    const fields = {
-      lot: get('lot'), year: get('year'), make: get('make'), model: get('model'),
-      vin: get('vin'), titleType: get('title-type'), auction: get('auction'),
-      miles: get('miles'), milesStatus: get('miles-status'),
-      damages: damages,
-      dashLights: get('dash-lights'), dashCustom: get('lights-custom'),
-      observations: get('observations'), offerMin: get('offer-min'),
-      offerMax: get('offer-max'),
-      reportLink: 'https://t.me/reporteexpressbot'
-    };
-
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: 'generate', fields })
+      body: JSON.stringify({
+        mode: 'generate',
+        fields: {
+          lot: get('lot'), year: get('year'), make: get('make'), model: get('model'),
+          vin: get('vin'), titleType: get('title-type'), auction: get('auction'),
+          miles: get('miles'), milesStatus: get('miles-status'),
+          damages: getSelectedDamages(),
+          dashLights: get('dash-lights'), dashCustom: get('lights-custom'),
+          observations: get('observations'),
+          offerMin: get('offer-min'), offerMax: get('offer-max')
+        }
+      })
     });
-
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error desconocido');
-
     currentOutput = data.result.trim();
     document.getElementById('output-text').textContent = currentOutput;
     document.getElementById('output-btns').style.display = 'flex';
@@ -503,7 +390,6 @@ async function generateAnalysis() {
     showError('error-gen', `Error: ${err.message}`);
     document.getElementById('output-card').style.display = 'none';
   }
-
   document.getElementById('output-loading').style.display = 'none';
   btn.disabled = false;
 }
@@ -512,12 +398,7 @@ function copyOutput() {
   if (!currentOutput) return;
   navigator.clipboard.writeText(currentOutput)
     .then(() => showToast('¡Copiado para WhatsApp ✓'))
-    .catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = currentOutput; document.body.appendChild(ta);
-      ta.select(); document.execCommand('copy');
-      document.body.removeChild(ta); showToast('¡Copiado ✓');
-    });
+    .catch(() => { const ta = document.createElement('textarea'); ta.value = currentOutput; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast('¡Copiado ✓'); });
 }
 
 function saveToHistory() {
@@ -535,23 +416,16 @@ function saveToHistory() {
 
 function renderHistory() {
   const container = document.getElementById('history-list');
-  if (!lotHistory.length) {
-    container.innerHTML = '<div class="empty">No hay análisis guardados aún</div>';
-    return;
-  }
+  if (!lotHistory.length) { container.innerHTML = '<div class="empty">No hay análisis guardados aún</div>'; return; }
   container.innerHTML = lotHistory.map(h => `
     <div class="history-item">
-      <div class="history-header">
-        <span class="history-title">${h.title}</span>
-        <span class="history-date">${h.date}</span>
-      </div>
-      <div class="history-preview">${h.text.substring(0, 100)}...</div>
+      <div class="history-header"><span class="history-title">${h.title}</span><span class="history-date">${h.date}</span></div>
+      <div class="history-preview">${h.text.substring(0,100)}...</div>
       <div class="btn-row">
         <button class="btn btn-outline" style="font-size:12px;padding:6px 12px" onclick="copyHistoryItem(${h.id})">Copiar</button>
         <button class="btn btn-outline" style="font-size:12px;padding:6px 12px;color:var(--danger)" onclick="deleteHistoryItem(${h.id})">Eliminar</button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
 function copyHistoryItem(id) {
@@ -567,12 +441,15 @@ function deleteHistoryItem(id) {
 
 function resetAll() {
   resetImage();
-  ['lot','year','make','model','vin','miles','observations','offer-min','offer-max','lights-custom']
+  ['quick-paste','lot','year','make','model','vin','miles','observations','offer-min','offer-max','lights-custom']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb => {
-    cb.checked = false;
-    cb.closest('.damage-option').classList.remove('checked');
+    cb.checked = false; cb.closest('.damage-option').classList.remove('checked');
   });
+  document.querySelectorAll('.light-option').forEach(x => x.classList.remove('selected'));
+  document.querySelector('.light-option[data-value="none"]').classList.add('selected');
+  document.getElementById('dash-lights').value = 'none';
+  document.getElementById('lights-custom-row').style.display = 'none';
   currentOutput = '';
   document.getElementById('output-card').style.display = 'none';
 }
