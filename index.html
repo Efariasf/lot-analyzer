@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analizador de Lotes</title>
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="manifest.json">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --text: #f0f0f0;
+    --muted: #888;
+    --accent: #e8ff4d;
+    --accent-dark: #c8df2d;
+    --danger: #ff5c5c;
+    --success: #4dff91;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; min-height: 100vh; }
+
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .logo { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo svg { width: 18px; height: 18px; }
+  .header h1 { font-size: 16px; font-weight: 600; }
+  .header p { font-size: 11px; color: var(--muted); }
+  .ai-badge { background: #1a1a2e; border: 1px solid #333; color: #a78bfa; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+
+  .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; font-weight: 500; color: var(--muted); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; transition: .15s; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .content { padding: 16px; max-width: 600px; margin: 0 auto; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .step-num { background: var(--accent); color: #000; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+
+  .upload-zone { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 28px 16px; text-align: center; cursor: pointer; transition: .15s; }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(232,255,77,.04); }
+  .upload-zone svg { width: 32px; height: 32px; color: var(--muted); margin-bottom: 8px; }
+  .upload-zone p { color: var(--muted); font-size: 13px; }
+  .upload-zone span { font-size: 11px; color: #555; }
+  .preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 10px; display: none; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .field { margin-bottom: 8px; }
+  .field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; font-weight: 500; }
+  .field input, .field select, .field textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 13px; padding: 8px 10px; font-family: inherit; transition: .15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+  .field select option { background: var(--surface2); }
+  .field textarea { resize: vertical; min-height: 65px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: .15s; font-family: inherit; }
+  .btn:active { transform: scale(.97); }
+  .btn-accent { background: var(--accent); color: #000; }
+  .btn-accent:hover { background: var(--accent-dark); }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { background: var(--surface2); }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .output { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: var(--text); min-height: 80px; }
+
+  .loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; padding: 8px 0; }
+  .dots { display: flex; gap: 4px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: blink 1s infinite; }
+  .dot:nth-child(2) { animation-delay: .2s; }
+  .dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,100%{opacity:.2} 50%{opacity:1} }
+
+  .error { background: rgba(255,92,92,.1); border: 1px solid rgba(255,92,92,.3); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; color: var(--danger); margin-top: 8px; display: none; }
+  .chip { background: rgba(232,255,77,.12); color: var(--accent); font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; display: none; }
+
+  .history-item { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; }
+  .history-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+  .history-title { font-size: 13px; font-weight: 600; }
+  .history-date { font-size: 11px; color: var(--muted); }
+  .history-preview { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
+
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: .3s; pointer-events: none; z-index: 99; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } .content { padding: 12px; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+        <path d="m4.93 4.93 2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Analizador de Lotes</h1>
+      <p>Copart · IAAI · Manheim</p>
+    </div>
+  </div>
+  <span class="ai-badge">✦ IA</span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('analyzer', this)">Analizar</button>
+  <button class="tab" onclick="showTab('history', this)">Historial</button>
+</div>
+
+<div class="content">
+
+  <!-- ANALYZER TAB -->
+  <div id="tab-analyzer">
+
+    <div class="card">
+      <div class="card-title"><span class="step-num">1</span> Foto del lote</div>
+      <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Toca para subir la foto del lote</p>
+        <span>JPG, PNG — Copart / IAAI / Manheim</span>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(event)">
+      <img id="preview" class="preview">
+      <div class="btn-row" id="analyze-row" style="display:none">
+        <button class="btn btn-accent" id="analyze-btn" onclick="analyzeImage()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          Extraer datos con IA
+        </button>
+        <button class="btn btn-outline" onclick="resetImage()">Cambiar foto</button>
+      </div>
+      <div class="error" id="error-img"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="step-num">2</span> Datos del vehículo
+        <span class="chip" id="ai-chip">✦ Completado por IA</span>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Número de lote</label><input id="lot" placeholder="55373136"></div>
+        <div class="field"><label>Año</label><input id="year" placeholder="2019"></div>
+        <div class="field"><label>Marca</label><input id="make" placeholder="Chevrolet"></div>
+        <div class="field"><label>Modelo</label><input id="model" placeholder="Camaro LS"></div>
+      </div>
+      <div class="field"><label>VIN</label><input id="vin" placeholder="1G1FB1RS4K0110401"></div>
+      <div class="grid2">
+        <div class="field"><label>Tipo de título</label>
+          <select id="title-type">
+            <option>Clean</option><option>Salvage</option><option>Rebuilt</option>
+            <option>Parts Only</option><option>Certificate of Destruction</option>
+          </select>
+        </div>
+        <div class="field"><label>Subasta</label>
+          <select id="auction"><option>Copart</option><option>IAAI</option><option>Manheim</option></select>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Millas</label><input id="miles" placeholder="80,422"></div>
+        <div class="field"><label>Estado de millas</label>
+          <select id="miles-status"><option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="step-num">3</span> Tu análisis</div>
+      <div class="field"><label>Tipo de daño principal</label>
+        <select id="damage-type">
+          <option>Granizo</option><option>Colisión frontal</option><option>Colisión trasera</option>
+          <option>Colisión lateral</option><option>Volcado</option><option>Inundación/Agua</option>
+          <option>Fuego</option><option>Vandalismo</option><option>Mecánico</option><option>Normal Wear</option>
+        </select>
+      </div>
+      <div class="field"><label>Luces del tablero</label>
+        <select id="dash-lights" onchange="toggleCustomLights()">
+          <option value="none">Sin luces encendidas</option>
+          <option value="check-engine">Check engine</option>
+          <option value="airbag">Airbag / SRS</option>
+          <option value="transmission">Transmisión</option>
+          <option value="abs">ABS / Frenos</option>
+          <option value="multiple">Múltiples luces</option>
+          <option value="custom">Otras (especificar)</option>
+        </select>
+      </div>
+      <div class="field" id="lights-custom-row" style="display:none">
+        <label>Especificar luces</label>
+        <input id="lights-custom" placeholder="Ej: luz de batería, aceite...">
+      </div>
+      <div class="field"><label>Observaciones (puntos clave tuyos)</label>
+        <textarea id="observations" placeholder="Ej: Enciende bien, transmisión engrena, carrocería en buen estado..."></textarea>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Oferta mínima ($)</label><input id="offer-min" type="number" placeholder="4500"></div>
+        <div class="field"><label>Oferta máxima ($)</label><input id="offer-max" type="number" placeholder="5500"></div>
+      </div>
+      <div class="field"><label>Link del reporte (opcional)</label><input id="report-link" placeholder="https://t.me/reportee..."></div>
+      <div class="btn-row">
+        <button class="btn btn-accent" id="gen-btn" onclick="generateAnalysis()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Generar análisis
+        </button>
+      </div>
+      <div class="error" id="error-gen"></div>
+    </div>
+
+    <div class="card" id="output-card" style="display:none">
+      <div class="card-title"><span class="step-num">4</span> Listo para WhatsApp</div>
+      <div class="loading" id="output-loading" style="display:none">
+        <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <span>Redactando análisis...</span>
+      </div>
+      <div class="output" id="output-text"></div>
+      <div class="btn-row" id="output-btns" style="display:none">
+        <button class="btn btn-accent" onclick="copyOutput()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copiar para WhatsApp
+        </button>
+        <button class="btn btn-outline" onclick="saveToHistory()">Guardar</button>
+        <button class="btn btn-outline" onclick="resetAll()">Nuevo</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div id="tab-history" style="display:none">
+    <div id="history-list"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let imageBase64 = null;
+let imageMediaType = 'image/jpeg';
+let currentOutput = '';
+let lotHistory = [];
+
+try { lotHistory = JSON.parse(localStorage.getItem('lot-history') || '[]'); } catch(e){}
+
+function toggleCustomLights() {
+  document.getElementById('lights-custom-row').style.display =
+    document.getElementById('dash-lights').value === 'custom' ? 'block' : 'none';
+}
+
+function showTab(t, el) {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-analyzer').style.display = t === 'analyzer' ? 'block' : 'none';
+  document.getElementById('tab-history').style.display = t === 'history' ? 'block' : 'none';
+  if (t === 'history') renderHistory();
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+}
+function hideError(id) { document.getElementById(id).style.display = 'none'; }
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  hideError('error-img');
+  imageMediaType = ['image/jpeg','image/png','image/gif','image/webp'].includes(file.type) ? file.type : 'image/jpeg';
+  const reader = new FileReader();
+  reader.onload = ev => {
+    imageBase64 = ev.target.result.split(',')[1];
+    document.getElementById('preview').src = ev.target.result;
+    document.getElementById('preview').style.display = 'block';
+    document.getElementById('dropzone').style.display = 'none';
+    document.getElementById('analyze-row').style.display = 'flex';
+  };
+  reader.onerror = () => showError('error-img', 'No se pudo leer el archivo.');
+  reader.readAsDataURL(file);
+}
+
+function resetImage() {
+  imageBase64 = null;
+  document.getElementById('preview').style.display = 'none';
+  document.getElementById('dropzone').style.display = 'block';
+  document.getElementById('analyze-row').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  hideError('error-img');
+}
+
+async function callAPI(body) {
+  const res = await fetch('/api/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error desconocido');
+  return data.result;
+}
+
+async function analyzeImage() {
+  if (!imageBase64) { showError('error-img', 'Primero sube una imagen.'); return; }
+  hideError('error-img');
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true; btn.textContent = 'Analizando...';
+  try {
+    const result = await callAPI({ imageBase64, mediaType: imageMediaType, mode: 'extract' });
+    const clean = result.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    const set = (id, val) => { if (val) document.getElementById(id).value = val; };
+    set('lot', parsed.lot); set('year', parsed.year); set('make', parsed.make);
+    set('model', parsed.model); set('vin', parsed.vin); set('miles', parsed.miles);
+    set('observations', parsed.initial_observations);
+    const setSelect = (id, val) => {
+      if (!val) return;
+      const sel = document.getElementById(id);
+      for (let o of sel.options) if (o.value === val || o.text === val) { sel.value = o.value; break; }
+    };
+    setSelect('miles-status', parsed.miles_status);
+    setSelect('title-type', parsed.title_type);
+    setSelect('auction', parsed.auction);
+    if (parsed.damage) {
+      const sel = document.getElementById('damage-type');
+      for (let o of sel.options) if (o.text.toLowerCase().includes((parsed.damage || '').toLowerCase())) { sel.value = o.value; break; }
+    }
+    document.getElementById('ai-chip').style.display = 'inline';
+    showToast('Datos extraídos ✓');
+  } catch(err) {
+    showError('error-img', `Error: ${err.message}`);
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Extraer datos con IA';
+}
+
+async function generateAnalysis() {
+  const get = id => document.getElementById(id).value;
+  hideError('error-gen');
+  document.getElementById('output-card').style.display = 'block';
+  document.getElementById('output-loading').style.display = 'flex';
+  document.getElementById('output-text').textContent = '';
+  document.getElementById('output-btns').style.display = 'none';
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  try {
+    const fields = {
+      lot: get('lot'), year: get('year'), make: get('make'), model: get('model'),
+      vin: get('vin'), titleType: get('title-type'), auction: get('auction'),
+      miles: get('miles'), milesStatus: get('miles-status'), damage: get('damage-type'),
+      dashLights: get('dash-lights'), dashCustom: get('lights-custom'),
+      observations: get('observations'), offerMin: get('offer-min'),
+      offerMax: get('offer-max'), reportLink: get('report-link')
+    };
+    currentOutput = await callAPI({ mode: 'generate', fields });
+    document.getElementById('output-text').textContent = currentOutput;
+    document.getElementById('output-btns').style.display = 'flex';
+  } catch(err) {
+    showError('error-gen', `Error: ${err.message}`);
+    document.getElementById('output-card').style.display = 'none';
+  }
+  document.getElementById('output-loading').style.display = 'none';
+  btn.disabled = false;
+}
+
+function copyOutput() {
+  if (!currentOutput) return;
+  navigator.clipboard.writeText(currentOutput)
+    .then(() => showToast('¡Copiado para WhatsApp ✓'))
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = currentOutput; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta); showToast('¡Copiado ✓');
+    });
+}
+
+function saveToHistory() {
+  if (!currentOutput) return;
+  const entry = {
+    id: Date.now(),
+    title: `${document.getElementById('lot').value} · ${document.getElementById('year').value} ${document.getElementById('make').value} ${document.getElementById('model').value}`,
+    date: new Date().toLocaleDateString('es-PA'),
+    text: currentOutput
+  };
+  lotHistory.unshift(entry);
+  try { localStorage.setItem('lot-history', JSON.stringify(lotHistory)); } catch(e){}
+  showToast('Guardado ✓');
+}
+
+function renderHistory() {
+  const container = document.getElementById('history-list');
+  if (!lotHistory.length) {
+    container.innerHTML = '<div class="empty">No hay análisis guardados aún</div>';
+    return;
+  }
+  container.innerHTML = lotHistory.map(h => `
+    <div class="history-item">
+      <div class="history-header">
+        <span class="history-title">${h.title}</span>
+        <span class="history-date">${h.date}</span>
+      </div>
+      <div class="history-preview">${h.text.substring(0, 100)}...</div>
+      <div class="btn-row">
+        <button class="btn btn-outline" style="font-size:12px;padding:6px 12px" onclick="copyHistoryItem(${h.id})">Copiar</button>
+        <button class="btn btn-outline" style="font-size:12px;padding:6px 12px;color:var(--danger)" onclick="deleteHistoryItem(${h.id})">Eliminar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyHistoryItem(id) {
+  const item = lotHistory.find(h => h.id === id);
+  if (item) navigator.clipboard.writeText(item.text).then(() => showToast('Copiado ✓'));
+}
+
+function deleteHistoryItem(id) {
+  lotHistory = lotHistory.filter(h => h.id !== id);
+  try { localStorage.setItem('lot-history', JSON.stringify(lotHistory)); } catch(e){}
+  renderHistory();
+}
+
+function resetAll() {
+  resetImage();
+  ['lot','year','make','model','vin','miles','observations','offer-min','offer-max','report-link','lights-custom']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  currentOutput = '';
+  document.getElementById('output-card').style.display = 'none';
+  document.getElementById('ai-chip').style.display = 'none';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
