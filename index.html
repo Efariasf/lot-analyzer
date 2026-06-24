@@ -152,6 +152,17 @@
     <!-- PASO 2: DATOS -->
     <div class="card">
       <div class="card-title"><span class="step-num">2</span> Datos del vehículo</div>
+
+      <!-- CAMPO DE PEGADO RÁPIDO -->
+      <div class="field" style="margin-bottom:14px;">
+        <label>Pega el título y lote de Copart/IAAI aquí</label>
+        <div style="display:flex;gap:6px;align-items:flex-start">
+          <textarea id="quick-paste" rows="2" placeholder="Ej: 49180866 - 2012 TOYOTA PRIUS FOUR" style="flex:1;font-size:13px;background:var(--surface2);border:1px solid var(--accent);border-radius:var(--radius-sm);color:var(--text);padding:8px 10px;font-family:inherit;resize:none;" oninput="parsePaste(this.value)"></textarea>
+          <button class="btn btn-outline" style="padding:8px 12px;font-size:12px;white-space:nowrap" onclick="document.getElementById('quick-paste').value='';clearParsed()">✕ Limpiar</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:4px;">Los campos se llenan automáticamente al pegar</p>
+      </div>
+
       <div class="grid2">
         <div class="field"><label>Número de lote</label><input id="lot" placeholder="55373136"></div>
         <div class="field"><label>Año</label><input id="year" placeholder="2019"></div>
@@ -393,7 +404,25 @@ function getSelectedDamages() {
   return Array.from(checked).map(cb => cb.value);
 }
 
-function selectLight(el) {
+function parsePaste(text) {
+  if (!text.trim()) return;
+  const line = text.trim().split('\n')[0].trim();
+
+  // Formato: 49180866 - 2012 TOYOTA PRIUS FOUR
+  const match = line.match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(\S+)\s+(.+)$/);
+  if (match) {
+    document.getElementById('lot').value = match[1].trim();
+    document.getElementById('year').value = match[2].trim();
+    document.getElementById('make').value = match[3].trim();
+    document.getElementById('model').value = match[4].trim();
+  }
+}
+
+function clearParsed() {
+  ['lot','year','make','model','vin'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
   document.querySelectorAll('.light-option').forEach(x => x.classList.remove('selected'));
   el.classList.add('selected');
   const val = el.dataset.value;
