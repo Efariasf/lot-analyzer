@@ -30,27 +30,29 @@ export default async function handler(req, res) {
     const isTitleClean = titleType === 'Clean';
 
     const hasHail = damageList.includes('Granizo');
-    const otherRiskDamages = ['Inundación/Agua', 'Vandalismo', 'Colisión frontal', 'Colisión trasera', 'Colisión lateral', 'Volcado', 'Fuego'];
-    const hasOtherRisk = damageList.some(d => otherRiskDamages.includes(d));
+    // Solo estos daños pueden causar cambio a salvage
+    const salvageTriggers = ['Inundación/Agua', 'Vandalismo', 'Fuego'];
+    const hasSalvageTrigger = damageList.some(d => salvageTriggers.includes(d));
 
     let salvageWarning = '';
 
     if (isTitleClean) {
-      if (hasHail && !hasOtherRisk) {
+      if (hasHail && !hasSalvageTrigger) {
         // Solo granizo
         salvageWarning = `Daño por granizo suele recibir automáticamente un título salvage al momento de registrarse. Sin embargo, en Texas normalmente conserva un título clean. Aun así, recomendamos contactar al DMV para confirmar si, al momento de registrar el vehículo, mantendría el título clean o si podría cambiar a salvage.`;
-      } else if (hasHail && hasOtherRisk) {
-        // Granizo + otros daños
-        salvageWarning = `Dado que presenta daño por granizo y ${damageList.filter(d => otherRiskDamages.includes(d)).join(', ')}, existe una alta probabilidad de que el título cambie a salvage al momento de registrarse, dependiendo del estado. En Texas el granizo normalmente conserva título clean, pero los daños adicionales pueden cambiar esto. Recomendamos contactar al DMV para confirmarlo antes de adquirirlo.`;
-      } else if (hasOtherRisk) {
-        // Otros daños sin granizo
+      } else if (hasHail && hasSalvageTrigger) {
+        // Granizo + inundación/vandalismo/fuego
+        const extra = damageList.filter(d => salvageTriggers.includes(d)).join(', ');
+        salvageWarning = `Dado que presenta daño por granizo y ${extra}, existe una alta probabilidad de que el título cambie a salvage al momento de registrarse, dependiendo del estado. En Texas el granizo normalmente conserva título clean, pero los daños adicionales pueden cambiar esto. Recomendamos contactar al DMV para confirmarlo antes de adquirirlo.`;
+      } else if (hasSalvageTrigger) {
+        // Inundación/vandalismo/fuego sin granizo
         salvageWarning = `Dado que presenta daño por ${damageText}, existe la posibilidad de que al momento de registrar el vehículo el título cambie a salvage dependiendo del estado donde sea registrado. Recomendamos contactar al DMV local para confirmar esto antes de adquirirlo.`;
       }
     }
 
     const prompt = `Eres un broker experto de subastas de vehículos salvage (Copart, IAAI, Manheim). Redacta un análisis profesional en español para enviar por WhatsApp a un cliente. Debe ser CONCISO. Texto plano, sin markdown, sin asteriscos, sin guiones al inicio, sin emojis.
 
-Usa EXACTAMENTE esta estructura respetando los saltos de línea. NO modifiques ni parafrasees el texto entre corchetes que diga INSERTAR TAL CUAL, cópialo exactamente:
+Usa EXACTAMENTE esta estructura respetando los saltos de línea. NO modifiques ni parafrasees el texto marcado como INSERTAR TAL CUAL:
 
 ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
 [2-3 oraciones: explica el tipo de título "${titleType}" en ${auction}, los daños "${damageText}", millas ${miles} (${milesStatus}), y estado general. Todo fluido en un párrafo.]
