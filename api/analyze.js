@@ -11,8 +11,20 @@ export default async function handler(req, res) {
 
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
-            damages, dashLights, dashCustom, observations, offerMin, offerMax,
-            buyNow, reservePrice } = fields;
+            damages, dashLights, dashCustom, observations, mechanicalStatus,
+            offerMin, offerMax, buyNow, reservePrice } = fields;
+
+    const mechMap = {
+      'no-enciende': 'El vehículo no enciende.',
+      'enciende-no-rueda': 'Copart verificó que el motor enciende, sin embargo el vehículo no rueda.',
+      'enciende-rueda': 'Copart verificó que el motor enciende y el vehículo rueda correctamente.'
+    };
+    const mechText = mechMap[mechanicalStatus] || '';
+
+    const isDestruction = titleType === 'Certificate of Destruction / Junk';
+    const destructionWarning = isDestruction
+      ? 'Este vehículo posee un título Certificate of Destruction (Junk), lo que significa que JAMÁS podrá circular legalmente en las carreteras de Estados Unidos. Solo puede ser utilizado para chatarra o venta de piezas.'
+      : '';
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
 
@@ -66,7 +78,9 @@ Usa EXACTAMENTE esta estructura respetando los saltos de línea. NO modifiques n
 ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
 [2-3 oraciones: explica el tipo de título "${titleType}" en ${auction}, los daños "${damageText}", millas ${miles} (${milesStatus}), y estado general. Todo fluido en un párrafo.]
 ${salvageWarning ? `INSERTAR TAL CUAL: ${salvageWarning}` : ''}
+${destructionWarning ? `INSERTAR TAL CUAL: ${destructionWarning}` : ''}
 ${lightsText ? `[1 oración sobre: ${lightsText}]` : ''}
+${mechText ? `INSERTAR TAL CUAL: ${mechText}` : ''}
 ${observations ? `[Mejora y redacta profesionalmente esto que observó el broker: ${observations}]` : ''}
 
 Ofertaría entre $${offerMin} a $${offerMax}
