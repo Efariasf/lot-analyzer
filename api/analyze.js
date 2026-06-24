@@ -71,8 +71,9 @@ export default async function handler(req, res) {
     const prompt = `Eres un broker experto de subastas de vehículos salvage (Copart, IAAI, Manheim). Redacta un análisis profesional en español para enviar por WhatsApp a un cliente. Debe ser CONCISO. Texto plano, sin markdown, sin asteriscos, sin guiones al inicio, sin emojis.
 
 REGLAS IMPORTANTES:
+- Varía el vocabulario y la estructura de las oraciones en cada análisis — nunca uses las mismas frases de siempre.
 - Título Clean significa solo que NO fue declarado pérdida total por aseguradora. NO menciones historial ni reportes previos.
-- NUNCA digas que el vehículo "rueda correctamente" ni uses la palabra "correctamente" — solo indica lo que dice la subasta.
+- NUNCA digas que el vehículo "rueda correctamente" ni uses la palabra "correctamente".
 - NUNCA uses "Dado que presenta daño por Daño" — usa solo el tipo sin repetir la palabra daño.
 - Sé directo y profesional.
 
@@ -103,7 +104,7 @@ CARFAX NO DA INFORMACIÓN DE DAÑOS MECÁNICOS NI OCULTOS`;
         model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 1000,
-        temperature: 0.3
+        temperature: 0.7
       })
     });
 
