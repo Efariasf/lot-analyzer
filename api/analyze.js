@@ -100,19 +100,19 @@ REGLAS IMPORTANTES:
 - NUNCA digas que el vehículo "rueda correctamente" ni uses la palabra "correctamente".
 - NUNCA uses "Dado que presenta daño por Daño" — usa solo el tipo sin repetir la palabra daño.
 
-Usa EXACTAMENTE esta estructura (respeta saltos de línea, NO modifiques los textos marcados INSERTAR TAL CUAL):
+Redacta el análisis en este orden exacto, usando los textos fijos tal como aparecen sin modificarlos:
 
 ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
 [2-3 oraciones: el título es "${titleType}" — si es Clean di que NO fue declarado pérdida total por la aseguradora, NUNCA menciones Salvage; si es Salvage di que el daño fue suficientemente severo para declararlo pérdida total. Afirma los daños "${damageTextClean}" con seguridad. Millas ${miles} (${milesStatus}). Estado general conciso.]
-${tituloAusenteWarning ? `INSERTAR TAL CUAL: ${tituloAusenteWarning}` : ''}
-${milesWarning ? `INSERTAR TAL CUAL: ${milesWarning}` : ''}
-${salvageWarning ? `INSERTAR TAL CUAL: ${salvageWarning}` : ''}
-${destructionWarning ? `INSERTAR TAL CUAL: ${destructionWarning}` : ''}
-${copartGoWarning ? `INSERTAR TAL CUAL: ${copartGoWarning}` : ''}
-${externalLotWarning ? `INSERTAR TAL CUAL: ${externalLotWarning}` : ''}
-${lightsText ? `INSERTAR TAL CUAL: ${lightsText}` : `INSERTAR TAL CUAL: ${noLightsText}`}
-${mechText ? `INSERTAR TAL CUAL: ${mechText}` : ''}
-${observations ? `[Integra estas observaciones del broker de forma natural, SIN repetir lo que ya se mencionó arriba sobre daños, luces o estado mecánico: ${observations}]` : ''}
+${tituloAusenteWarning}
+${milesWarning}
+${salvageWarning}
+${destructionWarning}
+${copartGoWarning}
+${externalLotWarning}
+${lightsText || noLightsText}
+${mechText}
+${observations ? `[Integra estas observaciones del broker de forma natural, SIN repetir lo que ya se mencionó arriba: ${observations}]` : ''}
 
 Ofertaría entre $${offerMin} a $${offerMax}
 ${buyNowText}${reserveText}
