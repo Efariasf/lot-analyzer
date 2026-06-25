@@ -367,11 +367,23 @@ function selectMech(el){
   document.getElementById('mechanical-status').value=el.dataset.value;
 }
 function selectLight(el){
-  document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
-  el.classList.add('selected');
   const val=el.dataset.value;
-  document.getElementById('dash-lights').value=val;
-  document.getElementById('lights-custom-row').style.display=val==='custom'?'block':'none';
+  if(val==='none'){
+    // Si selecciona "Sin luces", deselecciona todo lo demás
+    document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('lights-custom-row').style.display='none';
+  } else {
+    // Deselecciona "Sin luces" si estaba activo
+    document.querySelector('.light[data-value="none"]').classList.remove('selected');
+    el.classList.toggle('selected');
+    // Si no queda ninguna seleccionada, activa "Sin luces" de nuevo
+    const anySelected=document.querySelectorAll('.light.selected').length>0;
+    if(!anySelected) document.querySelector('.light[data-value="none"]').classList.add('selected');
+    // Mostrar campo custom si está seleccionado
+    const customSelected=document.querySelector('.light[data-value="custom"]')?.classList.contains('selected');
+    document.getElementById('lights-custom-row').style.display=customSelected?'block':'none';
+  }
 }
 
 function showTab(t,el){
@@ -412,7 +424,7 @@ async function generateAnalysis(){
         vin:get('vin'),titleType:get('title-type'),auction:get('auction'),
         miles:get('miles'),milesStatus:get('miles-status'),
         damages:getSelectedDamages(),
-        dashLights:get('dash-lights'),dashCustom:get('lights-custom'),
+        dashLights:Array.from(document.querySelectorAll('.light.selected')).map(x=>x.dataset.value).filter(v=>v!=='none'),
         observations:get('observations'),
         mechanicalStatus:get('mechanical-status'),
         offerMin:get('offer-min'),offerMax:get('offer-max'),
