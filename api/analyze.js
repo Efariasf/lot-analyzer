@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
-            offerMin, offerMax, buyNow, reservePrice, copartGo, externalLot } = fields;
+            offerMin, offerMax, buyNow, reservePrice, copartGo, externalLot, tituloAusente } = fields;
 
     const mechMap = {
       'no-enciende': 'El vehículo no enciende.',
@@ -20,6 +20,10 @@ export default async function handler(req, res) {
       'enciende-rueda': 'Copart verificó que el motor enciende y la transmisión engrana.'
     };
     const mechText = mechMap[mechanicalStatus] || '';
+
+    const tituloAusenteWarning = tituloAusente
+      ? `Título "${titleType}" en Copart: no posee el título actualmente. Copart le da al vendedor 30 días hábiles para que sea enviado a la yarda; luego ellos deben enviárnoslo a FL.`
+      : '';
 
     const milesStatusMap = {
       'Actuales': '',
@@ -100,6 +104,7 @@ Usa EXACTAMENTE esta estructura (respeta saltos de línea, NO modifiques los tex
 
 ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
 [2-3 oraciones: el título es "${titleType}" — si es Clean di que NO fue declarado pérdida total por la aseguradora, NUNCA menciones Salvage; si es Salvage di que el daño fue suficientemente severo para declararlo pérdida total. Afirma los daños "${damageTextClean}" con seguridad. Millas ${miles} (${milesStatus}). Estado general conciso.]
+${tituloAusenteWarning ? `INSERTAR TAL CUAL: ${tituloAusenteWarning}` : ''}
 ${milesWarning ? `INSERTAR TAL CUAL: ${milesWarning}` : ''}
 ${salvageWarning ? `INSERTAR TAL CUAL: ${salvageWarning}` : ''}
 ${destructionWarning ? `INSERTAR TAL CUAL: ${destructionWarning}` : ''}
