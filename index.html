@@ -184,6 +184,7 @@ textarea{resize:none;height:65px}
           <button id="btn-copartgo" class="toggle-btn" onclick="toggleFlag('copartgo')">CopartGO</button>
           <button id="btn-externallot" class="toggle-btn" onclick="toggleFlag('externallot')">Lote Externo</button>
           <button id="btn-tituloausente" class="toggle-btn" onclick="toggleFlag('tituloausente')">Título Ausente</button>
+          <button id="btn-fechafuturo" class="toggle-btn" onclick="toggleFlag('fechafuturo')">Fecha Futuro</button>
         </div>
 
         <div class="mb5"><input id="vin" placeholder="VIN"></div>
@@ -432,7 +433,8 @@ async function generateAnalysis(){
         buyNow:get('buy-now'),reservePrice:get('reserve-price'),
         copartGo:document.getElementById('btn-copartgo').classList.contains('active'),
         externalLot:document.getElementById('btn-externallot').classList.contains('active'),
-        tituloAusente:document.getElementById('btn-tituloausente').classList.contains('active')
+        tituloAusente:document.getElementById('btn-tituloausente').classList.contains('active'),
+        fechaFuturo:document.getElementById('btn-fechafuturo').classList.contains('active')
       }})
     });
     const data=await res.json();
