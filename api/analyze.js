@@ -51,7 +51,6 @@ export default async function handler(req, res) {
     const damageText = damageList.join(', ');
 
     const lightsMap = {
-      'none': '',
       'check-engine': 'Check engine encendido — podría indicar algún tipo de falla mecánica o electrónica.',
       'airbag': 'Luz de airbag/SRS encendida — podría indicar detonación de airbags o falla en el sistema de seguridad.',
       'transmission': 'Luz de transmisión encendida — podría indicar algún tipo de falla en la caja automática.',
@@ -62,8 +61,11 @@ export default async function handler(req, res) {
       'multiple': 'Múltiples luces del tablero encendidas — esto podría indicar algún tipo de daño eléctrico o falla mecánica en el vehículo.',
       'custom': dashCustom ? `${dashCustom} encendido — podría indicar algún tipo de falla mecánica o electrónica.` : ''
     };
-    const lightsText = lightsMap[dashLights] || '';
-    const noLightsText = dashLights === 'none' ? 'No presenta luces de motor ni airbag encendidas en el tablero.' : '';
+
+    // dashLights puede ser array (múltiple selección) o string legacy
+    const lightsArray = Array.isArray(dashLights) ? dashLights : (dashLights && dashLights !== 'none' ? [dashLights] : []);
+    const lightsText = lightsArray.map(l => lightsMap[l] || '').filter(Boolean).join(' ');
+    const noLightsText = lightsArray.length === 0 ? 'No presenta luces de motor ni airbag encendidas en el tablero.' : '';
 
     const isTitleClean = titleType === 'Clean';
     const hasHail = damageList.includes('Granizo');
@@ -87,9 +89,9 @@ export default async function handler(req, res) {
 
 REGLAS IMPORTANTES:
 - Varía el vocabulario y la estructura de las oraciones en cada análisis — nunca uses las mismas frases de siempre.
-- Título Clean significa que NO fue declarado pérdida total por la aseguradora — explícalo así, sin mencionar historial ni reportes previos.
-- Título Salvage significa que el daño fue lo suficientemente severo para que la aseguradora lo declarara pérdida total — dilo con confianza, no uses palabras como "sugiere" o "podría".
-- Los daños que el broker indicó son REALES y CONFIRMADOS — afírmalos con seguridad, nunca uses "se menciona" ni "podría tener".
+- Título Clean significa que NO fue declarado pérdida total por la aseguradora. NUNCA digas Salvage si el título es Clean. Explica solo que no fue declarado pérdida total.
+- Título Salvage significa que el daño fue lo suficientemente severo para que la aseguradora lo declarara pérdida total — dilo con confianza.
+- Los daños son REALES y CONFIRMADOS — afírmalos con seguridad, nunca uses "se menciona" ni "podría tener".
 - NUNCA uses frases como "catalogado como tal", "sugiere", "se menciona", "podría indicar" para los daños visibles.
 - NUNCA digas que el vehículo "rueda correctamente" ni uses la palabra "correctamente".
 - NUNCA uses "Dado que presenta daño por Daño" — usa solo el tipo sin repetir la palabra daño.
@@ -97,7 +99,7 @@ REGLAS IMPORTANTES:
 Usa EXACTAMENTE esta estructura (respeta saltos de línea, NO modifiques los textos marcados INSERTAR TAL CUAL):
 
 ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
-[2-3 oraciones: título "${titleType}" en ${auction} — si es Salvage, di que el daño fue suficientemente severo para que la aseguradora lo declarara pérdida total; si es Clean, di que no fue declarado pérdida total. Afirma los daños "${damageTextClean}" con seguridad. Millas ${miles} (${milesStatus}). Estado general conciso.]
+[2-3 oraciones: el título es "${titleType}" — si es Clean di que NO fue declarado pérdida total por la aseguradora, NUNCA menciones Salvage; si es Salvage di que el daño fue suficientemente severo para declararlo pérdida total. Afirma los daños "${damageTextClean}" con seguridad. Millas ${miles} (${milesStatus}). Estado general conciso.]
 ${milesWarning ? `INSERTAR TAL CUAL: ${milesWarning}` : ''}
 ${salvageWarning ? `INSERTAR TAL CUAL: ${salvageWarning}` : ''}
 ${destructionWarning ? `INSERTAR TAL CUAL: ${destructionWarning}` : ''}
