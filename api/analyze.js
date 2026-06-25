@@ -99,15 +99,22 @@ REGLAS ESTRICTAS:
 - NUNCA agregues opiniones, interpretaciones ni conclusiones que el broker no indicó.
 - NUNCA digas cosas como "lo que sugiere", "lo que indica", "potencial para ser reparado", ni nada que no sea un hecho dado.
 - NUNCA inventes datos: sin millas = no menciones millas, sin oferta = no pongas monto.
+- NUNCA agregues frases de relleno vacías como "el estado general es el resultado de un accidente" o "considerando su estado". Si no tienes información del estado general, no lo menciones.
+- Cuando menciones daños múltiples, escríbelos de forma natural: "daño frontal y trasero", no "frontal, trasero".
 - El título va SIEMPRE en la primera línea junto al lote: "${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}"
 - En el primer párrafo empieza con "Título ${titleType};" y explica brevemente qué significa.
 - Cada bloque adicional va en párrafo separado, copiado tal cual sin agregar interpretaciones.
 - NO repitas información entre párrafos.
+- El bloque del VIN y reporte debe ir EXACTAMENTE así, sin redactarlo como oración, sin agregar palabras:
+VIN: ${vin}
+Solicite su REPORTE aquí:
+${REPORT_LINK}
+- El bloque final de Carfax debe ir EXACTAMENTE como se indica, en dos líneas separadas.
 
 FORMATO EXACTO A SEGUIR:
 
 ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
-Título ${titleType}; [explicación breve de qué significa]${damageTextClean ? `. Presenta ${damageTextClean}` : ''}${miles ? `. ${miles} millas ${milesStatus}` : ''}. [estado general en una frase corta y objetiva]
+Título ${titleType}; [explicación breve de qué significa]${damageTextClean ? `. Presenta daño en ${damageTextClean}` : ''}${miles ? `, con ${miles} millas ${milesStatus.toLowerCase()}` : ''}.
 ${extraBlocks.join('\n\n')}
 ${observations ? `[Mejora solo la redacción de esto, sin agregar nada extra: ${observations}]` : ''}
 
@@ -120,6 +127,7 @@ Solicite su REPORTE aquí:
 ${REPORT_LINK}
 
 Es siempre recomendable revisar el Reporte de Carfax para verificar el tipo de título, millas, servicios realizados, accidentes reportados, y propietarios anteriores.
+
 CARFAX NO DA INFORMACIÓN DE DAÑOS MECÁNICOS NI OCULTOS`;
 
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
