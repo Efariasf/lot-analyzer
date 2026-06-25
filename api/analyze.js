@@ -93,22 +93,23 @@ export default async function handler(req, res) {
       mechText,
     ].filter(Boolean);
 
-    const prompt = `Eres un broker experto de subastas de vehículos salvage (Copart, IAAI, Manheim). Redacta un análisis profesional en español para WhatsApp. Texto plano, sin markdown, sin asteriscos, sin guiones al inicio, sin emojis. Varía el vocabulario en cada análisis.
+    const prompt = `Eres un broker de subastas de vehículos salvage. Redacta un análisis para WhatsApp en español. Texto plano, sin markdown, sin asteriscos, sin emojis. Varía el vocabulario en cada análisis.
 
-REGLAS:
-- El título es "${titleType}". Inícialo siempre como "Título ${titleType};" seguido de la explicación. NUNCA digas "este vehículo tiene el título de...".
-- Si es Clean: NO fue declarado pérdida total por la aseguradora. Si es Salvage: el daño fue suficientemente severo para que la aseguradora lo declarara pérdida total. NUNCA confundas uno con el otro.
-- Los daños son REALES y CONFIRMADOS. Afírmalos con seguridad.
-- NUNCA inventes datos — si no se proporcionaron millas u otro dato, omítelo.
+REGLAS ESTRICTAS:
+- NUNCA agregues opiniones, interpretaciones ni conclusiones que el broker no indicó.
+- NUNCA digas cosas como "lo que sugiere", "lo que indica", "potencial para ser reparado", ni nada que no sea un hecho dado.
+- NUNCA inventes datos: sin millas = no menciones millas, sin oferta = no pongas monto.
+- El título va SIEMPRE en la primera línea junto al lote: "${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}"
+- En el primer párrafo empieza con "Título ${titleType};" y explica brevemente qué significa.
+- Cada bloque adicional va en párrafo separado, copiado tal cual sin agregar interpretaciones.
 - NO repitas información entre párrafos.
-- NO agregues frases genéricas ni inventadas.
 
-Genera el análisis en este formato EXACTO (respeta los saltos de línea, omite líneas vacías):
+FORMATO EXACTO A SEGUIR:
 
 ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
-[Párrafo: Título ${titleType}; explica qué significa, daños "${damageTextClean}" afirmándolos${miles ? `, ${miles} millas (${milesStatus})` : ''}, estado general breve.]
+Título ${titleType}; [explicación breve de qué significa]${damageTextClean ? `. Presenta ${damageTextClean}` : ''}${miles ? `. ${miles} millas ${milesStatus}` : ''}. [estado general en una frase corta y objetiva]
 ${extraBlocks.join('\n\n')}
-${observations ? `[Párrafo: integra estas observaciones sin repetir lo anterior: ${observations}]` : ''}
+${observations ? `[Mejora solo la redacción de esto, sin agregar nada extra: ${observations}]` : ''}
 
 ${offerMin && offerMax ? `Ofertaría entre $${offerMin} a $${offerMax}` : ''}
 ${buyNowText}
