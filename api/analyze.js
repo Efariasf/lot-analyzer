@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
-            offerMin, offerMax, buyNow, reservePrice, copartGo, externalLot, tituloAusente } = fields;
+            offerMin, offerMax, buyNow, reservePrice, copartGo, externalLot, tituloAusente, fechaFuturo } = fields;
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
 
@@ -87,6 +87,7 @@ export default async function handler(req, res) {
       destructionWarning,
       copartGo ? 'Este vehículo está listado como CopartGO, lo que significa que fue publicado directamente por el vendedor usando la app móvil de Copart. El informe de condición lo completó el propio vendedor con respuestas de Sí/No y NO representa la opinión de Copart, quien no inspeccionó el vehículo ni se hace responsable de la exactitud del informe.' : '',
       externalLot ? 'Este es un Lote Externo: el vehículo NO se encuentra físicamente en una ubicación de Copart. Está en una ubicación designada para previsualizar y retirar indicada en el lote.' : '',
+      fechaFuturo ? 'Es posible que Copart haya realizado un cambio reciente en la fecha de subasta. Actualmente, en nuestra plataforma puede aparecer una fecha estimada, pero si en Copart el lote figura como "Future" o "Upcoming Lot", significa que la subasta aún no tiene una fecha confirmada, generalmente porque están pendientes documentos o el título del vehículo. Le recomendamos verificar directamente en Copart. Una vez que la documentación esté completa, se asignará una fecha de subasta oficial y el lote estará disponible para ofertar.' : '',
       ...lightsLines,
       noLightsText,
       mechText,
