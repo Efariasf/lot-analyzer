@@ -96,21 +96,19 @@ export default async function handler(req, res) {
     const prompt = `Eres un broker experto de subastas de vehículos salvage (Copart, IAAI, Manheim). Redacta un análisis profesional en español para WhatsApp. Texto plano, sin markdown, sin asteriscos, sin guiones al inicio, sin emojis. Varía el vocabulario en cada análisis.
 
 REGLAS:
-- El título es "${titleType}". Si es Clean: NO fue declarado pérdida total. Si es Salvage: el daño fue suficientemente severo para que la aseguradora lo declarara pérdida total. NUNCA confundas uno con el otro.
+- El título es "${titleType}". Inícialo siempre como "Título ${titleType};" seguido de la explicación. NUNCA digas "este vehículo tiene el título de...".
+- Si es Clean: NO fue declarado pérdida total por la aseguradora. Si es Salvage: el daño fue suficientemente severo para que la aseguradora lo declarara pérdida total. NUNCA confundas uno con el otro.
 - Los daños son REALES y CONFIRMADOS. Afírmalos con seguridad.
-- NUNCA inventes datos — si no se proporcionaron millas, oferta u otro dato, simplemente omítelo.
-- NO repitas información que ya mencionaste en un párrafo anterior.
-- Cada bloque de información debe ir en su propio párrafo separado.
-- NO agregues frases genéricas como "este vehículo está listo para inspección" o similares.
+- NUNCA inventes datos — si no se proporcionaron millas u otro dato, omítelo.
+- NO repitas información entre párrafos.
+- NO agregues frases genéricas ni inventadas.
 
-Estructura del análisis (cada bloque = un párrafo, omite los que estén vacíos):
+Genera el análisis en este formato EXACTO (respeta los saltos de línea, omite líneas vacías):
 
-PÁRRAFO 1: ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
-Explica el título "${titleType}" en ${auction} (sin repetir en otros párrafos), menciona los daños "${damageTextClean}" afirmándolos con confianza${miles ? `, millas ${miles} (${milesStatus})` : ''}, estado general breve.
-
-${extraBlocks.map((block, i) => `PÁRRAFO ${i + 2}: ${block}`).join('\n\n')}
-
-PÁRRAFO FINAL ANTES DE OFERTA: ${observations ? `Integra estas observaciones del broker de forma natural sin repetir lo ya dicho: ${observations}` : '(omitir si no hay observaciones)'}
+${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
+[Párrafo: Título ${titleType}; explica qué significa, daños "${damageTextClean}" afirmándolos${miles ? `, ${miles} millas (${milesStatus})` : ''}, estado general breve.]
+${extraBlocks.join('\n\n')}
+${observations ? `[Párrafo: integra estas observaciones sin repetir lo anterior: ${observations}]` : ''}
 
 ${offerMin && offerMax ? `Ofertaría entre $${offerMin} a $${offerMax}` : ''}
 ${buyNowText}
