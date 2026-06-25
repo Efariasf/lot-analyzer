@@ -98,6 +98,7 @@ export default async function handler(req, res) {
 REGLAS:
 - El título es "${titleType}". Si es Clean: NO fue declarado pérdida total. Si es Salvage: el daño fue suficientemente severo para que la aseguradora lo declarara pérdida total. NUNCA confundas uno con el otro.
 - Los daños son REALES y CONFIRMADOS. Afírmalos con seguridad.
+- NUNCA inventes datos — si no se proporcionaron millas, oferta u otro dato, simplemente omítelo.
 - NO repitas información que ya mencionaste en un párrafo anterior.
 - Cada bloque de información debe ir en su propio párrafo separado.
 - NO agregues frases genéricas como "este vehículo está listo para inspección" o similares.
@@ -105,13 +106,13 @@ REGLAS:
 Estructura del análisis (cada bloque = un párrafo, omite los que estén vacíos):
 
 PÁRRAFO 1: ${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}
-Explica el título "${titleType}" en ${auction} (sin repetir en otros párrafos), menciona los daños "${damageTextClean}" afirmándolos con confianza, millas ${miles} (${milesStatus}), estado general breve.
+Explica el título "${titleType}" en ${auction} (sin repetir en otros párrafos), menciona los daños "${damageTextClean}" afirmándolos con confianza${miles ? `, millas ${miles} (${milesStatus})` : ''}, estado general breve.
 
 ${extraBlocks.map((block, i) => `PÁRRAFO ${i + 2}: ${block}`).join('\n\n')}
 
 PÁRRAFO FINAL ANTES DE OFERTA: ${observations ? `Integra estas observaciones del broker de forma natural sin repetir lo ya dicho: ${observations}` : '(omitir si no hay observaciones)'}
 
-Ofertaría entre $${offerMin} a $${offerMax}
+${offerMin && offerMax ? `Ofertaría entre $${offerMin} a $${offerMax}` : ''}
 ${buyNowText}
 ${reserveText}
 
