@@ -200,7 +200,10 @@ textarea{resize:none;height:65px}
           <select id="miles-status"><option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option></select>
         </div>
 
-        <div class="section-label">Tipo de daño</div>
+        <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Tipo de daño</span>
+          <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 8px" onclick="openTemplates()">⊞ Plantillas</button>
+        </div>
         <div class="damage-grid" id="damage-grid">
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Granizo"><span>Granizo</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño frontal"><span>Daño frontal</span></label>
@@ -326,6 +329,7 @@ textarea{resize:none;height:65px}
 
   <!-- HISTORY -->
   <div id="tab-history" style="display:none;flex:1;overflow-y:auto;padding:12px">
+    <input id="history-search" placeholder="Buscar por lote, marca o modelo..." style="margin-bottom:10px" oninput="renderHistory()">
     <div id="history-list"></div>
   </div>
 
@@ -333,9 +337,111 @@ textarea{resize:none;height:65px}
 
 <div class="toast" id="toast"></div>
 
+<!-- MODAL PLANTILLAS -->
+<div id="templates-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <span style="font-weight:600;font-size:14px">Plantillas</span>
+      <button class="btn btn-outline btn-sm" onclick="closeTemplates()">✕</button>
+    </div>
+    <div style="padding:14px;overflow-y:auto;flex:1">
+      <button class="btn btn-accent btn-sm" style="width:100%;margin-bottom:12px" onclick="saveTemplate()">+ Guardar punto de vista actual como plantilla</button>
+      <div id="templates-list"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 let currentOutput='',lotHistory=[];
 try{lotHistory=JSON.parse(localStorage.getItem('lot-history')||'[]')}catch(e){}
+
+let lotTemplates=[];
+try{lotTemplates=JSON.parse(localStorage.getItem('lot-templates')||'[]')}catch(e){}
+
+function openTemplates(){
+  document.getElementById('templates-modal').style.display='flex';
+  renderTemplates();
+}
+function closeTemplates(){
+  document.getElementById('templates-modal').style.display='none';
+}
+
+function saveTemplate(){
+  const damages=getSelectedDamages();
+  const lights=Array.from(document.querySelectorAll('.light.selected')).map(x=>x.dataset.value).filter(v=>v!=='none');
+  const observations=document.getElementById('observations').value;
+  const mechanical=document.getElementById('mechanical-status').value;
+  if(!damages.length&&!lights.length&&!observations&&!mechanical){
+    showToast('Selecciona algo primero');return;
+  }
+  const name=prompt('Nombre de la plantilla (ej: Granizo techo y capó):');
+  if(!name)return;
+  const tpl={id:Date.now(),name,damages,lights,observations,mechanical};
+  lotTemplates.unshift(tpl);
+  try{localStorage.setItem('lot-templates',JSON.stringify(lotTemplates))}catch(e){}
+  renderTemplates();
+  showToast('Plantilla guardada ✓');
+}
+
+function applyTemplate(id){
+  const tpl=lotTemplates.find(t=>t.id===id);
+  if(!tpl)return;
+  // Limpiar daños actuales
+  document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb=>{cb.checked=false;cb.closest('.dmg').classList.remove('checked')});
+  // Aplicar daños
+  (tpl.damages||[]).forEach(val=>{
+    const cb=document.querySelector(`#damage-grid input[value="${val}"]`);
+    if(cb){cb.checked=true;cb.closest('.dmg').classList.add('checked')}
+  });
+  // Limpiar y aplicar luces
+  document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
+  if((tpl.lights||[]).length>0){
+    tpl.lights.forEach(val=>{
+      const el=document.querySelector(`.light[data-value="${val}"]`);
+      if(el)el.classList.add('selected');
+    });
+    const customSel=document.querySelector('.light[data-value="custom"]')?.classList.contains('selected');
+    document.getElementById('lights-custom-row').style.display=customSel?'block':'none';
+  } else {
+    document.querySelector('.light[data-value="none"]').classList.add('selected');
+  }
+  // Observaciones
+  if(tpl.observations)document.getElementById('observations').value=tpl.observations;
+  // Mecánico
+  document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
+  if(tpl.mechanical){
+    const m=document.querySelector(`.mech[data-value="${tpl.mechanical}"]`);
+    if(m)m.classList.add('selected');
+    document.getElementById('mechanical-status').value=tpl.mechanical;
+  }
+  closeTemplates();
+  showToast('Plantilla aplicada ✓');
+}
+
+function deleteTemplate(id){
+  lotTemplates=lotTemplates.filter(t=>t.id!==id);
+  try{localStorage.setItem('lot-templates',JSON.stringify(lotTemplates))}catch(e){}
+  renderTemplates();
+}
+
+function renderTemplates(){
+  const c=document.getElementById('templates-list');
+  if(!lotTemplates.length){c.innerHTML='<div class="empty" style="padding:20px">No tienes plantillas guardadas</div>';return}
+  c.innerHTML=lotTemplates.map(t=>{
+    const parts=[];
+    if(t.damages&&t.damages.length)parts.push(t.damages.join(', '));
+    if(t.lights&&t.lights.length)parts.push('Luces: '+t.lights.length);
+    if(t.mechanical)parts.push('Mecánico');
+    return `<div class="history-item">
+      <div class="history-title" style="margin-bottom:4px">${t.name}</div>
+      <div class="history-preview">${parts.join(' · ')||'Sin detalles'}</div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn btn-accent btn-sm" onclick="applyTemplate(${t.id})">Aplicar</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteTemplate(${t.id})">Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
 
 function toggleFlag(flag){
   document.getElementById('btn-'+flag).classList.toggle('active');
@@ -471,8 +577,11 @@ function saveToHistory(){
 
 function renderHistory(){
   const c=document.getElementById('history-list');
-  if(!lotHistory.length){c.innerHTML='<div class="empty">No hay análisis guardados aún</div>';return}
-  c.innerHTML=lotHistory.map(h=>`
+  const search=(document.getElementById('history-search')?.value||'').toLowerCase().trim();
+  let items=lotHistory;
+  if(search) items=lotHistory.filter(h=>h.title.toLowerCase().includes(search)||h.text.toLowerCase().includes(search));
+  if(!items.length){c.innerHTML=`<div class="empty">${search?'No se encontraron resultados':'No hay análisis guardados aún'}</div>`;return}
+  c.innerHTML=items.map(h=>`
     <div class="history-item">
       <div class="history-header"><span class="history-title">${h.title}</span><span class="history-date">${h.date}</span></div>
       <div class="history-preview">${h.text.substring(0,100)}...</div>
