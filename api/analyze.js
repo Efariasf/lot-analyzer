@@ -62,7 +62,12 @@ export default async function handler(req, res) {
     let salvageWarning = '';
     if (isTitleClean) {
       if (hasHail && !hasSalvageTrigger) {
-        salvageWarning = 'El daño por granizo suele recibir automáticamente un título salvage al momento de registrarse. Sin embargo, en Texas normalmente conserva un título clean. Aun así, recomendamos contactar al DMV para confirmar si al momento de registrar el vehículo mantendría el título clean o si podría cambiar a salvage.';
+        const granizoVariants = [
+          'El daño por granizo suele recibir automáticamente un título salvage al momento de registrarse. Sin embargo, en Texas normalmente conserva un título clean. Aun así, recomendamos contactar al DMV para confirmar si al momento de registrar el vehículo mantendría el título clean o si podría cambiar a salvage.',
+          'Es importante tener en cuenta que el daño por granizo a menudo provoca que el título cambie a salvage al registrarlo, aunque en Texas suele mantenerse como clean. Le recomendamos verificar con el DMV de su estado si conservaría el título clean o pasaría a salvage.',
+          'Tenga presente que en muchos estados el daño por granizo hace que el título pase a salvage durante el registro; Texas es una excepción donde normalmente se conserva clean. Por eso le sugerimos confirmar con el DMV cómo quedaría el título antes de adquirirlo.'
+        ];
+        salvageWarning = granizoVariants[Math.floor(Math.random() * granizoVariants.length)];
       } else if (hasHail && hasSalvageTrigger) {
         salvageWarning = `Dado que presenta granizo y ${otherTriggers.join(', ').toLowerCase()}, existe una alta probabilidad de que el título cambie a salvage al momento de registrarse, dependiendo del estado. En Texas el granizo normalmente conserva título clean, pero los daños adicionales pueden cambiar esto. Recomendamos contactar al DMV para confirmarlo antes de adquirirlo.`;
       } else if (hasSalvageTrigger) {
@@ -107,7 +112,9 @@ export default async function handler(req, res) {
       'Certificate of Destruction / Junk': 'no puede circular legalmente, solo sirve para chatarra o piezas'
     };
 
-    const prompt = `Eres un broker de subastas de vehículos. Redacta SOLO el primer párrafo de un análisis, en español, en una a dos oraciones. Texto plano, sin markdown, sin emojis. Varía el vocabulario.
+    const prompt = `Eres un broker de subastas de vehículos. Redacta SOLO el primer párrafo de un análisis, en español, en una a dos oraciones. Texto plano, sin markdown, sin emojis.
+
+IMPORTANTE: Varía SIEMPRE la estructura y el vocabulario. Cada vez que generes este párrafo debe sonar diferente al anterior — cambia el orden de las ideas, usa sinónimos, varía cómo introduces el título y los daños. Nunca repitas la misma redacción.
 
 Datos:
 - Título: ${titleType} (significa: ${titleExplain[titleType] || ''})
@@ -115,10 +122,10 @@ Datos:
 ${miles ? `- Millas: ${miles} ${milesStatus.toLowerCase()}` : '- Millas: no especificadas (NO las menciones)'}
 
 Reglas:
-- Empieza el párrafo con "Título ${titleType};".
+- Debe quedar claro el título "${titleType}" y su significado, pero puedes redactarlo de formas distintas.
 - Afirma los daños con seguridad, nunca digas "sugiere" o "podría tener daños".
 - Si hay daños múltiples, escríbelos natural: "daño por granizo y vandalismo".
-- NO inventes datos ni agregues frases de relleno como "es beneficioso al vender" o "puede necesitar reparaciones".
+- NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar" o "puede necesitar reparaciones".
 - NO menciones fecha de subasta, luces, ni nada que no esté en los datos.
 - Devuelve SOLO ese párrafo, nada más.`;
 
@@ -129,13 +136,15 @@ Reglas:
         model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 300,
-        temperature: 0.6
+        temperature: 1.0
       })
     });
 
     const data = await groqRes.json();
     if (!groqRes.ok) return res.status(500).json({ error: data?.error?.message || 'Error de Groq' });
     let firstParagraph = (data?.choices?.[0]?.message?.content || '').trim();
+    // Limpiar guiones, viñetas o caracteres sueltos al inicio
+    firstParagraph = firstParagraph.replace(/^[\s\-–—•*>]+/, '').trim();
 
     // Mejorar observaciones con IA si existen (segunda llamada corta)
     let obsText = '';
