@@ -194,6 +194,13 @@ CARFAX NO DA INFORMACIÓN DE DAÑOS MECÁNICOS NI OCULTOS`;
     if (offerBlock) result += '\n\n' + offerBlock;
     result += '\n\n' + footer;
 
+    // Eliminar líneas que sean solo un guion/viñeta suelto
+    result = result
+      .split('\n')
+      .filter(line => !/^\s*[-–—•*]+\s*$/.test(line))
+      .join('\n')
+      .trim();
+
     return res.status(200).json({ result });
 
   } catch (err) {
