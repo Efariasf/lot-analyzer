@@ -122,10 +122,11 @@ Datos:
 ${miles ? `- Millas: ${miles} ${milesStatus.toLowerCase()}` : '- Millas: no especificadas (NO las menciones)'}
 
 Reglas:
-- Debe quedar claro el título "${titleType}" y su significado, pero puedes redactarlo de formas distintas.
+- Empieza siempre indicando el título así: "La subasta indica título ${titleType};" o variaciones como "Según la subasta, el título es ${titleType};". NUNCA digas "El título de Clean" ni afirmes el título con certeza absoluta — siempre atribúyelo a la subasta.
+- Luego explica qué significa ese tipo de título.
 - Afirma los daños con seguridad, nunca digas "sugiere" o "podría tener daños".
 - Si hay daños múltiples, escríbelos natural: "daño por granizo y vandalismo".
-- NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar" o "puede necesitar reparaciones".
+- NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar", "ofrece un atractivo precio de compra", "sin otros daños reportados", "su historial no presenta registros" o "puede necesitar reparaciones". NUNCA hables de historial ni reportes previos, no tenemos esa información.
 - NO menciones fecha de subasta, luces, ni nada que no esté en los datos.
 - Devuelve SOLO ese párrafo, nada más.`;
 
