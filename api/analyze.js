@@ -23,8 +23,9 @@ export default async function handler(req, res) {
     // ---- ESTADO MECÁNICO ----
     const mechMap = {
       'no-enciende': 'El vehículo no enciende.',
-      'enciende-no-rueda': 'Copart verificó que el motor enciende, sin embargo el vehículo no rueda, lo que podría indicar algún tipo de falla mecánica como transmisión u otro problema relacionado.',
-      'enciende-rueda': 'Copart verificó que el motor enciende y la transmisión engrana.'
+      'solo-enciende': `${auction} verificó que el motor enciende, sin embargo no se confirma si el vehículo rueda.`,
+      'enciende-no-rueda': `${auction} verificó que el motor enciende, sin embargo el vehículo no rueda, lo que podría indicar algún tipo de falla mecánica como transmisión u otro problema relacionado.`,
+      'enciende-rueda': `${auction} verificó que el motor enciende y la transmisión engrana.`
     };
     const mechText = mechMap[mechanicalStatus] || '';
 
