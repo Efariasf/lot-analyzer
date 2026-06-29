@@ -122,8 +122,7 @@ Datos:
 ${miles ? `- Millas: ${miles} ${milesStatus.toLowerCase()}` : '- Millas: no especificadas (NO las menciones)'}
 
 Reglas:
-- Empieza siempre indicando el título así: "La subasta indica título ${titleType};" o variaciones como "Según la subasta, el título es ${titleType};". NUNCA digas "El título de Clean" ni afirmes el título con certeza absoluta — siempre atribúyelo a la subasta.
-- Luego explica qué significa ese tipo de título.
+- Empieza indicando el título sin afirmarlo con certeza absoluta, atribuyéndolo a la subasta. VARÍA la forma de decirlo cada vez, usa diferentes opciones como: "La subasta indica título ${titleType}", "El lote figura con título ${titleType}", "De acuerdo a la subasta, el título es ${titleType}", "Copart reporta título ${titleType}", "El vehículo aparece listado con título ${titleType}", "Registrado en la subasta como título ${titleType}". NUNCA uses siempre la misma frase, NUNCA digas "El título de ${titleType}".
 - Afirma los daños con seguridad, nunca digas "sugiere" o "podría tener daños".
 - Si hay daños múltiples, escríbelos natural: "daño por granizo y vandalismo".
 - NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar", "ofrece un atractivo precio de compra", "sin otros daños reportados", "su historial no presenta registros" o "puede necesitar reparaciones". NUNCA hables de historial ni reportes previos, no tenemos esa información.
