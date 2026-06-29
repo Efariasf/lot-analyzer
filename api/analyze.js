@@ -48,7 +48,7 @@ export default async function handler(req, res) {
 
     // ---- MILLAS ----
     const milesMap = {
-      'No actuales (TMU)': 'Las millas aparecen como No Actuales (TMU — True Mileage Unknown), lo que significa que las millas reales son desconocidas. Esto ocurre cuando el odómetro pudo haber sido alterado o el vehículo sufrió un daño importante que impide comprobar el millaje real.',
+      'No actuales (TMU)': 'Las millas aparecen como No Actuales (TMU — True Mileage Unknown), lo que significa que las millas reales son desconocidas. Esto puede deberse a varias razones: que el odómetro haya sido modificado ilegalmente, que el vehículo sufriera un daño importante que impide comprobar el millaje, o una falla en el tablero. Considérelo al momento de evaluar el vehículo.',
       'Exentas': 'Las millas aparecen como Exentas (Exempt), lo que significa que legalmente no se puede certificar que el número del tablero sea el real. Generalmente ocurre porque al momento del accidente el vehículo quedó sin batería, el tablero se dañó, o la aseguradora no pudo encenderlo para verificar. No implica necesariamente fraude; muchas veces el número del tablero es cercano al real, pero por protección legal se procesa como Exento. Recomendamos revisar el Carfax para ver las millas del último servicio registrado.'
     };
     const milesWarning = milesMap[milesStatus] || '';
