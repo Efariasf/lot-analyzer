@@ -74,7 +74,7 @@ textarea{resize:none;height:65px}
 .paste-hint{font-size:11px;color:var(--muted);margin-bottom:8px}
 
 /* TOGGLES */
-.toggle-row{display:flex;gap:5px;margin-bottom:8px}
+.toggle-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
 .toggle-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);font-size:11px;font-weight:600;padding:5px 10px;cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap}
 .toggle-btn:hover{border-color:var(--accent);color:var(--text)}
 .toggle-btn.active{border-color:var(--accent);background:rgba(232,255,77,.1);color:var(--accent)}
@@ -185,6 +185,7 @@ textarea{resize:none;height:65px}
           <button id="btn-externallot" class="toggle-btn" onclick="toggleFlag('externallot')">Lote Externo</button>
           <button id="btn-tituloausente" class="toggle-btn" onclick="toggleFlag('tituloausente')">Título Ausente</button>
           <button id="btn-fechafuturo" class="toggle-btn" onclick="toggleFlag('fechafuturo')">Fecha Futuro</button>
+          <button id="btn-excelente" class="toggle-btn" onclick="toggleFlag('excelente')">Excelente Estado</button>
         </div>
 
         <div class="mb5"><input id="vin" placeholder="VIN"></div>
@@ -544,7 +545,8 @@ async function generateAnalysis(){
         copartGo:document.getElementById('btn-copartgo').classList.contains('active'),
         externalLot:document.getElementById('btn-externallot').classList.contains('active'),
         tituloAusente:document.getElementById('btn-tituloausente').classList.contains('active'),
-        fechaFuturo:document.getElementById('btn-fechafuturo').classList.contains('active')
+        fechaFuturo:document.getElementById('btn-fechafuturo').classList.contains('active'),
+        excelente:document.getElementById('btn-excelente').classList.contains('active')
       }})
     });
     const data=await res.json();
