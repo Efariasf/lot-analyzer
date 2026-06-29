@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
-            offerMin, offerMax, buyNow, reservePrice, copartGo, externalLot, tituloAusente, fechaFuturo } = fields;
+            offerMin, offerMax, buyNow, reservePrice, copartGo, externalLot, tituloAusente, fechaFuturo, excelente } = fields;
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
 
@@ -96,6 +96,16 @@ export default async function handler(req, res) {
       ? 'Es posible que Copart haya realizado un cambio reciente en la fecha de subasta. Actualmente en nuestra plataforma puede aparecer una fecha estimada, pero si en Copart el lote figura como "Future" o "Upcoming Lot", significa que la subasta aún no tiene una fecha confirmada, generalmente porque están pendientes documentos o el título del vehículo. Le recomendamos verificar directamente en Copart. Una vez que la documentación esté completa, se asignará una fecha de subasta oficial y el lote estará disponible para ofertar.'
       : '';
 
+    const excelenteVariants = [
+      'El vehículo se observa en excelente estado, sin daños estéticos apreciables. Es una unidad impecable, muy bien cuidada y con una presentación sobresaliente.',
+      'Se trata de un vehículo en condiciones excepcionales, sin golpes ni daños visibles en la carrocería. Una excelente oportunidad por su estado prácticamente impecable.',
+      'El vehículo luce en muy buen estado general, sin daños estéticos notables. Es una unidad limpia, bien mantenida y con una apariencia excelente.',
+      'Excelente unidad, se aprecia en óptimas condiciones tanto estéticas como generales, sin daños visibles. Un vehículo muy bien conservado.'
+    ];
+    const excelenteText = excelente
+      ? excelenteVariants[Math.floor(Math.random() * excelenteVariants.length)]
+      : '';
+
     // ---- OFERTA ----
     const offerText = (offerMin && offerMax) ? `Ofertaría entre $${offerMin} a $${offerMax}` : '';
     const buyNowText = buyNow ? `El vehículo tiene un precio de compra inmediata (Buy Now) de $${buyNow}, ese es el precio mínimo que acepta el vendedor para cerrar la venta de inmediato.` : '';
@@ -176,6 +186,7 @@ Reglas:
       copartGoText,
       externalLotText,
       fechaFuturoText,
+      excelenteText,
       lightsBlock,
       mechText,
       obsText,
