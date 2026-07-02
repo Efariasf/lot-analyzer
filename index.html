@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 :root{
   --bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#2e2e2e;
@@ -159,6 +160,7 @@ textarea{resize:none;height:65px}
 
 <div class="tabs">
   <button class="tab active" onclick="showTab('analyzer',this)">Analizar</button>
+  <button class="tab" onclick="showTab('carfax',this)">Carfax</button>
   <button class="tab" onclick="showTab('history',this)">Historial</button>
 </div>
 
@@ -328,6 +330,43 @@ textarea{resize:none;height:65px}
         </button>
         <button class="btn btn-outline btn-sm" onclick="saveToHistory()">Guardar</button>
         <button class="btn btn-outline btn-sm" onclick="resetAll()">Nuevo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARFAX -->
+  <div id="tab-carfax" style="display:none;flex:1;overflow:hidden;flex-direction:row">
+    <div class="left-panel" style="width:420px">
+      <div class="panel-scroll">
+        <div class="card">
+          <div class="section-label">Reporte Carfax / AutoCheck</div>
+          <div class="upload-zone" id="carfax-dropzone" onclick="document.getElementById('carfax-file').click()" style="border:1.5px dashed var(--border);border-radius:var(--r);padding:24px 16px;text-align:center;cursor:pointer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;color:var(--muted);margin-bottom:8px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <p style="color:var(--muted);font-size:13px">Toca para subir el PDF del Carfax</p>
+            <span style="font-size:11px;color:#555">Solo PDF de texto (no escaneado)</span>
+          </div>
+          <input type="file" id="carfax-file" accept="application/pdf" style="display:none" onchange="handleCarfax(event)">
+          <div id="carfax-filename" style="display:none;margin-top:8px;font-size:12px;color:var(--accent)"></div>
+          <button class="btn btn-accent" id="carfax-btn" onclick="analyzeCarfax()" style="margin-top:10px;display:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Resumir y dar punto de vista
+          </button>
+          <div class="error" id="carfax-error"></div>
+        </div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="output-area">
+        <div class="output-header">Resumen del Carfax</div>
+        <div class="output-body" id="carfax-output">
+          <div class="output-empty">Sube un PDF de Carfax y genera el resumen →</div>
+        </div>
+        <div class="output-actions" id="carfax-actions" style="display:none">
+          <button class="btn btn-accent" onclick="copyCarfax()" style="flex:1">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copiar para WhatsApp
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -504,21 +543,95 @@ function showTab(t,el){
   el.classList.add('active');
   const analyzer=document.getElementById('tab-analyzer');
   const history=document.getElementById('tab-history');
+  const carfax=document.getElementById('tab-carfax');
   const right=document.getElementById('right-panel');
+  analyzer.style.display='none';
+  history.style.display='none';
+  carfax.style.display='none';
+  right.style.display='none';
   if(t==='analyzer'){
     analyzer.style.display='flex';
-    history.style.display='none';
     right.style.display='flex';
+  } else if(t==='carfax'){
+    carfax.style.display='flex';
   } else {
-    analyzer.style.display='none';
     history.style.display='block';
-    right.style.display='none';
     renderHistory();
   }
 }
 
 function showError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block'}
 function hideError(id){document.getElementById(id).style.display='none'}
+
+// ---- CARFAX ----
+let carfaxText='';
+let carfaxOutput='';
+
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+async function handleCarfax(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  hideError('carfax-error');
+  document.getElementById('carfax-filename').style.display='block';
+  document.getElementById('carfax-filename').textContent='📄 '+file.name+' — leyendo...';
+  try{
+    const buffer=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buffer}).promise;
+    let fullText='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const content=await page.getTextContent();
+      fullText+=content.items.map(it=>it.str).join(' ')+'\n';
+    }
+    carfaxText=fullText.trim();
+    if(carfaxText.length<50){
+      showError('carfax-error','El PDF no contiene texto legible. Puede ser un documento escaneado (imagen). Prueba con un Carfax en formato de texto.');
+      document.getElementById('carfax-filename').textContent='📄 '+file.name+' — sin texto';
+      document.getElementById('carfax-btn').style.display='none';
+      return;
+    }
+    document.getElementById('carfax-filename').textContent='📄 '+file.name+' ✓';
+    document.getElementById('carfax-btn').style.display='inline-flex';
+  }catch(err){
+    showError('carfax-error','Error al leer el PDF: '+err.message);
+    document.getElementById('carfax-filename').textContent='📄 error';
+  }
+}
+
+async function analyzeCarfax(){
+  if(!carfaxText){showError('carfax-error','Primero sube un PDF');return}
+  hideError('carfax-error');
+  const out=document.getElementById('carfax-output');
+  out.innerHTML='<div class="loading"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Analizando Carfax...</span></div>';
+  document.getElementById('carfax-actions').style.display='none';
+  const btn=document.getElementById('carfax-btn');
+  btn.disabled=true;
+  try{
+    const res=await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mode:'carfax',carfaxText})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Error desconocido');
+    carfaxOutput=data.result.trim();
+    out.textContent=carfaxOutput;
+    document.getElementById('carfax-actions').style.display='flex';
+  }catch(err){
+    out.innerHTML='<div class="output-empty" style="color:var(--danger)">Error: '+err.message+'</div>';
+  }
+  btn.disabled=false;
+}
+
+function copyCarfax(){
+  if(!carfaxOutput)return;
+  navigator.clipboard.writeText(carfaxOutput)
+    .then(()=>showToast('¡Copiado para WhatsApp ✓'))
+    .catch(()=>{const ta=document.createElement('textarea');ta.value=carfaxOutput;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('¡Copiado ✓')});
+}
 
 async function generateAnalysis(){
   const get=id=>document.getElementById(id).value;
