@@ -39,7 +39,7 @@ Termina con un punto de vista honesto y profesional sobre lo que refleja el repo
 REGLAS:
 - Solo usa información que esté REALMENTE en el texto. NO inventes nada. Si algo no aparece, no lo menciones.
 - No resumas en exceso: la información importante (título, total loss, accidentes, millas) debe quedar completa y clara.
-- Al final agrega siempre: "Recuerde que el Carfax no reporta daños mecánicos ni ocultos."
+- NO menciones que "el Carfax no reporta daños mecánicos" dentro del cuerpo del resumen; esa frase se agrega automáticamente al final una sola vez, no la incluyas tú.
 
 Texto del Carfax:
 ${carfaxText.substring(0, 14000)}`;
@@ -58,6 +58,10 @@ ${carfaxText.substring(0, 14000)}`;
       if (!cRes.ok) return res.status(500).json({ error: cData?.error?.message || 'Error de Groq' });
       let cText = (cData?.choices?.[0]?.message?.content || '').trim();
       cText = cText.replace(/^[\s\-–—•*>]+/, '').trim();
+      // Quitar cualquier mención duplicada del disclaimer que la IA haya puesto
+      cText = cText.replace(/\.?\s*(Recuerde que\s+)?El Carfax no reporta daños mecánicos ni ocultos\.?/gi, '').trim();
+      // Agregar el disclaimer una sola vez al final
+      cText += '\n\nRecuerde que el Carfax no reporta daños mecánicos ni ocultos.';
       return res.status(200).json({ result: cText });
     } catch (err) {
       return res.status(500).json({ error: err.message });
