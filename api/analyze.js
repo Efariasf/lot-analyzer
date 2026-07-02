@@ -9,6 +9,49 @@ export default async function handler(req, res) {
   const GROQ_KEY = process.env.GROQ_API_KEY;
   if (!GROQ_KEY) return res.status(500).json({ error: 'API key no configurada' });
 
+  // ---- MODO CARFAX ----
+  if (mode === 'carfax') {
+    const carfaxText = req.body.carfaxText || '';
+    if (!carfaxText.trim()) return res.status(400).json({ error: 'Sin texto del Carfax' });
+    try {
+      const carfaxPrompt = `Eres un experto en análisis de reportes Carfax de vehículos. A continuación tienes el texto extraído de un reporte Carfax. Analízalo y genera un resumen profesional en español para enviar por WhatsApp a un cliente. Texto plano, sin markdown, sin asteriscos, sin emojis.
+
+Incluye de forma clara y concisa:
+- Tipo de título y si hay marcas de salvage, junk, rebuilt, etc.
+- Número de dueños anteriores.
+- Historial de accidentes reportados (si los hay).
+- Registro de millas y si hay inconsistencias o alertas de odómetro.
+- Historial de servicios o mantenimiento relevante.
+- Uso del vehículo (personal, flota, alquiler, etc.) si aparece.
+- Cualquier alerta importante (recompra, daño total, problema de título).
+
+Termina con un punto de vista breve y honesto sobre lo que refleja el reporte.
+
+IMPORTANTE: Solo usa información que esté realmente en el texto. NO inventes datos. Si algo no aparece, no lo menciones. Recuerda al final que el Carfax no reporta daños mecánicos ni ocultos.
+
+Texto del Carfax:
+${carfaxText.substring(0, 12000)}`;
+
+      const cRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: carfaxPrompt }],
+          max_tokens: 1500,
+          temperature: 0.4
+        })
+      });
+      const cData = await cRes.json();
+      if (!cRes.ok) return res.status(500).json({ error: cData?.error?.message || 'Error de Groq' });
+      let cText = (cData?.choices?.[0]?.message?.content || '').trim();
+      cText = cText.replace(/^[\s\-–—•*>]+/, '').trim();
+      return res.status(200).json({ result: cText });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
