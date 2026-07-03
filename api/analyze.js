@@ -143,32 +143,43 @@ ${carfaxText.substring(0, 14000)}`;
 
     // ---- TOGGLES ----
     const tituloAusenteText = tituloAusente
-      ? 'En cuanto al título: Copart no posee el título actualmente. Le da al vendedor 30 días hábiles para que sea enviado a la yarda y luego ellos deben enviárnoslo a FL.'
+      ? `En cuanto al título: ${auction} no posee el título actualmente. Le da al vendedor 30 días hábiles para que sea enviado a la yarda y luego ellos deben enviárnoslo a FL.`
       : '';
     const copartGoText = copartGo
       ? 'Este vehículo está listado como CopartGO, lo que significa que fue publicado directamente por el vendedor usando la app móvil de Copart. El informe de condición lo completó el propio vendedor con respuestas de Sí/No y no representa la opinión de Copart, quien no inspeccionó el vehículo ni se hace responsable de la exactitud del informe.'
       : '';
     const externalLotText = externalLot
-      ? 'Este es un Lote Externo: el vehículo no se encuentra físicamente en una ubicación de Copart. Está en una ubicación designada para previsualizar y retirar indicada en el lote.'
+      ? `Este es un Lote Externo: el vehículo no se encuentra físicamente en una ubicación de ${auction}. Está en una ubicación designada para previsualizar y retirar indicada en el lote.`
       : '';
     const fechaFuturoText = fechaFuturo
-      ? 'Es posible que Copart haya realizado un cambio reciente en la fecha de subasta. Actualmente en nuestra plataforma puede aparecer una fecha estimada, pero si en Copart el lote figura como "Future" o "Upcoming Lot", significa que la subasta aún no tiene una fecha confirmada, generalmente porque están pendientes documentos o el título del vehículo. Le recomendamos verificar directamente en Copart. Una vez que la documentación esté completa, se asignará una fecha de subasta oficial y el lote estará disponible para ofertar.'
+      ? `Es posible que ${auction} haya realizado un cambio reciente en la fecha de subasta. Actualmente en nuestra plataforma puede aparecer una fecha estimada, pero si en ${auction} el lote figura como "Future" o "Upcoming Lot", significa que la subasta aún no tiene una fecha confirmada, generalmente porque están pendientes documentos o el título del vehículo. Le recomendamos verificar directamente en ${auction}. Una vez que la documentación esté completa, se asignará una fecha de subasta oficial y el lote estará disponible para ofertar.`
       : '';
 
-    const excelenteVariants = [
+    // Variantes de "excelente estado": si hay daños marcados, usa versiones que no contradigan
+    const excelenteVariantsSinDanos = [
       'El vehículo se observa en excelente estado, sin daños estéticos apreciables. Es una unidad impecable, muy bien cuidada y con una presentación sobresaliente.',
       'Se trata de un vehículo en condiciones excepcionales, sin golpes ni daños visibles en la carrocería. Una excelente oportunidad por su estado prácticamente impecable.',
       'El vehículo luce en muy buen estado general, sin daños estéticos notables. Es una unidad limpia, bien mantenida y con una apariencia excelente.',
       'Excelente unidad, se aprecia en óptimas condiciones tanto estéticas como generales, sin daños visibles. Un vehículo muy bien conservado.'
     ];
+    const excelenteVariantsConDanos = [
+      'Más allá del daño mencionado, el vehículo se observa en excelente estado general. Es una unidad bien cuidada y con muy buena presentación.',
+      'Fuera del daño indicado, el vehículo luce en condiciones excepcionales, bien mantenido y con una apariencia sobresaliente.',
+      'Aparte del daño señalado, se aprecia una unidad en muy buen estado, limpia y bien conservada.'
+    ];
+    const excelentePool = damageList.length > 0 ? excelenteVariantsConDanos : excelenteVariantsSinDanos;
     const excelenteText = excelente
-      ? excelenteVariants[Math.floor(Math.random() * excelenteVariants.length)]
+      ? excelentePool[Math.floor(Math.random() * excelentePool.length)]
       : '';
 
-    // ---- OFERTA ----
-    const offerText = (offerMin && offerMax) ? `Ofertaría entre $${offerMin} a $${offerMax}` : '';
-    const buyNowText = buyNow ? `El vehículo tiene un precio de compra inmediata (Buy Now) de $${buyNow}, ese es el precio mínimo que acepta el vendedor para cerrar la venta de inmediato.` : '';
-    const reserveText = reservePrice ? `Tiene un precio de reserva de $${reservePrice}.` : '';
+    // ---- OFERTA (números con formato de miles) ----
+    const fmt = n => {
+      const num = parseFloat(String(n).replace(/,/g, ''));
+      return isNaN(num) ? n : num.toLocaleString('en-US');
+    };
+    const offerText = (offerMin && offerMax) ? `Ofertaría entre $${fmt(offerMin)} a $${fmt(offerMax)}` : '';
+    const buyNowText = buyNow ? `El vehículo tiene un precio de compra inmediata (Buy Now) de $${fmt(buyNow)}, ese es el precio mínimo que acepta el vendedor para cerrar la venta de inmediato.` : '';
+    const reserveText = reservePrice ? `Tiene un precio de reserva de $${fmt(reservePrice)}.` : '';
 
     // Solo la primera línea la genera la IA para dar variedad; el resto es fijo y controlado.
     const milesInline = miles ? `, con ${miles} millas ${milesStatus.toLowerCase()}` : '';
@@ -192,15 +203,16 @@ Datos:
 ${miles ? `- Millas: ${miles} ${milesStatus.toLowerCase()}` : '- Millas: no especificadas (NO las menciones)'}
 
 Reglas:
-- Empieza indicando el título sin afirmarlo con certeza absoluta, atribuyéndolo a la subasta. VARÍA la forma de decirlo cada vez, usa diferentes opciones como: "La subasta indica título ${titleType}", "El lote figura con título ${titleType}", "De acuerdo a la subasta, el título es ${titleType}", "Copart reporta título ${titleType}", "El vehículo aparece listado con título ${titleType}", "Registrado en la subasta como título ${titleType}". NUNCA uses siempre la misma frase, NUNCA digas "El título de ${titleType}".
-- Al explicar el significado del título, SIEMPRE atribúyelo a la subasta, nunca lo afirmes como un hecho propio. Usa fórmulas como "según Copart, este título indica que...", "de acuerdo a la información de la subasta, esto significa que...". Para Salvage: "según la subasta, este título indica que el vehículo habría sufrido un daño suficientemente severo para ser declarado pérdida total". Siempre dejamos claro que solo repetimos la información de la subasta, no la verificamos nosotros.
+- Empieza indicando el título sin afirmarlo con certeza absoluta, atribuyéndolo a la subasta. VARÍA la forma de decirlo cada vez, usa diferentes opciones como: "La subasta indica título ${titleType}", "El lote figura con título ${titleType}", "De acuerdo a la subasta, el título es ${titleType}", "${auction} reporta título ${titleType}", "El vehículo aparece listado con título ${titleType}", "Registrado en la subasta como título ${titleType}". NUNCA uses siempre la misma frase, NUNCA digas "El título de ${titleType}".
+- Al explicar el significado del título, SIEMPRE atribúyelo a la subasta, nunca lo afirmes como un hecho propio. Usa fórmulas como "según ${auction}, este título indica que...", "de acuerdo a la información de la subasta, esto significa que...". Para Salvage: "según la subasta, este título indica que el vehículo habría sufrido un daño suficientemente severo para ser declarado pérdida total". Siempre dejamos claro que solo repetimos la información de la subasta, no la verificamos nosotros.
 - Afirma los daños con seguridad, nunca digas "sugiere" o "podría tener daños".
 - Menciona los daños tal como están escritos, de forma natural: si dice "daño trasero" escribe "daño trasero" (NO "daño en el trasero"), si dice "granizo" escribe "daño por granizo". Para varios: "daño frontal y lateral".
 - NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar", "ofrece un atractivo precio de compra", "sin otros daños reportados", "su historial no presenta registros" o "puede necesitar reparaciones". NUNCA hables de historial ni reportes previos, no tenemos esa información.
 - NO menciones fecha de subasta, luces, ni nada que no esté en los datos.
 - Devuelve SOLO ese párrafo, nada más.`;
 
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    // Ambas llamadas a Groq en PARALELO para mayor velocidad
+    const firstParagraphPromise = fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
       body: JSON.stringify({
@@ -211,25 +223,29 @@ Reglas:
       })
     });
 
+    const obsPromise = (observations && observations.trim())
+      ? fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: `Mejora solo la redacción de esta observación de un broker de autos, en español, sin agregar nada nuevo, en una oración profesional. Devuelve solo la oración mejorada: "${observations}"` }],
+            max_tokens: 150,
+            temperature: 0.5
+          })
+        })
+      : Promise.resolve(null);
+
+    const [groqRes, obsRes] = await Promise.all([firstParagraphPromise, obsPromise]);
+
     const data = await groqRes.json();
     if (!groqRes.ok) return res.status(500).json({ error: data?.error?.message || 'Error de Groq' });
     let firstParagraph = (data?.choices?.[0]?.message?.content || '').trim();
     // Limpiar guiones, viñetas o caracteres sueltos al inicio
     firstParagraph = firstParagraph.replace(/^[\s\-–—•*>]+/, '').trim();
 
-    // Mejorar observaciones con IA si existen (segunda llamada corta)
     let obsText = '';
-    if (observations && observations.trim()) {
-      const obsRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'user', content: `Mejora solo la redacción de esta observación de un broker de autos, en español, sin agregar nada nuevo, en una oración profesional. Devuelve solo la oración mejorada: "${observations}"` }],
-          max_tokens: 150,
-          temperature: 0.5
-        })
-      });
+    if (obsRes) {
       const obsData = await obsRes.json();
       if (obsRes.ok) obsText = (obsData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
     }
