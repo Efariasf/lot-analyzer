@@ -140,6 +140,9 @@ textarea{resize:none;height:65px}
   .right-panel{padding:10px}
   .right-panel .output-area{min-height:300px}
   .damage-grid{grid-template-columns:repeat(2,1fr)}
+  #tab-carfax{flex-direction:column !important;overflow:visible !important}
+  #tab-carfax .left-panel{width:100% !important}
+  #tab-carfax .right-panel{min-height:300px}
 }
 </style>
 </head>
@@ -398,6 +401,19 @@ textarea{resize:none;height:65px}
 <script>
 let currentOutput='',lotHistory=[];
 try{lotHistory=JSON.parse(localStorage.getItem('lot-history')||'[]')}catch(e){}
+
+// Atajo Ctrl+Enter para generar análisis rápido
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
+    const analyzerVisible=document.getElementById('tab-analyzer').style.display!=='none';
+    const carfaxVisible=document.getElementById('tab-carfax')&&document.getElementById('tab-carfax').style.display!=='none';
+    if(analyzerVisible&&!document.getElementById('gen-btn').disabled){
+      generateAnalysis();
+    } else if(carfaxVisible&&document.getElementById('carfax-btn').style.display!=='none'&&!document.getElementById('carfax-btn').disabled){
+      analyzeCarfax();
+    }
+  }
+});
 
 let lotTemplates=[];
 try{lotTemplates=JSON.parse(localStorage.getItem('lot-templates')||'[]')}catch(e){}
