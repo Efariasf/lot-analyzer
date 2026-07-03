@@ -16,29 +16,31 @@ export default async function handler(req, res) {
     try {
       const carfaxPrompt = `Eres un experto en análisis de reportes Carfax de vehículos de subasta. A continuación tienes el texto extraído de un reporte Carfax. Analízalo a fondo y genera un resumen profesional y COMPLETO en español para enviar por WhatsApp a un cliente. Texto plano, sin markdown, sin asteriscos, sin emojis.
 
-Incluye SIEMPRE que aparezca en el reporte (no resumas de más, la información importante debe estar completa):
+Incluye SOLO lo que realmente aparezca en el reporte, en este orden:
 
-1. TIPO DE TÍTULO: indica claramente qué tipo de título reporta el Carfax (Clean, Salvage, Junk, Certificate of Destruction, Rebuilt, etc.) y explica brevemente qué significa. Recuerda atribuirlo siempre al reporte ("el Carfax indica...").
+1. TIPO DE TÍTULO: indica qué tipo de título reporta el Carfax (Clean, Salvage, Junk, Certificate of Destruction, Rebuilt, etc.) atribuyéndolo siempre al reporte ("el Carfax indica..."). Explica brevemente qué significa ese título. NO digas que fue reparado ni nada que el reporte no confirme.
 
-2. TOTAL LOSS: si el reporte menciona un "Total Loss" (pérdida total), DESTÁCALO. Explica que cuando una aseguradora declara total loss, el vehículo PODRÍA pasar a tener título salvage dependiendo del estado, aunque no siempre aplica. Recomienda verificar.
+2. TOTAL LOSS: SOLO si el reporte menciona explícitamente un "Total Loss" (pérdida total), inclúyelo con su fecha. Si el título del reporte es Clean pero hay un Total Loss registrado, advierte que el título podría cambiar a salvage al registrarse dependiendo del estado. Si el título YA es Salvage/Junk, NO digas que "podría pasar a salvage" (ya lo es, sería contradictorio) — en ese caso solo menciona el total loss como el evento que originó ese título si el reporte lo respalda. Si NO hay ningún total loss en el reporte, NO escribas ningún párrafo sobre pérdida total, omítelo por completo.
 
 3. DUEÑOS ANTERIORES: cuántos dueños ha tenido.
 
 4. ACCIDENTES: todos los accidentes o daños reportados con fechas si aparecen.
 
-5. MILLAS / ODÓMETRO: registro de millas, y si hay alertas de rollback, inconsistencias o "not actual mileage".
+5. MILLAS / ODÓMETRO: registro de millas, y si hay alertas de rollback, inconsistencias o "not actual mileage". Si no hay alertas, dilo brevemente.
 
 6. HISTORIAL DE SERVICIOS: mantenimientos o servicios relevantes.
 
 7. USO DEL VEHÍCULO: personal, alquiler, flota, comercial, etc.
 
-8. ALERTAS: recompras (lemon/buyback), daños por inundación, granizo, robo recuperado, o cualquier problema serio.
+8. ALERTAS: recompras (lemon/buyback), daños por inundación, granizo, robo recuperado, recalls, o cualquier problema serio.
 
-Termina con un punto de vista honesto y profesional sobre lo que refleja el reporte en general.
+Termina con un punto de vista honesto y profesional sobre lo que refleja el reporte en general, coherente con todo lo anterior.
 
-REGLAS:
-- Solo usa información que esté REALMENTE en el texto. NO inventes nada. Si algo no aparece, no lo menciones.
-- No resumas en exceso: la información importante (título, total loss, accidentes, millas) debe quedar completa y clara.
+REGLAS CRÍTICAS:
+- Solo usa información que esté REALMENTE en el texto. NO inventes nada. Si algo no aparece, omítelo por completo — no escribas párrafos diciendo "no hay registros de X".
+- El resumen debe ser LÓGICO y COHERENTE de principio a fin: nunca digas algo en un párrafo que contradiga otro.
+- No digas "ha sido reparado" ni supongas hechos que el reporte no confirma.
+- No resumas en exceso: la información importante (título, total loss si existe, accidentes, millas) debe quedar completa y clara.
 - NO menciones que "el Carfax no reporta daños mecánicos" dentro del cuerpo del resumen; esa frase se agrega automáticamente al final una sola vez, no la incluyas tú.
 
 Texto del Carfax:
