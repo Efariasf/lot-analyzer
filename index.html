@@ -127,6 +127,11 @@ textarea{resize:none;height:65px}
 .history-date{font-size:11px;color:var(--muted)}
 .history-preview{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
 .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
+.guia-item{border:1px solid var(--border);border-radius:var(--rs);margin-bottom:6px;background:var(--surface2)}
+.guia-item summary{padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text);list-style:none;display:flex;align-items:center;justify-content:space-between}
+.guia-item summary::after{content:'+';color:var(--accent);font-size:15px;font-weight:700}
+.guia-item[open] summary::after{content:'−'}
+.guia-item p{padding:0 12px 10px;font-size:12.5px;line-height:1.6;color:#c9c9c9}
 
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--text);color:var(--bg);padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;z-index:99;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -164,6 +169,7 @@ textarea{resize:none;height:65px}
 <div class="tabs">
   <button class="tab active" onclick="showTab('analyzer',this)">Analizar</button>
   <button class="tab" onclick="showTab('carfax',this)">Carfax</button>
+  <button class="tab" onclick="showTab('guia',this)">Guía</button>
   <button class="tab" onclick="showTab('history',this)">Historial</button>
 </div>
 
@@ -374,6 +380,91 @@ textarea{resize:none;height:65px}
     </div>
   </div>
 
+  <!-- GUÍA DE TÍTULOS -->
+  <div id="tab-guia" style="display:none;flex:1;overflow-y:auto;padding:12px">
+    <div style="max-width:760px;margin:0 auto">
+
+      <div class="card">
+        <div class="section-label">Tipos de título</div>
+        <details class="guia-item" open>
+          <summary>Clean / Clear</summary>
+          <p>El vehículo no ha sido declarado pérdida total por una aseguradora. Ojo: un título clean en subasta puede ser reclasificado a salvage al momento de registrarlo si NMVTIS (la base de datos nacional) tiene marcado un total loss previo que aún no se refleja en el papel. Por eso siempre se recomienda revisar el Carfax y confirmar con el DMV.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Salvage</summary>
+          <p>La aseguradora declaró el vehículo pérdida total porque el costo de reparación superó el umbral del estado. No puede circular legalmente hasta ser reparado, inspeccionado y re-titulado como Rebuilt. La marca salvage de un estado acompaña al vehículo aunque se registre en otro estado.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Rebuilt / Reconstructed</summary>
+          <p>Vehículo que fue salvage, se reparó y pasó la inspección estatal. Puede circular legalmente. La marca "Rebuilt" es permanente y acompaña al vehículo en cada venta futura. El seguro suele ser más limitado y el valor de reventa es típicamente 20-40% menor que un clean equivalente.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Parts Only / Bill of Sale</summary>
+          <p>No otorga propiedad para circular: el vehículo jamás podrá registrarse. Solo sirve para piezas, uso fuera de carretera o exportación (verificar reglas del estado emisor).</p>
+        </details>
+        <details class="guia-item">
+          <summary>Certificate of Destruction / Junk</summary>
+          <p>El vehículo JAMÁS podrá circular legalmente en las carreteras de Estados Unidos. Solo chatarra o venta de piezas. El VIN se retira de la base nacional. En muchos estados se requiere licencia de desmantelador para comprarlos.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Non-Repairable</summary>
+          <p>Similar al Junk: nunca podrá volver a circular en EE.UU. Diferencia clave para exportadores: en varios estados se permite exportarlo antes del desguace. Verificar siempre las reglas del estado emisor antes de comprar para exportar.</p>
+        </details>
+      </div>
+
+      <div class="card">
+        <div class="section-label">Umbrales de pérdida total por estado</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Porcentaje del valor del vehículo que debe alcanzar el daño para que la aseguradora lo declare pérdida total (y normalmente pase a salvage). Mientras más bajo el umbral, más fácil que un carro reciba salvage.</p>
+        <details class="guia-item">
+          <summary>100% — Colorado, Texas</summary>
+          <p>El daño debe igualar el valor total del vehículo. Por eso Texas "perdona" más: muchos carros dañados conservan título clean. Además, en Texas el cálculo excluye el costo de repintado y el daño por granizo.</p>
+        </details>
+        <details class="guia-item">
+          <summary>80% — Florida, Minnesota, Missouri, Oregon</summary>
+          <p>El daño debe alcanzar el 80% del valor.</p>
+        </details>
+        <details class="guia-item">
+          <summary>75% — La mayoría de los estados</summary>
+          <p>Alabama, Kansas, Kentucky, Louisiana, Maryland, Michigan, Nebraska, New Hampshire, New York, North Carolina, North Dakota, Rhode Island, South Carolina, Tennessee, Virginia, West Virginia, Wyoming, DC.</p>
+        </details>
+        <details class="guia-item">
+          <summary>70% — Arkansas, Indiana, Iowa, Wisconsin</summary>
+          <p>Umbral más estricto: con 70% de daño ya es pérdida total.</p>
+        </details>
+        <details class="guia-item">
+          <summary>60-65% — Oklahoma (60%), Nevada (65%)</summary>
+          <p>Los más estrictos del país. Un carro de estos estados se "salvagea" con menos daño que en cualquier otro.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Fórmula TLF — California, Arizona, Georgia y otros</summary>
+          <p>Alaska, Arizona, California, Connecticut, Delaware, Georgia, Hawaii, Idaho, Illinois, Maine, Massachusetts, Mississippi, Montana, New Jersey, New Mexico, Ohio, Pennsylvania, South Dakota, Utah, Vermont, Washington usan una fórmula: si costo de reparación + valor de salvage ≥ valor del vehículo → pérdida total.</p>
+        </details>
+      </div>
+
+      <div class="card">
+        <div class="section-label">Reglas clave que debes recordar</div>
+        <details class="guia-item" open>
+          <summary>Granizo y Texas (confirmado por ley)</summary>
+          <p>Desde el 11 de septiembre de 2017, Texas no emite títulos salvage para vehículos dañados exclusivamente por granizo — la ley los excluye de la definición de vehículo salvage. En la mayoría de los demás estados, el granizo severo sí puede generar salvage al registrarse.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Clean en subasta ≠ Clean garantizado</summary>
+          <p>Si el Carfax muestra un total loss pero el título dice clean, al registrar el vehículo el DMV puede reclasificarlo a salvage usando los datos de NMVTIS. Siempre advertir al cliente y recomendar verificar con el DMV.</p>
+        </details>
+        <details class="guia-item">
+          <summary>La marca salvage sigue al vehículo</summary>
+          <p>Un salvage de otro estado no se "limpia" registrándolo en Texas ni en ningún estado serio. El intento de lavar títulos (title washing) es fraude.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Daños que NO cambian el título</summary>
+          <p>Daño frontal, trasero, lateral, volcadura o falla mecánica por sí solos no cambian un título clean — solo importa si la aseguradora declaró pérdida total. Los daños que típicamente disparan salvage al registrar: granizo (salvo Texas), inundación/agua, fuego y vandalismo severo.</p>
+        </details>
+      </div>
+
+      <p style="font-size:11px;color:#555;text-align:center;padding:8px 0 20px">Fuentes: TxDMV, NMVTIS / vehiclehistory.gov, leyes estatales de pérdida total. Actualizado julio 2026.</p>
+    </div>
+  </div>
+
   <!-- HISTORY -->
   <div id="tab-history" style="display:none;flex:1;overflow-y:auto;padding:12px">
     <input id="history-search" placeholder="Buscar por lote, marca o modelo..." style="margin-bottom:10px" oninput="renderHistory()">
@@ -560,16 +651,20 @@ function showTab(t,el){
   const analyzer=document.getElementById('tab-analyzer');
   const history=document.getElementById('tab-history');
   const carfax=document.getElementById('tab-carfax');
+  const guia=document.getElementById('tab-guia');
   const right=document.getElementById('right-panel');
   analyzer.style.display='none';
   history.style.display='none';
   carfax.style.display='none';
+  guia.style.display='none';
   right.style.display='none';
   if(t==='analyzer'){
     analyzer.style.display='flex';
     right.style.display='flex';
   } else if(t==='carfax'){
     carfax.style.display='flex';
+  } else if(t==='guia'){
+    guia.style.display='block';
   } else {
     history.style.display='block';
     renderHistory();
