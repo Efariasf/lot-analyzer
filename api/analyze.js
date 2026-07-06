@@ -1,867 +1,299 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Analizador de Lotes</title>
-<meta name="theme-color" content="#0f0f0f">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg">
-<link rel="apple-touch-icon" href="icon.svg">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<style>
-:root{
-  --bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#2e2e2e;
-  --text:#f0f0f0;--muted:#666;--accent:#e8ff4d;--accent-dark:#c8df2d;
-  --danger:#ff5c5c;--r:8px;--rs:6px;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;display:flex;flex-direction:column}
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-/* HEADER */
-.header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.header-left{display:flex;align-items:center;gap:8px}
-.logo{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.logo svg{width:14px;height:14px}
-.header h1{font-size:14px;font-weight:600}
-.header p{font-size:11px;color:var(--muted)}
-.ai-badge{background:#1a1a2e;border:1px solid #333;color:#a78bfa;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:500;white-space:nowrap}
+  const { mode, fields } = req.body;
+  const GROQ_KEY = process.env.GROQ_API_KEY;
+  if (!GROQ_KEY) return res.status(500).json({ error: 'API key no configurada' });
 
-/* TABS */
-.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
-.tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:500;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  // ---- MODO CARFAX ----
+  if (mode === 'carfax') {
+    const carfaxText = req.body.carfaxText || '';
+    if (!carfaxText.trim()) return res.status(400).json({ error: 'Sin texto del Carfax' });
+    try {
+      const carfaxPrompt = `Eres un experto en análisis de reportes Carfax de vehículos de subasta. A continuación tienes el texto extraído de un reporte Carfax. Analízalo a fondo y genera un resumen profesional y COMPLETO en español para enviar por WhatsApp a un cliente. Texto plano, sin markdown, sin asteriscos, sin emojis.
 
-/* MAIN LAYOUT */
-.main{flex:1;display:flex;overflow:hidden;min-height:0}
+Incluye SOLO lo que realmente aparezca en el reporte, en este orden:
 
-/* LEFT PANEL */
-.left-panel{width:420px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-.panel-scroll{flex:1;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
-.panel-scroll::-webkit-scrollbar{width:4px}
-.panel-scroll::-webkit-scrollbar-track{background:transparent}
-.panel-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+1. TIPO DE TÍTULO: indica qué tipo de título reporta el Carfax (Clean, Salvage, Junk, Certificate of Destruction, Rebuilt, etc.) atribuyéndolo siempre al reporte ("el Carfax indica..."). Explica brevemente qué significa ese título. NO digas que fue reparado ni nada que el reporte no confirme.
 
-/* RIGHT PANEL */
-.right-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px;gap:10px}
-.right-panel .output-area{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden;min-height:0}
-.output-header{padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
-.output-body{flex:1;overflow-y:auto;padding:14px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--text);scrollbar-width:thin;scrollbar-color:var(--border) transparent}
-.output-body::-webkit-scrollbar{width:4px}
-.output-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.output-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;text-align:center;padding:20px}
-.output-actions{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:6px;flex-shrink:0}
+2. TOTAL LOSS: SOLO si el reporte menciona explícitamente un "Total Loss" (pérdida total), inclúyelo con su fecha. Si el título del reporte es Clean pero hay un Total Loss registrado, advierte que el título podría cambiar a salvage al registrarse dependiendo del estado. Si el título YA es Salvage/Junk, NO digas que "podría pasar a salvage" (ya lo es, sería contradictorio) — en ese caso solo menciona el total loss como el evento que originó ese título si el reporte lo respalda. Si NO hay ningún total loss en el reporte, NO escribas ningún párrafo sobre pérdida total, omítelo por completo.
 
-/* HISTORY PANEL */
-#tab-history{flex:1;display:none;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+3. DUEÑOS ANTERIORES: cuántos dueños ha tenido.
 
-/* CARDS */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:8px}
-.section-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;margin-top:10px}
-.section-label:first-child{margin-top:0}
+4. ACCIDENTES: todos los accidentes o daños reportados con fechas si aparecen.
 
-/* INPUTS */
-input,select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-size:13px;padding:7px 9px;font-family:inherit;transition:.15s}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
-select option{background:var(--surface2)}
-textarea{resize:none;height:65px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px}
-.mb5{margin-bottom:5px}
+5. MILLAS / ODÓMETRO: registro de millas, y si hay alertas de rollback, inconsistencias o "not actual mileage". Si no hay alertas, dilo brevemente.
 
-/* PASTE */
-.paste-wrap{display:flex;gap:5px;margin-bottom:3px}
-.paste-wrap input{border-color:var(--accent);flex:1}
-.paste-hint{font-size:11px;color:var(--muted);margin-bottom:8px}
+6. HISTORIAL DE SERVICIOS: mantenimientos o servicios relevantes.
 
-/* TOGGLES */
-.toggle-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
-.toggle-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);font-size:11px;font-weight:600;padding:5px 10px;cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap}
-.toggle-btn:hover{border-color:var(--accent);color:var(--text)}
-.toggle-btn.active{border-color:var(--accent);background:rgba(232,255,77,.1);color:var(--accent)}
+7. USO DEL VEHÍCULO: personal, alquiler, flota, comercial, etc.
 
-/* DAMAGE */
-.damage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
-.dmg{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:5px 7px;cursor:pointer;transition:.15s}
-.dmg:hover{border-color:var(--accent)}
-.dmg input[type=checkbox]{accent-color:var(--accent);width:12px;height:12px;cursor:pointer;flex-shrink:0}
-.dmg span{font-size:11px;color:var(--text);line-height:1.2}
-.dmg.checked{border-color:var(--accent);background:rgba(232,255,77,.07)}
+8. ALERTAS: recompras (lemon/buyback), daños por inundación, granizo, robo recuperado, recalls, o cualquier problema serio.
 
-/* MECH */
-.mech-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:5px}
-.mech{display:flex;align-items:center;justify-content:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:7px 5px;cursor:pointer;transition:.15s;color:var(--muted)}
-.mech:hover{border-color:var(--accent);color:var(--text)}
-.mech.selected{border-color:var(--accent);background:rgba(232,255,77,.07);color:var(--accent)}
-.mech span{font-size:11px;color:inherit}
+Termina con un punto de vista honesto y profesional sobre lo que refleja el reporte en general, coherente con todo lo anterior.
 
-/* LIGHTS */
-.lights-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:5px}
-.light{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:6px 3px;cursor:pointer;transition:.15s;color:var(--muted)}
-.light:hover{border-color:var(--accent);color:var(--text)}
-.light.selected{border-color:var(--accent);background:rgba(232,255,77,.07);color:var(--accent)}
-.light svg{width:24px;height:24px}
-.light span{font-size:10px;text-align:center;line-height:1.2;color:inherit}
+REGLAS CRÍTICAS:
+- Solo usa información que esté REALMENTE en el texto. NO inventes nada. Si algo no aparece, omítelo por completo — no escribas párrafos diciendo "no hay registros de X".
+- El resumen debe ser LÓGICO y COHERENTE de principio a fin: nunca digas algo en un párrafo que contradiga otro.
+- No digas "ha sido reparado" ni supongas hechos que el reporte no confirma.
+- No resumas en exceso: la información importante (título, total loss si existe, accidentes, millas) debe quedar completa y clara.
+- NO menciones que "el Carfax no reporta daños mecánicos" dentro del cuerpo del resumen; esa frase se agrega automáticamente al final una sola vez, no la incluyas tú.
 
-/* BTNS */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px 14px;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:inherit}
-.btn:active{transform:scale(.97)}
-.btn-accent{background:var(--accent);color:#000;width:100%;padding:10px}
-.btn-accent:hover{background:var(--accent-dark)}
-.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
-.btn-outline:hover{background:var(--surface2)}
-.btn-sm{padding:7px 12px;font-size:12px}
-.btn:disabled{opacity:.5;cursor:not-allowed}
+Texto del Carfax:
+${carfaxText.substring(0, 14000)}`;
 
-.loading{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;padding:6px 0}
-.dots{display:flex;gap:4px}
-.dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:blink 1s infinite}
-.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
-@keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
-.error{background:rgba(255,92,92,.1);border:1px solid rgba(255,92,92,.3);border-radius:var(--rs);padding:7px 10px;font-size:12px;color:var(--danger);margin-top:6px;display:none}
-
-/* HISTORY */
-.history-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px}
-.history-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px}
-.history-title{font-size:13px;font-weight:600}
-.history-date{font-size:11px;color:var(--muted)}
-.history-preview{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
-.empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
-.guia-item{border:1px solid var(--border);border-radius:var(--rs);margin-bottom:6px;background:var(--surface2)}
-.guia-item summary{padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text);list-style:none;display:flex;align-items:center;justify-content:space-between}
-.guia-item summary::after{content:'+';color:var(--accent);font-size:15px;font-weight:700}
-.guia-item[open] summary::after{content:'−'}
-.guia-item p{padding:0 12px 10px;font-size:12.5px;line-height:1.6;color:#c9c9c9}
-
-.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--text);color:var(--bg);padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;z-index:99;white-space:nowrap}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* MOBILE */
-@media(max-width:768px){
-  html,body{height:auto;overflow:auto}
-  .main{flex-direction:column;overflow:visible}
-  .left-panel{width:100%;border-right:none;border-bottom:1px solid var(--border);overflow:visible}
-  .panel-scroll{overflow:visible;padding:10px}
-  .right-panel{padding:10px}
-  .right-panel .output-area{min-height:300px}
-  .damage-grid{grid-template-columns:repeat(2,1fr)}
-  #tab-carfax{flex-direction:column !important;overflow:visible !important}
-  #tab-carfax .left-panel{width:100% !important}
-  #tab-carfax .right-panel{min-height:300px}
-}
-</style>
-</head>
-<body>
-
-<div class="header">
-  <div class="header-left">
-    <div class="logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round">
-        <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
-        <path d="m4.93 4.93 2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/>
-      </svg>
-    </div>
-    <div><h1>Analizador de Lotes</h1><p>Copart · IAAI · Manheim</p></div>
-  </div>
-  <span class="ai-badge">✦ IA</span>
-</div>
-
-<div class="tabs">
-  <button class="tab active" onclick="showTab('analyzer',this)">Analizar</button>
-  <button class="tab" onclick="showTab('carfax',this)">Carfax</button>
-  <button class="tab" onclick="showTab('guia',this)">Guía</button>
-  <button class="tab" onclick="showTab('history',this)">Historial</button>
-</div>
-
-<div class="main">
-
-  <!-- LEFT: FORM -->
-  <div class="left-panel" id="tab-analyzer">
-    <div class="panel-scroll">
-
-      <div class="card">
-        <div class="section-label">Lote y vehículo</div>
-        <div class="paste-wrap">
-          <input id="quick-paste" placeholder="49180866 - 2012 TOYOTA PRIUS FOUR" oninput="parsePaste(this.value)">
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('quick-paste').value='';clearParsed()">✕</button>
-        </div>
-        <p class="paste-hint">Lote, año, marca y modelo se llenan automáticamente</p>
-        <input type="hidden" id="lot-hidden">
-        <input type="hidden" id="year-hidden">
-        <input type="hidden" id="make-hidden">
-        <input type="hidden" id="model-hidden">
-
-        <div class="toggle-row">
-          <button id="btn-copartgo" class="toggle-btn" onclick="toggleFlag('copartgo')">CopartGO</button>
-          <button id="btn-externallot" class="toggle-btn" onclick="toggleFlag('externallot')">Lote Externo</button>
-          <button id="btn-tituloausente" class="toggle-btn" onclick="toggleFlag('tituloausente')">Título Ausente</button>
-          <button id="btn-fechafuturo" class="toggle-btn" onclick="toggleFlag('fechafuturo')">Fecha Futuro</button>
-          <button id="btn-excelente" class="toggle-btn" onclick="toggleFlag('excelente')">Excelente Estado</button>
-        </div>
-
-        <div class="mb5"><input id="vin" placeholder="VIN"></div>
-        <div class="grid2">
-          <select id="title-type">
-            <option>Clean</option><option>Salvage</option><option>Rebuilt</option>
-            <option>Parts Only</option><option>Certificate of Destruction / Junk</option>
-          </select>
-          <select id="auction"><option>Copart</option><option>IAAI</option><option>Manheim</option></select>
-        </div>
-        <div class="grid2">
-          <input id="miles" placeholder="Millas (ej: 80,422)">
-          <select id="miles-status"><option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option></select>
-        </div>
-
-        <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
-          <span>Tipo de daño</span>
-          <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 8px" onclick="openTemplates()">⊞ Plantillas</button>
-        </div>
-        <div class="damage-grid" id="damage-grid">
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Granizo"><span>Granizo</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño frontal"><span>Daño frontal</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño trasero"><span>Daño trasero</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño lateral"><span>Daño lateral</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Volcado"><span>Volcado</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Inundación/Agua"><span>Inundación/Agua</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Fuego"><span>Fuego</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Vandalismo"><span>Vandalismo</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Mecánico"><span>Mecánico</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Undercarriage"><span>Undercarriage</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Minor Dent/Scratches"><span>Minor Dent/Scratches</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Normal Wear"><span>Normal Wear</span></label>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="section-label">Estado mecánico</div>
-        <input type="hidden" id="mechanical-status" value="">
-        <div class="mech-grid">
-          <div class="mech" data-value="no-enciende" onclick="selectMech(this)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/></svg>
-            <span>No enciende</span>
-          </div>
-          <div class="mech" data-value="solo-enciende" onclick="selectMech(this)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 9"/></svg>
-            <span>Solo enciende</span>
-          </div>
-          <div class="mech" data-value="enciende-no-rueda" onclick="selectMech(this)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
-            <span>Enciende, no rueda</span>
-          </div>
-          <div class="mech" data-value="enciende-rueda" onclick="selectMech(this)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>
-            <span>Enciende y rueda</span>
-          </div>
-        </div>
-
-        <div class="section-label">Luces del tablero</div>
-        <input type="hidden" id="dash-lights" value="none">
-        <div class="lights-grid">
-          <div class="light selected" data-value="none" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="16" stroke="#555" stroke-width="2" stroke-dasharray="4 3"/><line x1="12" y1="12" x2="28" y2="28" stroke="#555" stroke-width="2.5" stroke-linecap="round"/></svg>
-            <span>Sin luces</span>
-          </div>
-          <div class="light" data-value="check-engine" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><path d="M8 28 L14 16 Q16 12 20 12 Q24 12 26 16 L32 28 Q33 30 31 30 L9 30 Q7 30 8 28Z" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="24" r="1.5" fill="currentColor"/><line x1="20" y1="19" x2="20" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            <span>Check Engine</span>
-          </div>
-          <div class="light" data-value="airbag" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="10" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="20" r="2.5" fill="currentColor"/><text x="20" y="36" text-anchor="middle" font-size="7" fill="currentColor" font-family="sans-serif" font-weight="bold">SRS</text></svg>
-            <span>Airbag/SRS</span>
-          </div>
-          <div class="light" data-value="abs" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2"/><text x="20" y="24" text-anchor="middle" font-size="9" fill="currentColor" font-family="sans-serif" font-weight="bold">ABS</text></svg>
-            <span>ABS</span>
-          </div>
-          <div class="light" data-value="transmission" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><rect x="10" y="14" width="20" height="12" rx="2" stroke="currentColor" stroke-width="2"/><line x1="15" y1="14" x2="15" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="14" x2="20" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="25" y1="14" x2="25" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="10" y1="20" x2="30" y2="20" stroke="currentColor" stroke-width="1.5"/></svg>
-            <span>Transmisión</span>
-          </div>
-          <div class="light" data-value="battery" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><rect x="7" y="14" width="24" height="14" rx="2" stroke="currentColor" stroke-width="2"/><rect x="31" y="18" width="3" height="6" rx="1" fill="currentColor"/><line x1="13" y1="19" x2="13" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="11" y1="21" x2="15" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="23" y1="21" x2="27" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            <span>Batería</span>
-          </div>
-          <div class="light" data-value="oil" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><path d="M14 28 L14 18 Q14 14 18 14 L22 14 Q24 14 25 16 L28 20 Q30 22 28 24 L26 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 28 Q14 32 18 32 L22 32 Q26 32 26 28 L26 24 L14 24 Z" stroke="currentColor" stroke-width="2"/></svg>
-            <span>Aceite</span>
-          </div>
-          <div class="light" data-value="temperature" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><path d="M20 8 Q24 10 24 16 L24 26 Q24 32 20 34 Q16 32 16 26 L16 16 Q16 10 20 8Z" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="28" r="3" fill="currentColor"/></svg>
-            <span>Temperatura</span>
-          </div>
-          <div class="light" data-value="multiple" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><circle cx="12" cy="20" r="5" stroke="currentColor" stroke-width="2"/><circle cx="28" cy="20" r="5" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="12" r="5" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="28" r="5" stroke="currentColor" stroke-width="2"/></svg>
-            <span>Múltiples</span>
-          </div>
-          <div class="light" data-value="custom" onclick="selectLight(this)">
-            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"/><text x="20" y="25" text-anchor="middle" font-size="16" fill="currentColor" font-family="sans-serif">?</text></svg>
-            <span>Otras</span>
-          </div>
-        </div>
-        <div id="lights-custom-row" style="display:none;margin-bottom:5px">
-          <input id="lights-custom" placeholder="Especificar luces (ej: TPMS, ESP...)">
-        </div>
-
-        <div class="section-label">Observaciones</div>
-        <div class="mb5"><textarea id="observations" placeholder="Escríbelas como quieras, la IA las mejora..."></textarea></div>
-
-        <div class="section-label">Oferta</div>
-        <div class="grid2">
-          <input id="offer-min" type="number" placeholder="Mínimo ($)">
-          <input id="offer-max" type="number" placeholder="Máximo ($)">
-        </div>
-        <div class="grid2">
-          <input id="buy-now" type="number" placeholder="Buy Now ($) — opcional">
-          <input id="reserve-price" type="number" placeholder="Reserve Price ($) — opcional">
-        </div>
-
-        <button class="btn btn-accent" id="gen-btn" onclick="generateAnalysis()" style="margin-top:10px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          Generar análisis
-        </button>
-        <div class="error" id="error-gen"></div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- RIGHT: OUTPUT -->
-  <div class="right-panel" id="right-panel">
-    <div class="output-area">
-      <div class="output-header">Análisis generado</div>
-      <div class="output-body" id="output-body">
-        <div class="output-empty">El análisis aparecerá aquí una vez que generes uno →</div>
-      </div>
-      <div class="output-actions" id="output-actions" style="display:none">
-        <button class="btn btn-accent" onclick="copyOutput()" style="flex:1">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copiar para WhatsApp
-        </button>
-        <button class="btn btn-outline btn-sm" onclick="saveToHistory()">Guardar</button>
-        <button class="btn btn-outline btn-sm" onclick="resetAll()">Nuevo</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- CARFAX -->
-  <div id="tab-carfax" style="display:none;flex:1;overflow:hidden;flex-direction:row">
-    <div class="left-panel" style="width:420px">
-      <div class="panel-scroll">
-        <div class="card">
-          <div class="section-label">Reporte Carfax / AutoCheck</div>
-          <div class="upload-zone" id="carfax-dropzone" onclick="document.getElementById('carfax-file').click()" style="border:1.5px dashed var(--border);border-radius:var(--r);padding:24px 16px;text-align:center;cursor:pointer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;color:var(--muted);margin-bottom:8px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-            <p style="color:var(--muted);font-size:13px">Toca para subir el PDF del Carfax</p>
-            <span style="font-size:11px;color:#555">Solo PDF de texto (no escaneado)</span>
-          </div>
-          <input type="file" id="carfax-file" accept="application/pdf" style="display:none" onchange="handleCarfax(event)">
-          <div id="carfax-filename" style="display:none;margin-top:8px;font-size:12px;color:var(--accent)"></div>
-          <button class="btn btn-accent" id="carfax-btn" onclick="analyzeCarfax()" style="margin-top:10px;display:none">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-            Resumir y dar punto de vista
-          </button>
-          <div class="error" id="carfax-error"></div>
-        </div>
-      </div>
-    </div>
-    <div class="right-panel">
-      <div class="output-area">
-        <div class="output-header">Resumen del Carfax</div>
-        <div class="output-body" id="carfax-output">
-          <div class="output-empty">Sube un PDF de Carfax y genera el resumen →</div>
-        </div>
-        <div class="output-actions" id="carfax-actions" style="display:none">
-          <button class="btn btn-accent" onclick="copyCarfax()" style="flex:1">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copiar para WhatsApp
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- GUÍA DE TÍTULOS -->
-  <div id="tab-guia" style="display:none;flex:1;overflow-y:auto;padding:12px">
-    <div style="max-width:760px;margin:0 auto">
-
-      <div class="card">
-        <div class="section-label">Tipos de título</div>
-        <details class="guia-item" open>
-          <summary>Clean / Clear</summary>
-          <p>El vehículo no ha sido declarado pérdida total por una aseguradora. Ojo: un título clean en subasta puede ser reclasificado a salvage al momento de registrarlo si NMVTIS (la base de datos nacional) tiene marcado un total loss previo que aún no se refleja en el papel. Por eso siempre se recomienda revisar el Carfax y confirmar con el DMV.</p>
-        </details>
-        <details class="guia-item">
-          <summary>Salvage</summary>
-          <p>La aseguradora declaró el vehículo pérdida total porque el costo de reparación superó el umbral del estado. No puede circular legalmente hasta ser reparado, inspeccionado y re-titulado como Rebuilt. La marca salvage de un estado acompaña al vehículo aunque se registre en otro estado.</p>
-        </details>
-        <details class="guia-item">
-          <summary>Rebuilt / Reconstructed</summary>
-          <p>Vehículo que fue salvage, se reparó y pasó la inspección estatal. Puede circular legalmente. La marca "Rebuilt" es permanente y acompaña al vehículo en cada venta futura. El seguro suele ser más limitado y el valor de reventa es típicamente 20-40% menor que un clean equivalente.</p>
-        </details>
-        <details class="guia-item">
-          <summary>Parts Only / Bill of Sale</summary>
-          <p>No otorga propiedad para circular: el vehículo jamás podrá registrarse. Solo sirve para piezas, uso fuera de carretera o exportación (verificar reglas del estado emisor).</p>
-        </details>
-        <details class="guia-item">
-          <summary>Certificate of Destruction / Junk</summary>
-          <p>El vehículo JAMÁS podrá circular legalmente en las carreteras de Estados Unidos. Solo chatarra o venta de piezas. El VIN se retira de la base nacional. En muchos estados se requiere licencia de desmantelador para comprarlos.</p>
-        </details>
-        <details class="guia-item">
-          <summary>Non-Repairable</summary>
-          <p>Similar al Junk: nunca podrá volver a circular en EE.UU. Diferencia clave para exportadores: en varios estados se permite exportarlo antes del desguace. Verificar siempre las reglas del estado emisor antes de comprar para exportar.</p>
-        </details>
-      </div>
-
-      <div class="card">
-        <div class="section-label">Umbrales de pérdida total por estado</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Porcentaje del valor del vehículo que debe alcanzar el daño para que la aseguradora lo declare pérdida total (y normalmente pase a salvage). Mientras más bajo el umbral, más fácil que un carro reciba salvage.</p>
-        <details class="guia-item">
-          <summary>100% — Colorado, Texas</summary>
-          <p>El daño debe igualar el valor total del vehículo. Por eso Texas "perdona" más: muchos carros dañados conservan título clean. Además, en Texas el cálculo excluye el costo de repintado y el daño por granizo.</p>
-        </details>
-        <details class="guia-item">
-          <summary>80% — Florida, Minnesota, Missouri, Oregon</summary>
-          <p>El daño debe alcanzar el 80% del valor.</p>
-        </details>
-        <details class="guia-item">
-          <summary>75% — La mayoría de los estados</summary>
-          <p>Alabama, Kansas, Kentucky, Louisiana, Maryland, Michigan, Nebraska, New Hampshire, New York, North Carolina, North Dakota, Rhode Island, South Carolina, Tennessee, Virginia, West Virginia, Wyoming, DC.</p>
-        </details>
-        <details class="guia-item">
-          <summary>70% — Arkansas, Indiana, Iowa, Wisconsin</summary>
-          <p>Umbral más estricto: con 70% de daño ya es pérdida total.</p>
-        </details>
-        <details class="guia-item">
-          <summary>60-65% — Oklahoma (60%), Nevada (65%)</summary>
-          <p>Los más estrictos del país. Un carro de estos estados se "salvagea" con menos daño que en cualquier otro.</p>
-        </details>
-        <details class="guia-item">
-          <summary>Fórmula TLF — California, Arizona, Georgia y otros</summary>
-          <p>Alaska, Arizona, California, Connecticut, Delaware, Georgia, Hawaii, Idaho, Illinois, Maine, Massachusetts, Mississippi, Montana, New Jersey, New Mexico, Ohio, Pennsylvania, South Dakota, Utah, Vermont, Washington usan una fórmula: si costo de reparación + valor de salvage ≥ valor del vehículo → pérdida total.</p>
-        </details>
-      </div>
-
-      <div class="card">
-        <div class="section-label">Reglas clave que debes recordar</div>
-        <details class="guia-item" open>
-          <summary>Granizo y Texas (confirmado por ley)</summary>
-          <p>Desde el 11 de septiembre de 2017, Texas no emite títulos salvage para vehículos dañados exclusivamente por granizo — la ley los excluye de la definición de vehículo salvage. En la mayoría de los demás estados, el granizo severo sí puede generar salvage al registrarse.</p>
-        </details>
-        <details class="guia-item">
-          <summary>Clean en subasta ≠ Clean garantizado</summary>
-          <p>Si el Carfax muestra un total loss pero el título dice clean, al registrar el vehículo el DMV puede reclasificarlo a salvage usando los datos de NMVTIS. Siempre advertir al cliente y recomendar verificar con el DMV.</p>
-        </details>
-        <details class="guia-item">
-          <summary>La marca salvage sigue al vehículo</summary>
-          <p>Un salvage de otro estado no se "limpia" registrándolo en Texas ni en ningún estado serio. El intento de lavar títulos (title washing) es fraude.</p>
-        </details>
-        <details class="guia-item">
-          <summary>Daños que NO cambian el título</summary>
-          <p>Daño frontal, trasero, lateral, volcadura o falla mecánica por sí solos no cambian un título clean — solo importa si la aseguradora declaró pérdida total. Los daños que típicamente disparan salvage al registrar: granizo (salvo Texas), inundación/agua, fuego y vandalismo severo.</p>
-        </details>
-      </div>
-
-      <p style="font-size:11px;color:#555;text-align:center;padding:8px 0 20px">Fuentes: TxDMV, NMVTIS / vehiclehistory.gov, leyes estatales de pérdida total. Actualizado julio 2026.</p>
-    </div>
-  </div>
-
-  <!-- HISTORY -->
-  <div id="tab-history" style="display:none;flex:1;overflow-y:auto;padding:12px">
-    <input id="history-search" placeholder="Buscar por lote, marca o modelo..." style="margin-bottom:10px" oninput="renderHistory()">
-    <div id="history-list"></div>
-  </div>
-
-</div>
-
-<div class="toast" id="toast"></div>
-
-<!-- MODAL PLANTILLAS -->
-<div id="templates-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
-    <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-      <span style="font-weight:600;font-size:14px">Plantillas</span>
-      <button class="btn btn-outline btn-sm" onclick="closeTemplates()">✕</button>
-    </div>
-    <div style="padding:14px;overflow-y:auto;flex:1">
-      <button class="btn btn-accent btn-sm" style="width:100%;margin-bottom:12px" onclick="saveTemplate()">+ Guardar punto de vista actual como plantilla</button>
-      <div id="templates-list"></div>
-    </div>
-  </div>
-</div>
-
-<script>
-let currentOutput='',lotHistory=[];
-try{lotHistory=JSON.parse(localStorage.getItem('lot-history')||'[]')}catch(e){}
-
-// Atajo Ctrl+Enter para generar análisis rápido
-document.addEventListener('keydown',function(e){
-  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
-    const analyzerVisible=document.getElementById('tab-analyzer').style.display!=='none';
-    const carfaxVisible=document.getElementById('tab-carfax')&&document.getElementById('tab-carfax').style.display!=='none';
-    if(analyzerVisible&&!document.getElementById('gen-btn').disabled){
-      generateAnalysis();
-    } else if(carfaxVisible&&document.getElementById('carfax-btn').style.display!=='none'&&!document.getElementById('carfax-btn').disabled){
-      analyzeCarfax();
+      const cRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: carfaxPrompt }],
+          max_tokens: 2000,
+          temperature: 0.4
+        })
+      });
+      const cData = await cRes.json();
+      if (!cRes.ok) return res.status(500).json({ error: cData?.error?.message || 'Error de Groq' });
+      let cText = (cData?.choices?.[0]?.message?.content || '').trim();
+      cText = cText.replace(/^[\s\-–—•*>]+/, '').trim();
+      // Quitar cualquier mención duplicada del disclaimer que la IA haya puesto
+      cText = cText.replace(/\.?\s*(Recuerde que\s+)?El Carfax no reporta daños mecánicos ni ocultos\.?/gi, '').trim();
+      // Agregar el disclaimer una sola vez al final
+      cText += '\n\nRecuerde que el Carfax no reporta daños mecánicos ni ocultos.';
+      return res.status(200).json({ result: cText });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
     }
   }
-});
 
-let lotTemplates=[];
-try{lotTemplates=JSON.parse(localStorage.getItem('lot-templates')||'[]')}catch(e){}
+  try {
+    const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
+            damages, dashLights, dashCustom, observations, mechanicalStatus,
+            offerMin, offerMax, buyNow, reservePrice, copartGo, externalLot, tituloAusente, fechaFuturo, excelente } = fields;
 
-function openTemplates(){
-  document.getElementById('templates-modal').style.display='flex';
-  renderTemplates();
-}
-function closeTemplates(){
-  document.getElementById('templates-modal').style.display='none';
-}
+    const REPORT_LINK = 'https://t.me/reporteexpressbot';
 
-function saveTemplate(){
-  const damages=getSelectedDamages();
-  const lights=Array.from(document.querySelectorAll('.light.selected')).map(x=>x.dataset.value).filter(v=>v!=='none');
-  const observations=document.getElementById('observations').value;
-  const mechanical=document.getElementById('mechanical-status').value;
-  if(!damages.length&&!lights.length&&!observations&&!mechanical){
-    showToast('Selecciona algo primero');return;
-  }
-  const name=prompt('Nombre de la plantilla (ej: Granizo techo y capó):');
-  if(!name)return;
-  const tpl={id:Date.now(),name,damages,lights,observations,mechanical};
-  lotTemplates.unshift(tpl);
-  try{localStorage.setItem('lot-templates',JSON.stringify(lotTemplates))}catch(e){}
-  renderTemplates();
-  showToast('Plantilla guardada ✓');
-}
+    // ---- DAÑOS ----
+    const damageList = Array.isArray(damages) && damages.length > 0 ? damages : [];
+    const damageClean = damageList.join(', ').toLowerCase();
 
-function applyTemplate(id){
-  const tpl=lotTemplates.find(t=>t.id===id);
-  if(!tpl)return;
-  // Limpiar daños actuales
-  document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb=>{cb.checked=false;cb.closest('.dmg').classList.remove('checked')});
-  // Aplicar daños
-  (tpl.damages||[]).forEach(val=>{
-    const cb=document.querySelector(`#damage-grid input[value="${val}"]`);
-    if(cb){cb.checked=true;cb.closest('.dmg').classList.add('checked')}
-  });
-  // Limpiar y aplicar luces
-  document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
-  if((tpl.lights||[]).length>0){
-    tpl.lights.forEach(val=>{
-      const el=document.querySelector(`.light[data-value="${val}"]`);
-      if(el)el.classList.add('selected');
-    });
-    const customSel=document.querySelector('.light[data-value="custom"]')?.classList.contains('selected');
-    document.getElementById('lights-custom-row').style.display=customSel?'block':'none';
-  } else {
-    document.querySelector('.light[data-value="none"]').classList.add('selected');
-  }
-  // Observaciones
-  if(tpl.observations)document.getElementById('observations').value=tpl.observations;
-  // Mecánico
-  document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
-  if(tpl.mechanical){
-    const m=document.querySelector(`.mech[data-value="${tpl.mechanical}"]`);
-    if(m)m.classList.add('selected');
-    document.getElementById('mechanical-status').value=tpl.mechanical;
-  }
-  closeTemplates();
-  showToast('Plantilla aplicada ✓');
-}
+    // ---- ESTADO MECÁNICO ----
+    const mechMap = {
+      'no-enciende': 'El vehículo no enciende.',
+      'solo-enciende': `${auction} verificó que el motor enciende, sin embargo no se confirma si el vehículo rueda.`,
+      'enciende-no-rueda': `${auction} verificó que el motor enciende, sin embargo el vehículo no rueda, lo que podría indicar algún tipo de falla mecánica como transmisión u otro problema relacionado.`,
+      'enciende-rueda': `${auction} verificó que el motor enciende y la transmisión engrana.`
+    };
+    const mechText = mechMap[mechanicalStatus] || '';
 
-function deleteTemplate(id){
-  lotTemplates=lotTemplates.filter(t=>t.id!==id);
-  try{localStorage.setItem('lot-templates',JSON.stringify(lotTemplates))}catch(e){}
-  renderTemplates();
-}
+    // ---- LUCES ----
+    const lightsMap = {
+      'check-engine': 'Presenta la luz de check engine encendida, lo que podría indicar algún tipo de falla mecánica o electrónica.',
+      'airbag': 'Presenta la luz de airbag/SRS encendida, lo que podría indicar detonación de airbags o falla en el sistema de seguridad.',
+      'transmission': 'Presenta la luz de transmisión encendida, lo que podría indicar algún tipo de falla en la caja automática.',
+      'abs': 'Presenta la luz de ABS encendida, lo que podría indicar algún tipo de falla en el sistema de frenos antibloqueo.',
+      'battery': 'Presenta la luz de batería encendida, lo que podría indicar falla en el alternador, batería o sistema eléctrico.',
+      'oil': 'Presenta la luz de aceite encendida, lo que podría indicar baja presión de aceite o falla en el sistema de lubricación.',
+      'temperature': 'Presenta la luz de temperatura encendida, lo que podría indicar sobrecalentamiento del motor.',
+      'multiple': 'Presenta múltiples luces del tablero encendidas, lo que podría indicar algún tipo de daño eléctrico o falla mecánica en el vehículo.',
+      'custom': dashCustom ? `Presenta ${dashCustom} encendido, lo que podría indicar algún tipo de falla mecánica o electrónica.` : ''
+    };
+    const lightsArray = Array.isArray(dashLights) ? dashLights : (dashLights && dashLights !== 'none' ? [dashLights] : []);
+    const lightsLines = lightsArray.map(l => lightsMap[l] || '').filter(Boolean);
+    const lightsBlock = lightsLines.length > 0
+      ? lightsLines.join(' ')
+      : 'No presenta luces de motor ni airbag encendidas en el tablero.';
 
-function renderTemplates(){
-  const c=document.getElementById('templates-list');
-  if(!lotTemplates.length){c.innerHTML='<div class="empty" style="padding:20px">No tienes plantillas guardadas</div>';return}
-  c.innerHTML=lotTemplates.map(t=>{
-    const parts=[];
-    if(t.damages&&t.damages.length)parts.push(t.damages.join(', '));
-    if(t.lights&&t.lights.length)parts.push('Luces: '+t.lights.length);
-    if(t.mechanical)parts.push('Mecánico');
-    return `<div class="history-item">
-      <div class="history-title" style="margin-bottom:4px">${t.name}</div>
-      <div class="history-preview">${parts.join(' · ')||'Sin detalles'}</div>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button class="btn btn-accent btn-sm" onclick="applyTemplate(${t.id})">Aplicar</button>
-        <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteTemplate(${t.id})">Eliminar</button>
-      </div>
-    </div>`;
-  }).join('');
-}
+    // ---- MILLAS ----
+    const milesMap = {
+      'No actuales (TMU)': 'Las millas aparecen como No Actuales (TMU — True Mileage Unknown), lo que significa que las millas reales son desconocidas. Esto puede deberse a varias razones: que el odómetro haya sido modificado ilegalmente, que el vehículo sufriera un daño importante que impide comprobar el millaje, o una falla en el tablero. Considérelo al momento de evaluar el vehículo.',
+      'Exentas': 'Las millas aparecen como Exentas (Exempt), lo que significa que legalmente no se puede certificar que el número del tablero sea el real. Generalmente ocurre porque al momento del accidente el vehículo quedó sin batería, el tablero se dañó, o la aseguradora no pudo encenderlo para verificar. No implica necesariamente fraude; muchas veces el número del tablero es cercano al real, pero por protección legal se procesa como Exento. Recomendamos revisar el Carfax para ver las millas del último servicio registrado.'
+    };
+    const milesWarning = milesMap[milesStatus] || '';
 
-function toggleFlag(flag){
-  document.getElementById('btn-'+flag).classList.toggle('active');
-}
-
-function parsePaste(text){
-  if(!text.trim())return;
-  const m=text.trim().match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
-  if(m){
-    const p=m[3].trim().split(/\s+/);
-    document.getElementById('lot-hidden').value=m[1];
-    document.getElementById('year-hidden').value=m[2];
-    document.getElementById('make-hidden').value=p[0];
-    document.getElementById('model-hidden').value=p.slice(1).join(' ');
-  }
-}
-function clearParsed(){['lot-hidden','year-hidden','make-hidden','model-hidden'].forEach(id=>document.getElementById(id).value='')}
-
-function toggleDamage(label){
-  const cb=label.querySelector('input[type="checkbox"]');
-  cb.checked=!cb.checked;
-  label.classList.toggle('checked',cb.checked);
-}
-function getSelectedDamages(){
-  return Array.from(document.querySelectorAll('#damage-grid input[type="checkbox"]:checked')).map(cb=>cb.value);
-}
-
-function selectMech(el){
-  document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('mechanical-status').value=el.dataset.value;
-}
-function selectLight(el){
-  const val=el.dataset.value;
-  if(val==='none'){
-    // Si selecciona "Sin luces", deselecciona todo lo demás
-    document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
-    el.classList.add('selected');
-    document.getElementById('lights-custom-row').style.display='none';
-  } else {
-    // Deselecciona "Sin luces" si estaba activo
-    document.querySelector('.light[data-value="none"]').classList.remove('selected');
-    el.classList.toggle('selected');
-    // Si no queda ninguna seleccionada, activa "Sin luces" de nuevo
-    const anySelected=document.querySelectorAll('.light.selected').length>0;
-    if(!anySelected) document.querySelector('.light[data-value="none"]').classList.add('selected');
-    // Mostrar campo custom si está seleccionado
-    const customSelected=document.querySelector('.light[data-value="custom"]')?.classList.contains('selected');
-    document.getElementById('lights-custom-row').style.display=customSelected?'block':'none';
-  }
-}
-
-function showTab(t,el){
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-  el.classList.add('active');
-  const analyzer=document.getElementById('tab-analyzer');
-  const history=document.getElementById('tab-history');
-  const carfax=document.getElementById('tab-carfax');
-  const guia=document.getElementById('tab-guia');
-  const right=document.getElementById('right-panel');
-  analyzer.style.display='none';
-  history.style.display='none';
-  carfax.style.display='none';
-  guia.style.display='none';
-  right.style.display='none';
-  if(t==='analyzer'){
-    analyzer.style.display='flex';
-    right.style.display='flex';
-  } else if(t==='carfax'){
-    carfax.style.display='flex';
-  } else if(t==='guia'){
-    guia.style.display='block';
-  } else {
-    history.style.display='block';
-    renderHistory();
-  }
-}
-
-function showError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block'}
-function hideError(id){document.getElementById(id).style.display='none'}
-
-// ---- CARFAX ----
-let carfaxText='';
-let carfaxOutput='';
-
-if(window.pdfjsLib){
-  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-}
-
-async function handleCarfax(e){
-  const file=e.target.files[0];
-  if(!file)return;
-  hideError('carfax-error');
-  document.getElementById('carfax-filename').style.display='block';
-  document.getElementById('carfax-filename').textContent='📄 '+file.name+' — leyendo...';
-  try{
-    const buffer=await file.arrayBuffer();
-    const pdf=await pdfjsLib.getDocument({data:buffer}).promise;
-    let fullText='';
-    for(let i=1;i<=pdf.numPages;i++){
-      const page=await pdf.getPage(i);
-      const content=await page.getTextContent();
-      fullText+=content.items.map(it=>it.str).join(' ')+'\n';
+    // ---- SALVAGE WARNING (solo Clean) ----
+    const isTitleClean = titleType === 'Clean';
+    const hasHail = damageList.includes('Granizo');
+    const salvageTriggers = ['Inundación/Agua', 'Vandalismo', 'Fuego'];
+    const otherTriggers = damageList.filter(d => salvageTriggers.includes(d));
+    const hasSalvageTrigger = otherTriggers.length > 0;
+    let salvageWarning = '';
+    if (isTitleClean) {
+      if (hasHail && !hasSalvageTrigger) {
+        const granizoVariants = [
+          'El daño por granizo suele recibir automáticamente un título salvage al momento de registrarse en la mayoría de los estados. Texas es la excepción: por ley, el daño exclusivamente por granizo no convierte el vehículo en salvage y conserva su título clean. Aun así, recomendamos contactar al DMV del estado donde se registrará para confirmar cómo quedaría el título.',
+          'Tenga en cuenta que en muchos estados el daño por granizo hace que el título pase a salvage durante el registro. Texas es una excepción confirmada por ley: si el daño es exclusivamente por granizo, el vehículo mantiene su título clean. Le sugerimos verificar con el DMV correspondiente antes de adquirirlo.',
+          'Es importante saber que el daño por granizo puede provocar un cambio de título a salvage al registrar el vehículo, dependiendo del estado. En Texas, la ley excluye el daño exclusivo por granizo de la definición de vehículo salvage, por lo que normalmente conserva el título clean. Recomendamos confirmar con el DMV cómo quedaría el título en su caso.'
+        ];
+        salvageWarning = granizoVariants[Math.floor(Math.random() * granizoVariants.length)];
+      } else if (hasHail && hasSalvageTrigger) {
+        salvageWarning = `Dado que presenta granizo y ${otherTriggers.join(', ').toLowerCase()}, existe una alta probabilidad de que el título cambie a salvage al momento de registrarse, dependiendo del estado. En Texas el daño exclusivo por granizo conserva título clean por ley, pero los daños adicionales pueden cambiar esto. Recomendamos contactar al DMV para confirmarlo antes de adquirirlo.`;
+      } else if (hasSalvageTrigger) {
+        salvageWarning = `Dado que presenta ${otherTriggers.join(', ').toLowerCase()}, existe la posibilidad de que al momento de registrar el vehículo el título cambie a salvage, dependiendo del estado donde sea registrado. Cada estado tiene sus propias reglas y umbrales de daño (entre el 60% y el 100% del valor del vehículo). Recomendamos contactar al DMV local para confirmar esto antes de adquirirlo.`;
+      }
     }
-    carfaxText=fullText.trim();
-    if(carfaxText.length<50){
-      showError('carfax-error','El PDF no contiene texto legible. Puede ser un documento escaneado (imagen). Prueba con un Carfax en formato de texto.');
-      document.getElementById('carfax-filename').textContent='📄 '+file.name+' — sin texto';
-      document.getElementById('carfax-btn').style.display='none';
-      return;
+
+    // ---- DESTRUCTION ----
+    const isDestruction = titleType === 'Certificate of Destruction / Junk';
+    const destructionWarning = isDestruction
+      ? 'Este vehículo posee un título Certificate of Destruction (Junk), lo que significa que JAMÁS podrá circular legalmente en las carreteras de Estados Unidos. Solo puede utilizarse para chatarra o venta de piezas.'
+      : '';
+
+    // ---- TOGGLES ----
+    const tituloAusenteText = tituloAusente
+      ? `En cuanto al título: ${auction} no posee el título actualmente. Le da al vendedor 30 días hábiles para que sea enviado a la yarda y luego ellos deben enviárnoslo a FL.`
+      : '';
+    const copartGoText = copartGo
+      ? 'Este vehículo está listado como CopartGO, lo que significa que fue publicado directamente por el vendedor usando la app móvil de Copart. El informe de condición lo completó el propio vendedor con respuestas de Sí/No y no representa la opinión de Copart, quien no inspeccionó el vehículo ni se hace responsable de la exactitud del informe.'
+      : '';
+    const externalLotText = externalLot
+      ? `Este es un Lote Externo: el vehículo no se encuentra físicamente en una ubicación de ${auction}. Está en una ubicación designada para previsualizar y retirar indicada en el lote.`
+      : '';
+    const fechaFuturoText = fechaFuturo
+      ? `Es posible que ${auction} haya realizado un cambio reciente en la fecha de subasta. Actualmente en nuestra plataforma puede aparecer una fecha estimada, pero si en ${auction} el lote figura como "Future" o "Upcoming Lot", significa que la subasta aún no tiene una fecha confirmada, generalmente porque están pendientes documentos o el título del vehículo. Le recomendamos verificar directamente en ${auction}. Una vez que la documentación esté completa, se asignará una fecha de subasta oficial y el lote estará disponible para ofertar.`
+      : '';
+
+    // Variantes de "excelente estado": si hay daños marcados, usa versiones que no contradigan
+    const excelenteVariantsSinDanos = [
+      'El vehículo se observa en excelente estado, sin daños estéticos apreciables. Es una unidad impecable, muy bien cuidada y con una presentación sobresaliente.',
+      'Se trata de un vehículo en condiciones excepcionales, sin golpes ni daños visibles en la carrocería. Una excelente oportunidad por su estado prácticamente impecable.',
+      'El vehículo luce en muy buen estado general, sin daños estéticos notables. Es una unidad limpia, bien mantenida y con una apariencia excelente.',
+      'Excelente unidad, se aprecia en óptimas condiciones tanto estéticas como generales, sin daños visibles. Un vehículo muy bien conservado.'
+    ];
+    const excelenteVariantsConDanos = [
+      'Más allá del daño mencionado, el vehículo se observa en excelente estado general. Es una unidad bien cuidada y con muy buena presentación.',
+      'Fuera del daño indicado, el vehículo luce en condiciones excepcionales, bien mantenido y con una apariencia sobresaliente.',
+      'Aparte del daño señalado, se aprecia una unidad en muy buen estado, limpia y bien conservada.'
+    ];
+    const excelentePool = damageList.length > 0 ? excelenteVariantsConDanos : excelenteVariantsSinDanos;
+    const excelenteText = excelente
+      ? excelentePool[Math.floor(Math.random() * excelentePool.length)]
+      : '';
+
+    // ---- OFERTA (números con formato de miles) ----
+    const fmt = n => {
+      const num = parseFloat(String(n).replace(/,/g, ''));
+      return isNaN(num) ? n : num.toLocaleString('en-US');
+    };
+    const offerText = (offerMin && offerMax) ? `Ofertaría entre $${fmt(offerMin)} a $${fmt(offerMax)}` : '';
+    const buyNowText = buyNow ? `El vehículo tiene un precio de compra inmediata (Buy Now) de $${fmt(buyNow)}, ese es el precio mínimo que acepta el vendedor para cerrar la venta de inmediato.` : '';
+    const reserveText = reservePrice ? `Tiene un precio de reserva de $${fmt(reservePrice)}.` : '';
+
+    // Solo la primera línea la genera la IA para dar variedad; el resto es fijo y controlado.
+    const milesInline = miles ? `, con ${miles} millas ${milesStatus.toLowerCase()}` : '';
+    const damageInline = damageClean ? ` Presenta daño por ${damageClean}.` : '';
+
+    const titleExplain = {
+      'Clean': 'no fue declarado pérdida total por la aseguradora',
+      'Salvage': 'el daño fue lo suficientemente severo para que la aseguradora lo declarara pérdida total',
+      'Rebuilt': 'fue reconstruido tras haber tenido un título salvage y aprobó la inspección estatal',
+      'Parts Only': 'solo puede usarse para piezas, no puede registrarse para circular',
+      'Certificate of Destruction / Junk': 'no puede circular legalmente, solo sirve para chatarra o piezas'
+    };
+
+    const prompt = `Eres un broker de subastas de vehículos. Redacta SOLO el primer párrafo de un análisis, en español, en una a dos oraciones. Texto plano, sin markdown, sin emojis.
+
+IMPORTANTE: Varía SIEMPRE la estructura y el vocabulario. Cada vez que generes este párrafo debe sonar diferente al anterior — cambia el orden de las ideas, usa sinónimos, varía cómo introduces el título y los daños. Nunca repitas la misma redacción.
+
+Datos:
+- Título: ${titleType} (significa: ${titleExplain[titleType] || ''})
+- Daños: ${damageClean || 'ninguno especificado'}
+${miles ? `- Millas: ${miles} ${milesStatus.toLowerCase()}` : '- Millas: no especificadas (NO las menciones)'}
+
+Reglas:
+- Empieza indicando el título sin afirmarlo con certeza absoluta, atribuyéndolo a la subasta. VARÍA la forma de decirlo cada vez, usa diferentes opciones como: "La subasta indica título ${titleType}", "El lote figura con título ${titleType}", "De acuerdo a la subasta, el título es ${titleType}", "${auction} reporta título ${titleType}", "El vehículo aparece listado con título ${titleType}", "Registrado en la subasta como título ${titleType}". NUNCA uses siempre la misma frase, NUNCA digas "El título de ${titleType}".
+- Al explicar el significado del título, SIEMPRE atribúyelo a la subasta, nunca lo afirmes como un hecho propio. Usa fórmulas como "según ${auction}, este título indica que...", "de acuerdo a la información de la subasta, esto significa que...". Para Salvage: "según la subasta, este título indica que el vehículo habría sufrido un daño suficientemente severo para ser declarado pérdida total". Siempre dejamos claro que solo repetimos la información de la subasta, no la verificamos nosotros.
+- Afirma los daños con seguridad, nunca digas "sugiere" o "podría tener daños".
+- Menciona los daños tal como están escritos, de forma natural: si dice "daño trasero" escribe "daño trasero" (NO "daño en el trasero"), si dice "granizo" escribe "daño por granizo". Para varios: "daño frontal y lateral".
+- NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar", "ofrece un atractivo precio de compra", "sin otros daños reportados", "su historial no presenta registros" o "puede necesitar reparaciones". NUNCA hables de historial ni reportes previos, no tenemos esa información.
+- NO menciones fecha de subasta, luces, ni nada que no esté en los datos.
+- Devuelve SOLO ese párrafo, nada más.`;
+
+    // Ambas llamadas a Groq en PARALELO para mayor velocidad
+    const firstParagraphPromise = fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 300,
+        temperature: 1.0
+      })
+    });
+
+    const obsPromise = (observations && observations.trim())
+      ? fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: `Mejora solo la redacción de esta observación de un broker de autos, en español, sin agregar nada nuevo, en una oración profesional. Devuelve solo la oración mejorada: "${observations}"` }],
+            max_tokens: 150,
+            temperature: 0.5
+          })
+        })
+      : Promise.resolve(null);
+
+    const [groqRes, obsRes] = await Promise.all([firstParagraphPromise, obsPromise]);
+
+    const data = await groqRes.json();
+    if (!groqRes.ok) return res.status(500).json({ error: data?.error?.message || 'Error de Groq' });
+    let firstParagraph = (data?.choices?.[0]?.message?.content || '').trim();
+    // Limpiar guiones, viñetas o caracteres sueltos al inicio
+    firstParagraph = firstParagraph.replace(/^[\s\-–—•*>]+/, '').trim();
+
+    let obsText = '';
+    if (obsRes) {
+      const obsData = await obsRes.json();
+      if (obsRes.ok) obsText = (obsData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
     }
-    document.getElementById('carfax-filename').textContent='📄 '+file.name+' ✓';
-    document.getElementById('carfax-btn').style.display='inline-flex';
-  }catch(err){
-    showError('carfax-error','Error al leer el PDF: '+err.message);
-    document.getElementById('carfax-filename').textContent='📄 error';
+
+    // ---- ENSAMBLAR EL TEXTO FINAL (controlado) ----
+    const header = `${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}`;
+
+    const blocks = [
+      firstParagraph,
+      tituloAusenteText,
+      milesWarning,
+      salvageWarning,
+      destructionWarning,
+      copartGoText,
+      externalLotText,
+      fechaFuturoText,
+      excelenteText,
+      lightsBlock,
+      mechText,
+      obsText,
+    ].filter(Boolean);
+
+    const offerBlock = [offerText, buyNowText, reserveText].filter(Boolean).join('\n');
+
+    const footer = `VIN: ${vin}
+Solicite su REPORTE aquí:
+${REPORT_LINK}
+
+Es siempre recomendable revisar el Reporte de Carfax para verificar el tipo de título, millas, servicios realizados, accidentes reportados, y propietarios anteriores.
+
+CARFAX NO DA INFORMACIÓN DE DAÑOS MECÁNICOS NI OCULTOS`;
+
+    let result = header + '\n' + blocks.join('\n\n');
+    if (offerBlock) result += '\n\n' + offerBlock;
+    result += '\n\n' + footer;
+
+    // Eliminar líneas que sean solo un guion/viñeta suelto
+    result = result
+      .split('\n')
+      .filter(line => !/^\s*[-–—•*]+\s*$/.test(line))
+      .join('\n')
+      .trim();
+
+    return res.status(200).json({ result });
+
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 }
-
-async function analyzeCarfax(){
-  if(!carfaxText){showError('carfax-error','Primero sube un PDF');return}
-  hideError('carfax-error');
-  const out=document.getElementById('carfax-output');
-  out.innerHTML='<div class="loading"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Analizando Carfax...</span></div>';
-  document.getElementById('carfax-actions').style.display='none';
-  const btn=document.getElementById('carfax-btn');
-  btn.disabled=true;
-  try{
-    const res=await fetch('/api/analyze',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({mode:'carfax',carfaxText})
-    });
-    const data=await res.json();
-    if(!res.ok)throw new Error(data.error||'Error desconocido');
-    carfaxOutput=data.result.trim();
-    out.textContent=carfaxOutput;
-    document.getElementById('carfax-actions').style.display='flex';
-  }catch(err){
-    out.innerHTML='<div class="output-empty" style="color:var(--danger)">Error: '+err.message+'</div>';
-  }
-  btn.disabled=false;
-}
-
-function copyCarfax(){
-  if(!carfaxOutput)return;
-  navigator.clipboard.writeText(carfaxOutput)
-    .then(()=>showToast('¡Copiado para WhatsApp ✓'))
-    .catch(()=>{const ta=document.createElement('textarea');ta.value=carfaxOutput;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('¡Copiado ✓')});
-}
-
-async function generateAnalysis(){
-  const get=id=>document.getElementById(id).value;
-  hideError('error-gen');
-  const body=document.getElementById('output-body');
-  body.innerHTML='<div class="loading"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Redactando análisis...</span></div>';
-  document.getElementById('output-actions').style.display='none';
-  const btn=document.getElementById('gen-btn');
-  btn.disabled=true;
-  try{
-    const res=await fetch('/api/analyze',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({mode:'generate',fields:{
-        lot:get('lot-hidden'),year:get('year-hidden'),make:get('make-hidden'),model:get('model-hidden'),
-        vin:get('vin'),titleType:get('title-type'),auction:get('auction'),
-        miles:get('miles'),milesStatus:get('miles-status'),
-        damages:getSelectedDamages(),
-        dashLights:Array.from(document.querySelectorAll('.light.selected')).map(x=>x.dataset.value).filter(v=>v!=='none'),
-        observations:get('observations'),
-        mechanicalStatus:get('mechanical-status'),
-        offerMin:get('offer-min'),offerMax:get('offer-max'),
-        buyNow:get('buy-now'),reservePrice:get('reserve-price'),
-        copartGo:document.getElementById('btn-copartgo').classList.contains('active'),
-        externalLot:document.getElementById('btn-externallot').classList.contains('active'),
-        tituloAusente:document.getElementById('btn-tituloausente').classList.contains('active'),
-        fechaFuturo:document.getElementById('btn-fechafuturo').classList.contains('active'),
-        excelente:document.getElementById('btn-excelente').classList.contains('active')
-      }})
-    });
-    const data=await res.json();
-    if(!res.ok)throw new Error(data.error||'Error desconocido');
-    currentOutput=data.result.trim();
-    body.textContent=currentOutput;
-    document.getElementById('output-actions').style.display='flex';
-  }catch(err){
-    body.innerHTML='<div class="output-empty" style="color:var(--danger)">Error: '+err.message+'</div>';
-    showError('error-gen',`Error: ${err.message}`);
-  }
-  btn.disabled=false;
-}
-
-function copyOutput(){
-  if(!currentOutput)return;
-  navigator.clipboard.writeText(currentOutput)
-    .then(()=>showToast('¡Copiado para WhatsApp ✓'))
-    .catch(()=>{const ta=document.createElement('textarea');ta.value=currentOutput;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('¡Copiado ✓')});
-}
-
-function saveToHistory(){
-  if(!currentOutput)return;
-  const entry={
-    id:Date.now(),
-    title:`${document.getElementById('lot-hidden').value} · ${document.getElementById('year-hidden').value} ${document.getElementById('make-hidden').value} ${document.getElementById('model-hidden').value}`,
-    date:new Date().toLocaleDateString('es-PA'),
-    text:currentOutput
-  };
-  lotHistory.unshift(entry);
-  try{localStorage.setItem('lot-history',JSON.stringify(lotHistory))}catch(e){}
-  showToast('Guardado ✓');
-}
-
-function renderHistory(){
-  const c=document.getElementById('history-list');
-  const search=(document.getElementById('history-search')?.value||'').toLowerCase().trim();
-  let items=lotHistory;
-  if(search) items=lotHistory.filter(h=>h.title.toLowerCase().includes(search)||h.text.toLowerCase().includes(search));
-  if(!items.length){c.innerHTML=`<div class="empty">${search?'No se encontraron resultados':'No hay análisis guardados aún'}</div>`;return}
-  c.innerHTML=items.map(h=>`
-    <div class="history-item">
-      <div class="history-header"><span class="history-title">${h.title}</span><span class="history-date">${h.date}</span></div>
-      <div class="history-preview">${h.text.substring(0,100)}...</div>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button class="btn btn-outline btn-sm" onclick="copyHistoryItem(${h.id})">Copiar</button>
-        <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteHistoryItem(${h.id})">Eliminar</button>
-      </div>
-    </div>`).join('');
-}
-function copyHistoryItem(id){const item=lotHistory.find(h=>h.id===id);if(item)navigator.clipboard.writeText(item.text).then(()=>showToast('Copiado ✓'))}
-function deleteHistoryItem(id){lotHistory=lotHistory.filter(h=>h.id!==id);try{localStorage.setItem('lot-history',JSON.stringify(lotHistory))}catch(e){}renderHistory()}
-
-function resetAll(){
-  ['quick-paste','lot-hidden','year-hidden','make-hidden','model-hidden','vin','miles','observations','offer-min','offer-max','buy-now','reserve-price','lights-custom','mechanical-status']
-    .forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
-  // Resetear selectores a su primer valor
-  document.getElementById('title-type').selectedIndex=0;
-  document.getElementById('auction').selectedIndex=0;
-  document.getElementById('miles-status').selectedIndex=0;
-  document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb=>{cb.checked=false;cb.closest('.dmg').classList.remove('checked')});
-  document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
-  document.querySelector('.light[data-value="none"]').classList.add('selected');
-  document.getElementById('dash-lights').value='none';
-  document.getElementById('lights-custom-row').style.display='none';
-  document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
-  document.getElementById('mechanical-status').value='';
-  document.querySelectorAll('.toggle-btn').forEach(x=>x.classList.remove('active'));
-  currentOutput='';
-  const body=document.getElementById('output-body');
-  body.innerHTML='<div class="output-empty">El análisis aparecerá aquí una vez que generes uno →</div>';
-  document.getElementById('output-actions').style.display='none';
-  // Scroll al inicio del formulario
-  const panel=document.querySelector('.panel-scroll');
-  if(panel)panel.scrollTo(0,0);
-  window.scrollTo(0,0);
-  showToast('Listo para nuevo análisis ✓');
-}
-
-function showToast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
-}
-
-// Install PWA prompt
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt',(e)=>{
-  e.preventDefault();
-  deferredPrompt=e;
-});
-</script>
-</body>
-</html>
