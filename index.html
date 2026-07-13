@@ -336,7 +336,10 @@ textarea{resize:none;height:65px}
   <!-- RIGHT: OUTPUT -->
   <div class="right-panel" id="right-panel">
     <div class="output-area">
-      <div class="output-header">Análisis generado</div>
+      <div class="output-header" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Análisis generado</span>
+        <span id="presence-indicator" style="font-size:11px;font-weight:400;color:var(--muted);display:flex;align-items:center;gap:5px"></span>
+      </div>
       <div class="output-body" id="output-body">
         <div class="output-empty">El análisis aparecerá aquí una vez que generes uno →</div>
       </div>
@@ -345,6 +348,7 @@ textarea{resize:none;height:65px}
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           Copiar para WhatsApp
         </button>
+        <button class="btn btn-outline btn-sm" id="edit-btn" onclick="toggleEdit()">Editar</button>
         <button class="btn btn-outline btn-sm" onclick="resetAll()">Nuevo</button>
       </div>
     </div>
@@ -814,6 +818,10 @@ async function generateAnalysis(){
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Error desconocido');
     currentOutput=data.result.trim();
+    editing=false;currentRecordId=null;
+    document.getElementById('edit-btn').textContent='Editar';
+    document.getElementById('edit-btn').classList.remove('btn-accent');
+    document.getElementById('edit-btn').classList.add('btn-outline');
     body.textContent=currentOutput;
     document.getElementById('output-actions').style.display='flex';
     // Guardar automáticamente en el historial compartido
@@ -832,13 +840,58 @@ function copyOutput(){
     .catch(()=>{const ta=document.createElement('textarea');ta.value=currentOutput;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('¡Copiado ✓')});
 }
 
+// ---- EDITAR ANÁLISIS ----
+let editing=false;
+function toggleEdit(){
+  const body=document.getElementById('output-body');
+  const btn=document.getElementById('edit-btn');
+  if(!editing){
+    // Entrar en modo edición
+    editing=true;
+    body.innerHTML='';
+    const ta=document.createElement('textarea');
+    ta.id='edit-textarea';
+    ta.value=currentOutput;
+    ta.style.cssText='width:100%;height:100%;min-height:300px;background:var(--surface2);border:1px solid var(--accent);border-radius:var(--rs);color:var(--text);font-size:13px;line-height:1.7;padding:12px;font-family:inherit;resize:none';
+    body.appendChild(ta);
+    ta.focus();
+    btn.textContent='Guardar cambios';
+    btn.classList.remove('btn-outline');
+    btn.classList.add('btn-accent');
+  }else{
+    // Guardar cambios
+    const ta=document.getElementById('edit-textarea');
+    currentOutput=ta.value.trim();
+    editing=false;
+    body.textContent=currentOutput;
+    btn.textContent='Editar';
+    btn.classList.remove('btn-accent');
+    btn.classList.add('btn-outline');
+    updateAnalysisInCloud();
+  }
+}
+
+async function updateAnalysisInCloud(){
+  if(!currentRecordId||!supa){ showToast('Cambios aplicados'); return; }
+  try{
+    const {error}=await supa.from('lot_history').update({analysis:currentOutput}).eq('id',currentRecordId);
+    if(error) throw error;
+    showToast('Cambios guardados en el historial ✓');
+  }catch(e){
+    console.error('update',e);
+    showToast('Cambios aplicados (no se pudo actualizar historial)');
+  }
+}
+
 // ---- HISTORIAL COMPARTIDO (Supabase) ----
 let cloudHistory=[];
+let currentRecordId=null;
 
 async function autoSaveToCloud(clientName){
   const g=id=>document.getElementById(id).value;
+  const recId=Date.now();
   const entry={
-    id:Date.now(),
+    id:recId,
     lot_title:`${g('lot-hidden')} · ${g('year-hidden')} ${g('make-hidden')} ${g('model-hidden')}`.trim(),
     client:clientName,
     source:g('client-source')||null,
@@ -849,6 +902,7 @@ async function autoSaveToCloud(clientName){
   try{
     const {error}=await supa.from('lot_history').insert(entry);
     if(error) throw error;
+    currentRecordId=recId;
     showToast('Análisis guardado ✓');
   }catch(e){
     console.error('save cloud',e);
@@ -957,6 +1011,8 @@ function setIdentity(name){
   localStorage.setItem('lot-user',name);
   document.getElementById('identity-modal').style.display='none';
   showToast('Bienvenido, '+name);
+  heartbeat();
+  renderPresence();
 }
 function showCustomIdentity(){
   document.getElementById('identity-buttons').style.display='none';
@@ -969,10 +1025,43 @@ function saveCustomIdentity(){
   setIdentity(name);
 }
 
+// ---- PRESENCIA (quién está conectado) ----
+async function heartbeat(){
+  if(!supa||!currentUser)return;
+  try{
+    await supa.from('lot_presence').upsert({author:currentUser,last_seen:new Date().toISOString()});
+  }catch(e){ /* silencioso */ }
+}
+async function renderPresence(){
+  if(!supa){return}
+  try{
+    const {data,error}=await supa.from('lot_presence').select('*');
+    if(error)throw error;
+    const now=Date.now();
+    // Activos = vistos en los últimos 90 segundos
+    const active=(data||[]).filter(p=>now-new Date(p.last_seen).getTime()<90000).map(p=>p.author);
+    const ind=document.getElementById('presence-indicator');
+    if(!ind)return;
+    if(active.length===0){ ind.innerHTML=''; return; }
+    const others=active.filter(a=>a!==currentUser);
+    const dot='<span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block"></span>';
+    if(others.length===0){
+      ind.innerHTML=`${dot} Solo tú en línea`;
+    }else{
+      ind.innerHTML=`${dot} En línea: ${active.join(', ')}`;
+    }
+  }catch(e){ /* silencioso */ }
+}
+
 // Al cargar: si no hay usuario registrado, pedirlo
 window.addEventListener('DOMContentLoaded',()=>{
-  if(!currentUser) showIdentityModal();
+  if(!currentUser){ showIdentityModal(); }
+  else { heartbeat(); renderPresence(); }
 });
+
+// Latido cada 30s + refresco de presencia cada 20s
+setInterval(()=>{ heartbeat(); },30000);
+setInterval(()=>{ renderPresence(); },20000);
 
 function showToast(msg){
   const t=document.getElementById('toast');
