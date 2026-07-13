@@ -345,7 +345,7 @@ textarea{resize:none;height:65px}
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           Copiar para WhatsApp
         </button>
-        <button class="btn btn-outline btn-sm" onclick="saveToHistory()">Guardar</button>
+        <button class="btn btn-outline btn-sm" onclick="saveToHistory()" title="El análisis ya se guarda solo al generarlo">Guardar otra vez</button>
         <button class="btn btn-outline btn-sm" onclick="resetAll()">Nuevo</button>
       </div>
     </div>
@@ -483,6 +483,19 @@ textarea{resize:none;height:65px}
 
 <div class="toast" id="toast"></div>
 
+<!-- MODAL IDENTIDAD (primera vez) -->
+<div id="identity-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);width:100%;max-width:360px;padding:22px">
+    <div style="font-weight:600;font-size:16px;margin-bottom:6px">¿Quién eres?</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Selecciona tu nombre. Solo se pide una vez y quedará guardado en este dispositivo.</div>
+    <div id="identity-buttons" style="display:flex;flex-direction:column;gap:7px"></div>
+    <div id="identity-custom-row" style="display:none;margin-top:10px">
+      <input id="identity-custom" placeholder="Escribe tu nombre">
+      <button class="btn btn-accent" style="width:100%;margin-top:8px" onclick="saveCustomIdentity()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL PLANTILLAS -->
 <div id="templates-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
@@ -497,9 +510,18 @@ textarea{resize:none;height:65px}
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-let currentOutput='',lotHistory=[];
-try{lotHistory=JSON.parse(localStorage.getItem('lot-history')||'[]')}catch(e){}
+// ---- SUPABASE (historial compartido del equipo) ----
+const SUPABASE_URL='https://acnzhwfkwrtrmkanwbtp.supabase.co';
+const SUPABASE_KEY='sb_publishable_BC5a1ZI6M6-UnS_QYZN3Kg_dyVm1Ogg';
+let supa=null;
+try{ supa=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ console.error('Supabase init',e); }
+
+const TEAM=['Axel','Christian','Gerald','Javier','Eduardo'];
+let currentUser=localStorage.getItem('lot-user')||'';
+
+let currentOutput='';
 
 // Atajo Ctrl+Enter para generar análisis rápido
 document.addEventListener('keydown',function(e){
@@ -754,6 +776,15 @@ function copyCarfax(){
 
 async function generateAnalysis(){
   const get=id=>document.getElementById(id).value;
+  // Validar nombre del cliente obligatorio
+  const clientName=get('client-name').trim();
+  if(!clientName){
+    showError('error-gen','Por favor escribe el nombre del cliente antes de generar.');
+    document.getElementById('client-name').focus();
+    document.getElementById('client-name').style.borderColor='var(--danger)';
+    return;
+  }
+  document.getElementById('client-name').style.borderColor='';
   hideError('error-gen');
   const body=document.getElementById('output-body');
   body.innerHTML='<div class="loading"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Redactando análisis...</span></div>';
@@ -786,6 +817,8 @@ async function generateAnalysis(){
     currentOutput=data.result.trim();
     body.textContent=currentOutput;
     document.getElementById('output-actions').style.display='flex';
+    // Guardar automáticamente en el historial compartido
+    autoSaveToCloud(clientName);
   }catch(err){
     body.innerHTML='<div class="output-empty" style="color:var(--danger)">Error: '+err.message+'</div>';
     showError('error-gen',`Error: ${err.message}`);
@@ -800,40 +833,91 @@ function copyOutput(){
     .catch(()=>{const ta=document.createElement('textarea');ta.value=currentOutput;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('¡Copiado ✓')});
 }
 
-function saveToHistory(){
-  if(!currentOutput)return;
+// ---- HISTORIAL COMPARTIDO (Supabase) ----
+let cloudHistory=[];
+
+async function autoSaveToCloud(clientName){
+  const g=id=>document.getElementById(id).value;
   const entry={
     id:Date.now(),
-    title:`${document.getElementById('lot-hidden').value} · ${document.getElementById('year-hidden').value} ${document.getElementById('make-hidden').value} ${document.getElementById('model-hidden').value}`,
-    client:document.getElementById('client-name').value.trim(),
-    source:document.getElementById('client-source').value,
-    date:new Date().toLocaleDateString('es-PA'),
-    text:currentOutput
+    lot_title:`${g('lot-hidden')} · ${g('year-hidden')} ${g('make-hidden')} ${g('model-hidden')}`.trim(),
+    client:clientName,
+    source:g('client-source')||null,
+    author:currentUser||'Desconocido',
+    analysis:currentOutput
   };
-  lotHistory.unshift(entry);
-  try{localStorage.setItem('lot-history',JSON.stringify(lotHistory))}catch(e){}
-  showToast('Guardado ✓');
+  if(!supa){ showToast('Guardado local (sin conexión)'); return; }
+  try{
+    const {error}=await supa.from('lot_history').insert(entry);
+    if(error) throw error;
+    showToast('Análisis guardado ✓');
+  }catch(e){
+    console.error('save cloud',e);
+    showToast('No se pudo guardar en la nube');
+  }
 }
 
-function renderHistory(){
+// Botón manual "Guardar" (por si acaso) — reusa el autosave
+function saveToHistory(){
+  const clientName=document.getElementById('client-name').value.trim();
+  if(!currentOutput)return;
+  if(!clientName){ showToast('Falta el nombre del cliente'); return; }
+  autoSaveToCloud(clientName);
+}
+
+async function renderHistory(){
   const c=document.getElementById('history-list');
+  c.innerHTML='<div class="loading" style="padding:20px"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Cargando historial del equipo...</span></div>';
+  if(!supa){ c.innerHTML='<div class="empty">Sin conexión a la nube</div>'; return; }
+  try{
+    const {data,error}=await supa.from('lot_history').select('*').order('created_at',{ascending:false}).limit(500);
+    if(error) throw error;
+    cloudHistory=data||[];
+  }catch(e){
+    console.error('load history',e);
+    c.innerHTML='<div class="empty">Error al cargar el historial</div>';
+    return;
+  }
   const search=(document.getElementById('history-search')?.value||'').toLowerCase().trim();
-  let items=lotHistory;
-  if(search) items=lotHistory.filter(h=>h.title.toLowerCase().includes(search)||h.text.toLowerCase().includes(search)||(h.client||'').toLowerCase().includes(search)||(h.source||'').toLowerCase().includes(search));
+  let items=cloudHistory;
+  if(search) items=cloudHistory.filter(h=>
+    (h.lot_title||'').toLowerCase().includes(search)||
+    (h.analysis||'').toLowerCase().includes(search)||
+    (h.client||'').toLowerCase().includes(search)||
+    (h.source||'').toLowerCase().includes(search)||
+    (h.author||'').toLowerCase().includes(search)
+  );
   if(!items.length){c.innerHTML=`<div class="empty">${search?'No se encontraron resultados':'No hay análisis guardados aún'}</div>`;return}
-  c.innerHTML=items.map(h=>`
-    <div class="history-item">
-      <div class="history-header"><span class="history-title">${h.title}</span><span class="history-date">${h.date}</span></div>
-      ${h.client||h.source?`<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">👤 ${h.client||'Sin nombre'}${h.source?` <span style="color:var(--muted);font-weight:400">· ${h.source}</span>`:''}</div>`:''}
-      <div class="history-preview">${h.text.substring(0,100)}...</div>
+  c.innerHTML=items.map(h=>{
+    const fecha=h.created_at?new Date(h.created_at).toLocaleDateString('es-PA'):'';
+    const canDelete=h.author===currentUser;
+    return `<div class="history-item">
+      <div class="history-header"><span class="history-title">${h.lot_title||'Sin lote'}</span><span class="history-date">${fecha}</span></div>
+      <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">
+        ${h.author||'?'}${h.client?` → ${h.client}`:''}${h.source?` <span style="color:var(--muted);font-weight:400">· ${h.source}</span>`:''}
+      </div>
+      <div class="history-preview">${(h.analysis||'').substring(0,100)}...</div>
       <div style="display:flex;gap:6px;margin-top:6px">
         <button class="btn btn-outline btn-sm" onclick="copyHistoryItem(${h.id})">Copiar</button>
-        <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteHistoryItem(${h.id})">Eliminar</button>
+        ${canDelete?`<button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteHistoryItem(${h.id})">Eliminar</button>`:''}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
-function copyHistoryItem(id){const item=lotHistory.find(h=>h.id===id);if(item)navigator.clipboard.writeText(item.text).then(()=>showToast('Copiado ✓'))}
-function deleteHistoryItem(id){lotHistory=lotHistory.filter(h=>h.id!==id);try{localStorage.setItem('lot-history',JSON.stringify(lotHistory))}catch(e){}renderHistory()}
+function copyHistoryItem(id){const item=cloudHistory.find(h=>h.id===id);if(item)navigator.clipboard.writeText(item.analysis).then(()=>showToast('Copiado ✓'))}
+async function deleteHistoryItem(id){
+  const item=cloudHistory.find(h=>h.id===id);
+  if(!item)return;
+  if(item.author!==currentUser){ showToast('Solo el autor puede borrar'); return; }
+  if(!confirm('¿Eliminar este análisis?'))return;
+  try{
+    const {error}=await supa.from('lot_history').delete().eq('id',id);
+    if(error) throw error;
+    cloudHistory=cloudHistory.filter(h=>h.id!==id);
+    renderHistory();
+    showToast('Eliminado ✓');
+  }catch(e){ console.error('delete',e); showToast('No se pudo eliminar'); }
+}
 
 function resetAll(){
   ['quick-paste','lot-hidden','year-hidden','make-hidden','model-hidden','vin','client-name','miles','observations','offer-min','offer-max','buy-now','reserve-price','lights-custom','mechanical-status']
@@ -861,6 +945,35 @@ function resetAll(){
   window.scrollTo(0,0);
   showToast('Listo para nuevo análisis ✓');
 }
+
+// ---- IDENTIDAD DEL USUARIO ----
+function showIdentityModal(){
+  const cont=document.getElementById('identity-buttons');
+  cont.innerHTML=TEAM.map(n=>`<button class="btn btn-outline" style="width:100%;justify-content:center" onclick="setIdentity('${n}')">${n}</button>`).join('')
+    +`<button class="btn btn-outline" style="width:100%;justify-content:center;border-style:dashed" onclick="showCustomIdentity()">Otro (nuevo integrante)</button>`;
+  document.getElementById('identity-modal').style.display='flex';
+}
+function setIdentity(name){
+  currentUser=name;
+  localStorage.setItem('lot-user',name);
+  document.getElementById('identity-modal').style.display='none';
+  showToast('Bienvenido, '+name);
+}
+function showCustomIdentity(){
+  document.getElementById('identity-buttons').style.display='none';
+  document.getElementById('identity-custom-row').style.display='block';
+  document.getElementById('identity-custom').focus();
+}
+function saveCustomIdentity(){
+  const name=document.getElementById('identity-custom').value.trim();
+  if(!name){showToast('Escribe tu nombre');return}
+  setIdentity(name);
+}
+
+// Al cargar: si no hay usuario registrado, pedirlo
+window.addEventListener('DOMContentLoaded',()=>{
+  if(!currentUser) showIdentityModal();
+});
 
 function showToast(msg){
   const t=document.getElementById('toast');
