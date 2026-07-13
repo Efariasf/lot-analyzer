@@ -200,7 +200,14 @@ textarea{resize:none;height:65px}
         </div>
 
         <div class="mb5"><input id="vin" placeholder="VIN"></div>
-        <div class="mb5"><input id="client-name" placeholder="Cliente (opcional, solo para tu historial)"></div>
+        <div class="grid2">
+          <input id="client-name" placeholder="Cliente (opcional)">
+          <select id="client-source">
+            <option value="">Origen...</option>
+            <option value="CRM">CRM</option>
+            <option value="WhatsApp">WhatsApp</option>
+          </select>
+        </div>
         <div class="grid2">
           <select id="title-type">
             <option>Clean</option><option>Salvage</option><option>Rebuilt</option>
@@ -799,6 +806,7 @@ function saveToHistory(){
     id:Date.now(),
     title:`${document.getElementById('lot-hidden').value} · ${document.getElementById('year-hidden').value} ${document.getElementById('make-hidden').value} ${document.getElementById('model-hidden').value}`,
     client:document.getElementById('client-name').value.trim(),
+    source:document.getElementById('client-source').value,
     date:new Date().toLocaleDateString('es-PA'),
     text:currentOutput
   };
@@ -811,12 +819,12 @@ function renderHistory(){
   const c=document.getElementById('history-list');
   const search=(document.getElementById('history-search')?.value||'').toLowerCase().trim();
   let items=lotHistory;
-  if(search) items=lotHistory.filter(h=>h.title.toLowerCase().includes(search)||h.text.toLowerCase().includes(search)||(h.client||'').toLowerCase().includes(search));
+  if(search) items=lotHistory.filter(h=>h.title.toLowerCase().includes(search)||h.text.toLowerCase().includes(search)||(h.client||'').toLowerCase().includes(search)||(h.source||'').toLowerCase().includes(search));
   if(!items.length){c.innerHTML=`<div class="empty">${search?'No se encontraron resultados':'No hay análisis guardados aún'}</div>`;return}
   c.innerHTML=items.map(h=>`
     <div class="history-item">
       <div class="history-header"><span class="history-title">${h.title}</span><span class="history-date">${h.date}</span></div>
-      ${h.client?`<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">👤 ${h.client}</div>`:''}
+      ${h.client||h.source?`<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">👤 ${h.client||'Sin nombre'}${h.source?` <span style="color:var(--muted);font-weight:400">· ${h.source}</span>`:''}</div>`:''}
       <div class="history-preview">${h.text.substring(0,100)}...</div>
       <div style="display:flex;gap:6px;margin-top:6px">
         <button class="btn btn-outline btn-sm" onclick="copyHistoryItem(${h.id})">Copiar</button>
@@ -834,6 +842,7 @@ function resetAll(){
   document.getElementById('title-type').selectedIndex=0;
   document.getElementById('auction').selectedIndex=0;
   document.getElementById('miles-status').selectedIndex=0;
+  document.getElementById('client-source').selectedIndex=0;
   document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb=>{cb.checked=false;cb.closest('.dmg').classList.remove('checked')});
   document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
   document.querySelector('.light[data-value="none"]').classList.add('selected');
