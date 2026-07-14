@@ -253,7 +253,8 @@ Reglas:
     }
 
     // ---- ENSAMBLAR EL TEXTO FINAL (controlado) ----
-    const header = `${lot} - ${year} ${make.toUpperCase()} ${model.toUpperCase()}`;
+    const vehParts = [year, (make||'').toUpperCase(), (model||'').toUpperCase()].filter(Boolean).join(' ');
+    const header = vehParts ? `${lot} - ${vehParts}` : `${lot}`;
 
     const blocks = [
       firstParagraph,
