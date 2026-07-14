@@ -632,15 +632,41 @@ function toggleFlag(flag){
 }
 
 function parsePaste(text){
-  if(!text.trim())return;
-  const m=text.trim().match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
-  if(m){
-    const p=m[3].trim().split(/\s+/);
-    document.getElementById('lot-hidden').value=m[1];
-    document.getElementById('year-hidden').value=m[2];
+  const t=text.trim();
+  // Formato completo: lote - año marca modelo
+  const full=t.match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
+  if(full){
+    const p=full[3].trim().split(/\s+/);
+    document.getElementById('lot-hidden').value=full[1];
+    document.getElementById('year-hidden').value=full[2];
     document.getElementById('make-hidden').value=p[0];
     document.getElementById('model-hidden').value=p.slice(1).join(' ');
+    document.getElementById('quick-paste').style.borderColor='var(--accent)';
+    return;
   }
+  // Solo número de lote (7-9 dígitos, con o sin texto extra)
+  const lotOnly=t.match(/^(\d{7,9})\b(.*)$/);
+  if(lotOnly){
+    document.getElementById('lot-hidden').value=lotOnly[1];
+    // Intentar capturar año/marca/modelo si vienen después
+    const rest=lotOnly[2].replace(/^\s*[-–]\s*/,'').trim();
+    const withYear=rest.match(/^((?:19|20)\d{2})\s+(.+)$/);
+    if(withYear){
+      const p=withYear[2].trim().split(/\s+/);
+      document.getElementById('year-hidden').value=withYear[1];
+      document.getElementById('make-hidden').value=p[0];
+      document.getElementById('model-hidden').value=p.slice(1).join(' ');
+    }else{
+      document.getElementById('year-hidden').value='';
+      document.getElementById('make-hidden').value='';
+      document.getElementById('model-hidden').value='';
+    }
+    document.getElementById('quick-paste').style.borderColor='var(--accent)';
+    return;
+  }
+  // No hay lote válido: limpiar
+  clearParsed();
+  document.getElementById('quick-paste').style.borderColor='';
 }
 function clearParsed(){['lot-hidden','year-hidden','make-hidden','model-hidden'].forEach(id=>document.getElementById(id).value='')}
 
@@ -779,6 +805,16 @@ function copyCarfax(){
 
 async function generateAnalysis(){
   const get=id=>document.getElementById(id).value;
+  // Validar que al menos el número de lote esté presente
+  const lot=get('lot-hidden').trim();
+  const pasteVal=get('quick-paste').trim();
+  if(!lot){
+    showError('error-gen','Debes colocar al menos el número de lote (ejemplo: 49180866 o 49180866 - 2012 TOYOTA PRIUS FOUR)');
+    document.getElementById('quick-paste').focus();
+    document.getElementById('quick-paste').style.borderColor='var(--danger)';
+    return;
+  }
+  document.getElementById('quick-paste').style.borderColor='var(--accent)';
   // Validar nombre del cliente obligatorio
   const clientName=get('client-name').trim();
   if(!clientName){
