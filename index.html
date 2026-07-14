@@ -201,7 +201,7 @@ textarea{resize:none;height:65px}
 
         <div class="mb5"><input id="vin" placeholder="VIN"></div>
         <div class="grid2">
-          <input id="client-name" placeholder="Cliente (opcional)">
+          <input id="client-name" placeholder="Nombre del cliente">
           <select id="client-source">
             <option value="">Origen...</option>
             <option value="CRM">CRM</option>
@@ -943,7 +943,7 @@ async function renderHistory(){
   );
   if(!items.length){c.innerHTML=`<div class="empty">${search?'No se encontraron resultados':'No hay análisis guardados aún'}</div>`;return}
   c.innerHTML=items.map(h=>{
-    const fecha=h.created_at?new Date(h.created_at).toLocaleDateString('es-PA'):'';
+    const fecha=h.created_at?new Date(h.created_at).toLocaleDateString('es-PA')+' · '+new Date(h.created_at).toLocaleTimeString('es-PA',{hour:'2-digit',minute:'2-digit'}):'';
     const canDelete=h.author===currentUser;
     return `<div class="history-item">
       <div class="history-header"><span class="history-title">${h.lot_title||'Sin lote'}</span><span class="history-date">${fecha}</span></div>
