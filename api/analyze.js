@@ -73,7 +73,7 @@ ${carfaxText.substring(0, 14000)}`;
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
-            offerMin, offerMax, buyNow, reservePrice, copartGo, externalLot, tituloAusente, fechaFuturo, excelente } = fields;
+            offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente } = fields;
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
 
@@ -238,7 +238,20 @@ Reglas:
         })
       : Promise.resolve(null);
 
-    const [groqRes, obsRes] = await Promise.all([firstParagraphPromise, obsPromise]);
+    const offerNotesPromise = (offerNotes && offerNotes.trim())
+      ? fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: `Mejora solo la redacción de esta nota de un broker de autos sobre la oferta de un vehículo, en español, sin agregar nada nuevo ni inventar cifras, de forma profesional y breve. Devuelve solo el texto mejorado: "${offerNotes}"` }],
+            max_tokens: 200,
+            temperature: 0.5
+          })
+        })
+      : Promise.resolve(null);
+
+    const [groqRes, obsRes, offerNotesRes] = await Promise.all([firstParagraphPromise, obsPromise, offerNotesPromise]);
 
     const data = await groqRes.json();
     if (!groqRes.ok) return res.status(500).json({ error: data?.error?.message || 'Error de Groq' });
@@ -250,6 +263,12 @@ Reglas:
     if (obsRes) {
       const obsData = await obsRes.json();
       if (obsRes.ok) obsText = (obsData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
+    }
+
+    let offerNotesText = '';
+    if (offerNotesRes) {
+      const onData = await offerNotesRes.json();
+      if (offerNotesRes.ok) offerNotesText = (onData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '').replace(/^[\s\-–—•*>]+/, '');
     }
 
     // ---- ENSAMBLAR EL TEXTO FINAL (controlado) ----
@@ -271,7 +290,7 @@ Reglas:
       obsText,
     ].filter(Boolean);
 
-    const offerBlock = [offerText, buyNowText, reserveText].filter(Boolean).join('\n');
+    const offerBlock = [offerText, buyNowText, reserveText, offerNotesText].filter(Boolean).join('\n');
 
     const footer = `VIN: ${vin}
 Solicite su REPORTE aquí:
