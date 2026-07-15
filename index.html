@@ -210,6 +210,7 @@ textarea{resize:none;height:52px}
         </div>
         <div class="grid2">
           <select id="title-type">
+            <option value="">Tipo de título...</option>
             <option>Clean</option><option>Salvage</option><option>Rebuilt</option>
             <option>Parts Only</option><option>Certificate of Destruction / Junk</option>
           </select>
@@ -217,7 +218,10 @@ textarea{resize:none;height:52px}
         </div>
         <div class="grid2">
           <input id="miles" placeholder="Millas (ej: 80,422)">
-          <select id="miles-status"><option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option></select>
+          <select id="miles-status">
+            <option value="">Tipo de millas...</option>
+            <option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option>
+          </select>
         </div>
 
         <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
@@ -780,15 +784,22 @@ function copyCarfax(){
 
 async function generateAnalysis(){
   const get=id=>document.getElementById(id).value;
-  // Validar nombre del cliente obligatorio
+  const flag=(id,msg)=>{
+    showError('error-gen',msg);
+    const el=document.getElementById(id);
+    el.focus(); el.style.borderColor='var(--danger)';
+  };
+  // Limpiar marcas de error previas
+  ['client-name','client-source','vin','title-type','miles-status'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.borderColor='';
+  });
+  // Validaciones obligatorias
   const clientName=get('client-name').trim();
-  if(!clientName){
-    showError('error-gen','Por favor escribe el nombre del cliente antes de generar.');
-    document.getElementById('client-name').focus();
-    document.getElementById('client-name').style.borderColor='var(--danger)';
-    return;
-  }
-  document.getElementById('client-name').style.borderColor='';
+  if(!clientName){ flag('client-name','Escribe el nombre del cliente antes de generar.'); return; }
+  if(!get('client-source')){ flag('client-source','Selecciona el origen del cliente (CRM o WhatsApp).'); return; }
+  if(!get('vin').trim()){ flag('vin','Coloca el VIN del vehículo.'); return; }
+  if(!get('title-type')){ flag('title-type','Selecciona el tipo de título.'); return; }
+  if(!get('miles-status')){ flag('miles-status','Selecciona el tipo de millas (Actuales, No actuales o Exentas).'); return; }
   hideError('error-gen');
   const body=document.getElementById('output-body');
   body.innerHTML='<div class="loading"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Redactando análisis...</span></div>';
@@ -981,6 +992,11 @@ function resetAll(){
   document.getElementById('auction').selectedIndex=0;
   document.getElementById('miles-status').selectedIndex=0;
   document.getElementById('client-source').selectedIndex=0;
+  // Limpiar marcas rojas de error
+  ['client-name','client-source','vin','title-type','miles-status'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.borderColor='';
+  });
+  hideError('error-gen');
   document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb=>{cb.checked=false;cb.closest('.dmg').classList.remove('checked')});
   document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
   document.querySelector('.light[data-value="none"]').classList.add('selected');
