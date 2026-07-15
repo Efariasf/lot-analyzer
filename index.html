@@ -329,6 +329,7 @@ textarea{resize:none;height:52px}
           <input id="buy-now" type="number" placeholder="Buy Now ($) — opcional">
           <input id="reserve-price" type="number" placeholder="Reserve Price ($) — opcional">
         </div>
+        <div class="mb5"><textarea id="offer-notes" placeholder="Notas sobre la oferta (opcional), la IA las mejora..."></textarea></div>
 
         <button class="btn btn-accent" id="gen-btn" onclick="generateAnalysis()" style="margin-top:7px">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -824,6 +825,7 @@ async function generateAnalysis(){
         mechanicalStatus:get('mechanical-status'),
         offerMin:get('offer-min'),offerMax:get('offer-max'),
         buyNow:get('buy-now'),reservePrice:get('reserve-price'),
+        offerNotes:get('offer-notes'),
         copartGo:document.getElementById('btn-copartgo').classList.contains('active'),
         externalLot:document.getElementById('btn-externallot').classList.contains('active'),
         tituloAusente:document.getElementById('btn-tituloausente').classList.contains('active'),
@@ -989,7 +991,7 @@ async function deleteHistoryItem(id){
 }
 
 function resetAll(){
-  ['quick-paste','lot-hidden','year-hidden','make-hidden','model-hidden','vin','client-name','miles','observations','offer-min','offer-max','buy-now','reserve-price','lights-custom','mechanical-status']
+  ['quick-paste','lot-hidden','year-hidden','make-hidden','model-hidden','vin','client-name','miles','observations','offer-min','offer-max','buy-now','reserve-price','offer-notes','lights-custom','mechanical-status']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
   // Resetear selectores a su primer valor
   document.getElementById('title-type').selectedIndex=0;
