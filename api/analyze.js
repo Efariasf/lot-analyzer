@@ -238,13 +238,26 @@ Reglas:
         })
       : Promise.resolve(null);
 
+    const yaMencionado = [offerText, buyNowText, reserveText].filter(Boolean).join(' ');
     const offerNotesPromise = (offerNotes && offerNotes.trim())
       ? fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
           body: JSON.stringify({
             model: 'llama-3.3-70b-versatile',
-            messages: [{ role: 'user', content: `Mejora solo la redacción de esta nota de un broker de autos sobre la oferta de un vehículo, en español, sin agregar nada nuevo ni inventar cifras, de forma profesional y breve. Devuelve solo el texto mejorado: "${offerNotes}"` }],
+            messages: [{ role: 'user', content: `Eres un broker de subastas de vehículos (Copart, IAAI, Manheim). Mejora la redacción de esta nota sobre la oferta de un lote, en español, de forma profesional y breve.
+
+NOTA DEL BROKER: "${offerNotes}"
+
+${yaMencionado ? `INFORMACIÓN QUE YA SE MENCIONÓ ANTES (NO la repitas, ni repitas las cifras): "${yaMencionado}"` : ''}
+
+REGLAS ESTRICTAS:
+- Esto es una SUBASTA, no una negociación. Usa el vocabulario correcto: "pujar", "ofertar", "subastar", "oferta". NUNCA uses las palabras "negociar", "negociación", "margen de negociación" ni "regatear".
+- NO repitas cifras ni información que ya se mencionó arriba. Complementa, no repitas.
+- NO inventes datos ni cifras que no estén en la nota del broker.
+- Debe fluir de forma natural como continuación de lo ya dicho.
+- Máximo 1 a 2 oraciones.
+- Devuelve SOLO el texto mejorado, sin comillas ni preámbulo.` }],
             max_tokens: 200,
             temperature: 0.5
           })
@@ -268,7 +281,19 @@ Reglas:
     let offerNotesText = '';
     if (offerNotesRes) {
       const onData = await offerNotesRes.json();
-      if (offerNotesRes.ok) offerNotesText = (onData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '').replace(/^[\s\-–—•*>]+/, '');
+      if (offerNotesRes.ok) {
+        offerNotesText = (onData?.choices?.[0]?.message?.content || '').trim()
+          .replace(/^["']|["']$/g, '')
+          .replace(/^[\s\-–—•*>]+/, '');
+        // Red de seguridad: es una subasta, no una negociación
+        offerNotesText = offerNotesText
+          .replace(/margen de negociaci[oó]n/gi, 'margen para pujar')
+          .replace(/negociaci[oó]n/gi, 'puja')
+          .replace(/\bnegociarse\b/gi, 'pujarse')
+          .replace(/\bnegociar\b/gi, 'pujar')
+          .replace(/\bnegociando\b/gi, 'pujando')
+          .replace(/\bregatear\b/gi, 'pujar');
+      }
     }
 
     // ---- ENSAMBLAR EL TEXTO FINAL (controlado) ----
