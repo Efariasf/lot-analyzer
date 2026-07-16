@@ -805,6 +805,18 @@ async function generateAnalysis(){
   if(!get('title-type')){ flag('title-type','Selecciona el tipo de título.'); return; }
   if(!get('auction')){ flag('auction','Selecciona la subasta (Copart, IAAI o Manheim).'); return; }
   if(!get('miles-status')){ flag('miles-status','Selecciona el tipo de millas (Actuales, No actuales o Exentas).'); return; }
+  // Validar rango de oferta coherente
+  const oMin=get('offer-min').trim(), oMax=get('offer-max').trim();
+  ['offer-min','offer-max'].forEach(id=>{const el=document.getElementById(id); if(el) el.style.borderColor='';});
+  if(oMin && oMax && parseFloat(oMax) < parseFloat(oMin)){
+    flag('offer-max','El monto máximo no puede ser menor que el mínimo.');
+    document.getElementById('offer-min').style.borderColor='var(--danger)';
+    return;
+  }
+  if((oMin && !oMax) || (!oMin && oMax)){
+    flag(oMin?'offer-max':'offer-min','Completa ambos montos de la oferta (mínimo y máximo).');
+    return;
+  }
   hideError('error-gen');
   const body=document.getElementById('output-body');
   body.innerHTML='<div class="loading"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Redactando análisis...</span></div>';
@@ -999,7 +1011,7 @@ function resetAll(){
   document.getElementById('miles-status').selectedIndex=0;
   document.getElementById('client-source').selectedIndex=0;
   // Limpiar marcas rojas de error
-  ['client-name','client-source','vin','title-type','auction','miles-status'].forEach(id=>{
+  ['client-name','client-source','vin','title-type','auction','miles-status','offer-min','offer-max'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.borderColor='';
   });
   hideError('error-gen');
