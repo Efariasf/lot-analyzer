@@ -179,7 +179,15 @@ ${carfaxText.substring(0, 14000)}`;
       const num = parseFloat(String(n).replace(/,/g, ''));
       return isNaN(num) ? n : num.toLocaleString('en-US');
     };
-    const offerText = (offerMin && offerMax) ? `Ofertaría entre $${fmt(offerMin)} a $${fmt(offerMax)}` : '';
+    const offerVariants = [
+      `Ofertaría entre $${fmt(offerMin)} a $${fmt(offerMax)}`,
+      `Podríamos ofertar entre $${fmt(offerMin)} a $${fmt(offerMax)}`,
+      `Mi recomendación sería ofertar entre $${fmt(offerMin)} a $${fmt(offerMax)}`,
+      `Sugiero pujar entre $${fmt(offerMin)} a $${fmt(offerMax)}`,
+      `Podríamos pujar entre $${fmt(offerMin)} a $${fmt(offerMax)}`,
+      `Recomendaría ofertar en un rango de $${fmt(offerMin)} a $${fmt(offerMax)}`
+    ];
+    const offerText = (offerMin && offerMax) ? offerVariants[Math.floor(Math.random() * offerVariants.length)] : '';
     const buyNowText = buyNow ? `El vehículo tiene un precio de compra inmediata (Buy Now) de $${fmt(buyNow)}, ese es el precio mínimo que acepta el vendedor para cerrar la venta de inmediato.` : '';
     const reserveText = reservePrice ? `Tiene un precio de reserva de $${fmt(reservePrice)}.` : '';
 
