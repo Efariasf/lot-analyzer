@@ -73,7 +73,7 @@ ${carfaxText.substring(0, 14000)}`;
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
-            offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente } = fields;
+            offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente, esMoto } = fields;
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
 
@@ -120,11 +120,15 @@ ${carfaxText.substring(0, 14000)}`;
       'multiple': 'Presenta múltiples luces del tablero encendidas, lo que podría indicar algún tipo de daño eléctrico o falla mecánica en el vehículo.',
       'custom': dashCustom ? `Presenta ${dashCustom} encendido, lo que podría indicar algún tipo de falla mecánica o electrónica.` : ''
     };
-    const lightsArray = Array.isArray(dashLights) ? dashLights : (dashLights && dashLights !== 'none' ? [dashLights] : []);
+    let lightsArray = Array.isArray(dashLights) ? dashLights : (dashLights && dashLights !== 'none' ? [dashLights] : []);
+    // Las motocicletas no tienen airbag: filtrar por seguridad
+    if (esMoto) lightsArray = lightsArray.filter(l => l !== 'airbag');
     const lightsLines = lightsArray.map(l => lightsMap[l] || '').filter(Boolean);
     const lightsBlock = lightsLines.length > 0
       ? lightsLines.join(' ')
-      : 'No presenta luces de motor ni airbag encendidas en el tablero.';
+      : (esMoto
+          ? 'No presenta luces de advertencia encendidas en el tablero.'
+          : 'No presenta luces de motor ni airbag encendidas en el tablero.');
 
     // ---- MILLAS ----
     const milesMap = {
@@ -222,6 +226,7 @@ ${carfaxText.substring(0, 14000)}`;
     };
 
     const prompt = `Eres un broker de subastas de vehículos. Redacta SOLO el primer párrafo de un análisis, en español, en una a dos oraciones. Texto plano, sin markdown, sin emojis.
+${esMoto ? '\nIMPORTANTE: Este lote es una MOTOCICLETA. Refiérete a ella como motocicleta o moto, NUNCA como "vehículo" genérico de cuatro ruedas. NUNCA menciones airbags, transmisión automática, ni nada que las motos no tengan.\n' : ''}
 
 IMPORTANTE: Varía SIEMPRE la estructura y el vocabulario. Cada vez que generes este párrafo debe sonar diferente al anterior — cambia el orden de las ideas, usa sinónimos, varía cómo introduces el título y los daños. Nunca repitas la misma redacción.
 
