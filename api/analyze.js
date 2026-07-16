@@ -78,8 +78,19 @@ ${carfaxText.substring(0, 14000)}`;
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
 
     // ---- DAÑOS ----
-    const damageList = Array.isArray(damages) && damages.length > 0 ? damages : [];
+    const damageListRaw = Array.isArray(damages) && damages.length > 0 ? damages : [];
+    // "Damage History" no es un daño actual, es un antecedente: se maneja aparte
+    const hasDamageHistory = damageListRaw.includes('Damage History');
+    const damageList = damageListRaw.filter(d => d !== 'Damage History');
     const damageClean = damageList.join(', ').toLowerCase();
+    const damageHistoryVariants = [
+      'La subasta indica Damage History, lo que significa que el vehículo tiene un historial de daños o reclamaciones anteriores registrado en bases de datos. No corresponde al daño actual, sino a un antecedente del vehículo.',
+      'El lote figura con Damage History: existe un historial de daños o reclamaciones previas registrado en bases de datos. Esto no se refiere al daño actual del vehículo, sino a un antecedente suyo.',
+      'Aparece marcado como Damage History, es decir, el vehículo cuenta con antecedentes de daños o reclamaciones registrados en bases de datos. No corresponde al daño actual, sino a su historial.'
+    ];
+    const damageHistoryText = hasDamageHistory
+      ? damageHistoryVariants[Math.floor(Math.random() * damageHistoryVariants.length)]
+      : '';
 
     // ---- ESTADO MECÁNICO ----
     const mechMap = {
@@ -310,6 +321,7 @@ REGLAS ESTRICTAS:
 
     const blocks = [
       firstParagraph,
+      damageHistoryText,
       tituloAusenteText,
       milesWarning,
       salvageWarning,
