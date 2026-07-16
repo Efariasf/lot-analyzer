@@ -191,14 +191,6 @@ textarea{resize:none;height:52px}
         <input type="hidden" id="make-hidden">
         <input type="hidden" id="model-hidden">
 
-        <div class="toggle-row">
-          <button id="btn-copartgo" class="toggle-btn" onclick="toggleFlag('copartgo')">CopartGO</button>
-          <button id="btn-externallot" class="toggle-btn" onclick="toggleFlag('externallot')">Lote Externo</button>
-          <button id="btn-tituloausente" class="toggle-btn" onclick="toggleFlag('tituloausente')">Título Ausente</button>
-          <button id="btn-fechafuturo" class="toggle-btn" onclick="toggleFlag('fechafuturo')">Fecha Futuro</button>
-          <button id="btn-excelente" class="toggle-btn" onclick="toggleFlag('excelente')">Excelente Estado</button>
-        </div>
-
         <div class="mb5"><input id="vin" placeholder="VIN"></div>
         <div class="grid2">
           <input id="client-name" placeholder="Nombre del cliente">
@@ -226,6 +218,16 @@ textarea{resize:none;height:52px}
             <option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option>
           </select>
         </div>
+
+        <div class="toggle-row">
+          <button id="btn-moto" class="toggle-btn" onclick="toggleMoto()">🏍 Motocicleta</button>
+          <button id="btn-copartgo" class="toggle-btn" onclick="toggleFlag('copartgo')">CopartGO</button>
+          <button id="btn-externallot" class="toggle-btn" onclick="toggleFlag('externallot')">Lote Externo</button>
+          <button id="btn-tituloausente" class="toggle-btn" onclick="toggleFlag('tituloausente')">Título Ausente</button>
+          <button id="btn-fechafuturo" class="toggle-btn" onclick="toggleFlag('fechafuturo')">Fecha Futuro</button>
+          <button id="btn-excelente" class="toggle-btn" onclick="toggleFlag('excelente')">Excelente Estado</button>
+        </div>
+
 
         <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
           <span>Tipo de daño</span>
@@ -641,6 +643,27 @@ function toggleFlag(flag){
   document.getElementById('btn-'+flag).classList.toggle('active');
 }
 
+// Motocicleta: las motos no tienen airbag
+function toggleMoto(){
+  const btn=document.getElementById('btn-moto');
+  btn.classList.toggle('active');
+  const esMoto=btn.classList.contains('active');
+  const airbagEl=document.querySelector('.light[data-value="airbag"]');
+  if(esMoto){
+    // Deseleccionar y ocultar la luz de airbag
+    if(airbagEl){
+      airbagEl.classList.remove('selected');
+      airbagEl.style.display='none';
+    }
+    // Si no queda ninguna luz seleccionada, activar "Sin luces"
+    if(document.querySelectorAll('.light.selected').length===0){
+      document.querySelector('.light[data-value="none"]').classList.add('selected');
+    }
+  }else{
+    if(airbagEl) airbagEl.style.display='';
+  }
+}
+
 function parsePaste(text){
   const m=text.trim().match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
   if(m){
@@ -844,7 +867,8 @@ async function generateAnalysis(){
         externalLot:document.getElementById('btn-externallot').classList.contains('active'),
         tituloAusente:document.getElementById('btn-tituloausente').classList.contains('active'),
         fechaFuturo:document.getElementById('btn-fechafuturo').classList.contains('active'),
-        excelente:document.getElementById('btn-excelente').classList.contains('active')
+        excelente:document.getElementById('btn-excelente').classList.contains('active'),
+        esMoto:document.getElementById('btn-moto').classList.contains('active')
       }})
     });
     const data=await res.json();
@@ -1025,6 +1049,9 @@ function resetAll(){
   document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
   document.getElementById('mechanical-status').value='';
   document.querySelectorAll('.toggle-btn').forEach(x=>x.classList.remove('active'));
+  // Restaurar visibilidad de la luz de airbag (por si estaba en modo moto)
+  const airbagEl=document.querySelector('.light[data-value="airbag"]');
+  if(airbagEl) airbagEl.style.display='';
   currentOutput='';
   const body=document.getElementById('output-body');
   body.innerHTML='<div class="output-empty">El análisis aparecerá aquí una vez que generes uno →</div>';
