@@ -490,7 +490,14 @@ textarea{resize:none;height:52px}
 
   <!-- HISTORY -->
   <div id="tab-history" style="display:none;flex:1;overflow-y:auto;padding:12px">
-    <input id="history-search" placeholder="Buscar por cliente, lote, marca o modelo..." style="margin-bottom:10px" oninput="renderHistory()">
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">
+        <span class="section-label" style="margin:0">Puntos de vista por día</span>
+        <input type="date" id="stats-date" style="width:auto;font-size:11.5px;padding:3px 6px" onchange="renderStats()">
+      </div>
+      <div id="stats-content" style="font-size:12.5px;color:var(--muted)">Cargando...</div>
+    </div>
+    <input id="history-search" placeholder="Buscar por cliente, lote, marca o modelo..." style="margin-bottom:10px" oninput="renderHistory(true)">
     <div id="history-list"></div>
   </div>
 
@@ -974,18 +981,49 @@ function saveToHistory(){
   autoSaveToCloud(clientName);
 }
 
-async function renderHistory(){
+// ---- ESTADÍSTICAS POR DÍA ----
+function toLocalDateStr(d){
+  const dt=new Date(d);
+  const y=dt.getFullYear(), m=String(dt.getMonth()+1).padStart(2,'0'), day=String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function renderStats(){
+  const cont=document.getElementById('stats-content');
+  if(!cont)return;
+  const dateInput=document.getElementById('stats-date');
+  const sel=dateInput.value||toLocalDateStr(new Date());
+  if(!dateInput.value) dateInput.value=sel;
+  const delDia=cloudHistory.filter(h=>h.created_at && toLocalDateStr(h.created_at)===sel);
+  if(!delDia.length){ cont.innerHTML='<span style="color:var(--muted)">Sin puntos de vista este día</span>'; return; }
+  const conteo={};
+  delDia.forEach(h=>{ const a=h.author||'Desconocido'; conteo[a]=(conteo[a]||0)+1; });
+  const orden=Object.entries(conteo).sort((a,b)=>b[1]-a[1]);
+  const total=delDia.length;
+  const esHoy=sel===toLocalDateStr(new Date());
+  cont.innerHTML=
+    `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">`+
+    orden.map(([autor,n])=>{
+      const yo=autor===currentUser;
+      return `<span style="background:${yo?'rgba(232,255,77,.12)':'var(--surface2)'};border:1px solid ${yo?'var(--accent)':'var(--border)'};color:${yo?'var(--accent)':'var(--text)'};border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600">${autor} <span style="opacity:.8">${n}</span></span>`;
+    }).join('')+
+    `</div><span style="font-size:11.5px;color:var(--muted)">${esHoy?'Hoy':'Ese día'}: ${total} punto${total===1?'':'s'} de vista en total</span>`;
+}
+
+async function renderHistory(skipFetch){
   const c=document.getElementById('history-list');
-  c.innerHTML='<div class="loading" style="padding:20px"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Cargando historial del equipo...</span></div>';
-  if(!supa){ c.innerHTML='<div class="empty">Sin conexión a la nube</div>'; return; }
-  try{
-    const {data,error}=await supa.from('lot_history').select('*').order('created_at',{ascending:false}).limit(500);
-    if(error) throw error;
-    cloudHistory=data||[];
-  }catch(e){
-    console.error('load history',e);
-    c.innerHTML='<div class="empty">Error al cargar el historial</div>';
-    return;
+  if(!skipFetch){
+    c.innerHTML='<div class="loading" style="padding:20px"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Cargando historial del equipo...</span></div>';
+    if(!supa){ c.innerHTML='<div class="empty">Sin conexión a la nube</div>'; return; }
+    try{
+      const {data,error}=await supa.from('lot_history').select('*').order('created_at',{ascending:false}).limit(500);
+      if(error) throw error;
+      cloudHistory=data||[];
+      renderStats();
+    }catch(e){
+      console.error('load history',e);
+      c.innerHTML='<div class="empty">Error al cargar el historial</div>';
+      return;
+    }
   }
   const search=(document.getElementById('history-search')?.value||'').toLowerCase().trim();
   let items=cloudHistory;
