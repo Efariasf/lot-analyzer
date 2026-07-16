@@ -82,7 +82,14 @@ ${carfaxText.substring(0, 14000)}`;
     // "Damage History" no es un daño actual, es un antecedente: se maneja aparte
     const hasDamageHistory = damageListRaw.includes('Damage History');
     const damageList = damageListRaw.filter(d => d !== 'Damage History');
-    const damageClean = damageList.join(', ').toLowerCase();
+    // Traducción a lenguaje natural para el análisis
+    const damageDisplay = {
+      'All Over': 'daños generalizados en varias áreas del vehículo',
+      'Minor Dent/Scratches': 'abolladuras y rayones menores',
+      'Normal Wear': 'desgaste normal por uso',
+      'Undercarriage': 'daño en los bajos (undercarriage)'
+    };
+    const damageClean = damageList.map(d => damageDisplay[d] || d.toLowerCase()).join(', ');
     const damageHistoryVariants = [
       'La subasta indica Damage History, lo que significa que el vehículo tiene un historial de daños o reclamaciones anteriores registrado en bases de datos. No corresponde al daño actual, sino a un antecedente del vehículo.',
       'El lote figura con Damage History: existe un historial de daños o reclamaciones previas registrado en bases de datos. Esto no se refiere al daño actual del vehículo, sino a un antecedente suyo.',
