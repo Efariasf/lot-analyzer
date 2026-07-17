@@ -341,7 +341,10 @@ CÓMO USAR LA FICHA TÉCNICA: es solo una REFERENCIA DE EXACTITUD, no contenido 
 ` : ''}
 Reglas:
 - Empieza indicando el título sin afirmarlo con certeza absoluta, atribuyéndolo a la subasta. VARÍA la forma de decirlo cada vez, usa diferentes opciones como: "La subasta indica título ${titleType}", "El lote figura con título ${titleType}", "De acuerdo a la subasta, el título es ${titleType}", "${auction} reporta título ${titleType}", "El vehículo aparece listado con título ${titleType}", "Registrado en la subasta como título ${titleType}". NUNCA uses siempre la misma frase, NUNCA digas "El título de ${titleType}".
-- Al explicar el significado del título, SIEMPRE atribúyelo a la subasta, nunca lo afirmes como un hecho propio. Usa fórmulas como "según ${auction}, este título indica que...", "de acuerdo a la información de la subasta, esto significa que...". Para Salvage: "según la subasta, este título indica que el vehículo habría sufrido un daño suficientemente severo para ser declarado pérdida total". Siempre dejamos claro que solo repetimos la información de la subasta, no la verificamos nosotros.
+- Al explicar el significado del título usa el verbo REFERIR: "refiere que...". PROHIBIDO usar "indica que", "significa que" o "quiere decir que" para explicar el significado del título.
+- PROHIBIDO escribir "este título". Es la fórmula que más se repite y suena robótica. Para retomar el título antes del verbo, VARÍA en cada generación entre estas opciones: "dicho título", "esta clasificación", "dicha clasificación", "esta condición", "dicha categoría", o simplemente NO retomarlo y encadenar directo ("lo que según la subasta refiere que..."). Elige una distinta cada vez.
+- Sí puedes atribuir a la subasta al explicar el significado, esa parte nos gusta: "lo que según la subasta, dicha clasificación refiere que...", "lo que de acuerdo a ${auction}, dicho título refiere que...". Para Salvage el sentido es: el vehículo habría sufrido un daño suficientemente severo para ser declarado pérdida total.
+- Nunca afirmes el significado del título como un hecho propio: solo repetimos la información de la subasta, no la verificamos nosotros.
 - Afirma los daños con seguridad, nunca digas "sugiere" o "podría tener daños".
 - Menciona los daños tal como están escritos, de forma natural: si dice "daño trasero" escribe "daño trasero" (NO "daño en el trasero"), si dice "granizo" escribe "daño por granizo". Para varios: "daño frontal y lateral".
 - NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar", "ofrece un atractivo precio de compra", "sin otros daños reportados", "su historial no presenta registros" o "puede necesitar reparaciones". NUNCA hables de historial ni reportes previos, no tenemos esa información.
@@ -406,6 +409,21 @@ REGLAS ESTRICTAS:
     let firstParagraph = (data?.choices?.[0]?.message?.content || '').trim();
     // Limpiar guiones, viñetas o caracteres sueltos al inicio
     firstParagraph = firstParagraph.replace(/^[\s\-–—•*>]+/, '').trim();
+
+    // ---- RED DE SEGURIDAD DEL TÍTULO ----
+    // A temperatura 1.0 el modelo recae en "este título indica que" aunque el prompt lo prohíba.
+    // Se corrige aquí de forma determinista, SIN tocar la atribución a la subasta (esa nos gusta).
+    const tituloRefVariants = ['dicho título', 'esta clasificación', 'dicha clasificación', 'esta condición', 'dicha categoría'];
+    firstParagraph = firstParagraph
+      // Verbo: "indica/significa/quiere decir que" -> "refiere que"
+      .replace(/\b(?:indica|significa|quiere\s+decir)\s+que\b/gi, 'refiere que')
+      // "este título" -> una variante distinta en cada llamada
+      .replace(/\beste\s+t[ií]tulo\b/gi, () => tituloRefVariants[Math.floor(Math.random() * tituloRefVariants.length)])
+      // Limpieza de espacios o comas que puedan quedar sueltos
+      .replace(/\s{2,}/g, ' ')
+      .replace(/\s+,/g, ',')
+      .replace(/,\s*,/g, ',')
+      .trim();
 
     let obsText = '';
     if (obsRes) {
