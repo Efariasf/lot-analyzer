@@ -765,16 +765,21 @@ function toggleMoto(){
 }
 
 function parsePaste(text){
-  const m=text.trim().match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
-  if(m){
-    const p=m[3].trim().split(/\s+/);
-    document.getElementById('lot-hidden').value=m[1];
-    document.getElementById('year-hidden').value=m[2];
-    document.getElementById('make-hidden').value=p[0];
+  const t=text.trim();
+  const setParsed=(lot,year,rest)=>{
+    const p=rest.trim().split(/\s+/);
+    document.getElementById('lot-hidden').value=lot;
+    document.getElementById('year-hidden').value=year;
+    document.getElementById('make-hidden').value=p[0]||'';
     document.getElementById('model-hidden').value=p.slice(1).join(' ');
-  }else{
-    clearParsed();
-  }
+  };
+  // Formato completo: "49180866 - 2012 TOYOTA PRIUS FOUR"
+  let m=t.match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
+  if(m){ setParsed(m[1],m[2],m[3]); return; }
+  // Sin lote: "2012 TOYOTA PRIUS FOUR" (queda así al aplicar el VIN antes de pegar el lote)
+  m=t.match(/^((?:19|20)\d{2})\s+(.+)$/);
+  if(m){ setParsed('',m[1],m[2]); return; }
+  clearParsed();
 }
 function clearParsed(){['lot-hidden','year-hidden','make-hidden','model-hidden'].forEach(id=>document.getElementById(id).value='')}
 
@@ -1277,7 +1282,15 @@ function applyVinToForm(){
 
   // Volver a la pestaña Analizar
   document.querySelector('.tab').click();
-  showToast('Datos aplicados'+(esMoto?' · moto detectada 🏍':'')+' ✓');
+  if(!lot){
+    // NHTSA no conoce el número de lote: hay que pegarlo a mano
+    const qp=document.getElementById('quick-paste');
+    qp.focus(); qp.setSelectionRange(0,0);
+    qp.style.borderColor='var(--danger)';
+    showToast('Datos aplicados — falta el lote, escríbelo al inicio');
+  }else{
+    showToast('Datos aplicados'+(esMoto?' · moto detectada 🏍':'')+' ✓');
+  }
 }
 // =============================================
 
@@ -1359,10 +1372,11 @@ async function generateAnalysis(){
     el.focus(); el.style.borderColor='var(--danger)';
   };
   // Limpiar marcas de error previas
-  ['client-name','client-source','vin','title-type','auction','miles-status'].forEach(id=>{
+  ['quick-paste','client-name','client-source','vin','title-type','auction','miles-status'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.borderColor='';
   });
   // Validaciones obligatorias
+  if(!get('lot-hidden')){ flag('quick-paste','Falta el número de lote. Pega el lote completo arriba (ej: 49180866 - 2012 TOYOTA PRIUS FOUR).'); return; }
   const clientName=get('client-name').trim();
   if(!clientName){ flag('client-name','Escribe el nombre del cliente antes de generar.'); return; }
   if(!get('client-source')){ flag('client-source','Selecciona el origen del cliente (CRM o WhatsApp).'); return; }
@@ -1673,7 +1687,7 @@ function resetAll(){
   document.getElementById('miles-status').selectedIndex=0;
   document.getElementById('client-source').selectedIndex=0;
   // Limpiar marcas rojas de error
-  ['client-name','client-source','vin','title-type','auction','miles-status','offer-min','offer-max'].forEach(id=>{
+  ['quick-paste','client-name','client-source','vin','title-type','auction','miles-status','offer-min','offer-max'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.borderColor='';
   });
   hideError('error-gen');
