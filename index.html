@@ -358,7 +358,7 @@ textarea{resize:none;height:52px}
       <div class="output-actions" id="output-actions" style="display:none">
         <button class="btn btn-accent" onclick="copyOutput()" style="flex:1">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copiar para WhatsApp
+          Copiar texto
         </button>
         <button class="btn btn-outline btn-sm" id="edit-btn" onclick="toggleEdit()">Editar</button>
         <button class="btn btn-outline btn-sm" onclick="resetAll()">Nuevo</button>
@@ -396,7 +396,7 @@ textarea{resize:none;height:52px}
         <div class="output-actions" id="carfax-actions" style="display:none">
           <button class="btn btn-accent" onclick="copyCarfax()" style="flex:1">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copiar para WhatsApp
+            Copiar texto
           </button>
         </div>
       </div>
@@ -814,7 +814,7 @@ async function analyzeCarfax(){
 function copyCarfax(){
   if(!carfaxOutput)return;
   navigator.clipboard.writeText(carfaxOutput)
-    .then(()=>showToast('¡Copiado para WhatsApp ✓'))
+    .then(()=>showToast('¡Texto copiado ✓'))
     .catch(()=>{const ta=document.createElement('textarea');ta.value=carfaxOutput;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('¡Copiado ✓')});
 }
 
@@ -899,7 +899,7 @@ async function generateAnalysis(){
 function copyOutput(){
   if(!currentOutput)return;
   navigator.clipboard.writeText(currentOutput)
-    .then(()=>showToast('¡Copiado para WhatsApp ✓'))
+    .then(()=>showToast('¡Texto copiado ✓'))
     .catch(()=>{const ta=document.createElement('textarea');ta.value=currentOutput;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('¡Copiado ✓')});
 }
 
