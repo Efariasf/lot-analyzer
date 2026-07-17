@@ -1,1 +1,1231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analizador de Lotes</title>
+<meta name="theme-color" content="#0f0f0f">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#2e2e2e;
+  --text:#f0f0f0;--muted:#666;--accent:#e8ff4d;--accent-dark:#c8df2d;
+  --danger:#ff5c5c;--r:8px;--rs:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;display:flex;flex-direction:column}
 
+/* HEADER */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.header-left{display:flex;align-items:center;gap:8px}
+.logo{width:22px;height:22px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo svg{width:12px;height:12px}
+.header h1{font-size:13px;font-weight:600}
+.header p{font-size:10px;color:var(--muted)}
+.ai-badge{background:#1a1a2e;border:1px solid #333;color:#a78bfa;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:500;white-space:nowrap}
+
+/* TABS */
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:6px;text-align:center;font-size:12px;font-weight:500;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* MAIN LAYOUT */
+.main{flex:1;display:flex;overflow:hidden;min-height:0}
+
+/* LEFT PANEL */
+.left-panel{width:400px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.panel-scroll{flex:1;overflow-y:auto;padding:8px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.panel-scroll::-webkit-scrollbar{width:4px}
+.panel-scroll::-webkit-scrollbar-track{background:transparent}
+.panel-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* RIGHT PANEL */
+.right-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:8px;gap:8px}
+.right-panel .output-area{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.output-header{padding:7px 12px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+.output-body{flex:1;overflow-y:auto;padding:12px;font-size:12.5px;line-height:1.65;white-space:pre-wrap;color:var(--text);scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.output-body::-webkit-scrollbar{width:4px}
+.output-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.output-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;text-align:center;padding:20px}
+.output-actions{padding:8px 12px;border-top:1px solid var(--border);display:flex;gap:6px;flex-shrink:0}
+
+/* HISTORY PANEL */
+#tab-history{flex:1;display:none;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:9px;margin-bottom:6px}
+.section-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;margin-top:7px}
+.section-label:first-child{margin-top:0}
+
+/* INPUTS */
+input,select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-size:12.5px;padding:5px 8px;font-family:inherit;transition:.15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+select option{background:var(--surface2)}
+textarea{resize:none;height:52px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px}
+.mb5{margin-bottom:4px}
+
+/* PASTE */
+.paste-wrap{display:flex;gap:5px;margin-bottom:3px}
+.paste-wrap input{border-color:var(--accent);flex:1}
+.paste-hint{font-size:10px;color:var(--muted);margin-bottom:6px}
+
+/* TOGGLES */
+.toggle-row{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.toggle-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);font-size:10.5px;font-weight:600;padding:4px 8px;cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap}
+.toggle-btn:hover{border-color:var(--accent);color:var(--text)}
+.toggle-btn.active{border-color:var(--accent);background:rgba(232,255,77,.1);color:var(--accent)}
+
+/* DAMAGE */
+.damage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.dmg{display:flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:3px 5px;cursor:pointer;transition:.15s}
+.dmg:hover{border-color:var(--accent)}
+.dmg input[type=checkbox]{accent-color:var(--accent);width:12px;height:12px;cursor:pointer;flex-shrink:0}
+.dmg span{font-size:10.5px;color:var(--text);line-height:1.15}
+.dmg.checked{border-color:var(--accent);background:rgba(232,255,77,.07)}
+
+/* MECH */
+.mech-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:4px}
+.mech{display:flex;align-items:center;justify-content:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:5px 3px;cursor:pointer;transition:.15s;color:var(--muted)}
+.mech:hover{border-color:var(--accent);color:var(--text)}
+.mech.selected{border-color:var(--accent);background:rgba(232,255,77,.07);color:var(--accent)}
+.mech span{font-size:10.5px;color:inherit}
+
+/* LIGHTS */
+.lights-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-bottom:4px}
+.light{display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:4px 2px;cursor:pointer;transition:.15s;color:var(--muted)}
+.light:hover{border-color:var(--accent);color:var(--text)}
+.light.selected{border-color:var(--accent);background:rgba(232,255,77,.07);color:var(--accent)}
+.light svg{width:19px;height:19px}
+.light span{font-size:9px;text-align:center;line-height:1.1;color:inherit}
+
+/* BTNS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 12px;border-radius:var(--rs);font-size:12.5px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn-accent{background:var(--accent);color:#000;width:100%;padding:8px}
+.btn-accent:hover{background:var(--accent-dark)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{background:var(--surface2)}
+.btn-sm{padding:5px 10px;font-size:11.5px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.loading{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;padding:6px 0}
+.dots{display:flex;gap:4px}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:blink 1s infinite}
+.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
+.error{background:rgba(255,92,92,.1);border:1px solid rgba(255,92,92,.3);border-radius:var(--rs);padding:7px 10px;font-size:12px;color:var(--danger);margin-top:6px;display:none}
+
+/* HISTORY */
+.history-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px}
+.history-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px}
+.history-title{font-size:13px;font-weight:600}
+.history-date{font-size:11px;color:var(--muted)}
+.history-preview{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+.empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
+.guia-item{border:1px solid var(--border);border-radius:var(--rs);margin-bottom:6px;background:var(--surface2)}
+.guia-item summary{padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text);list-style:none;display:flex;align-items:center;justify-content:space-between}
+.guia-item summary::after{content:'+';color:var(--accent);font-size:15px;font-weight:700}
+.guia-item[open] summary::after{content:'−'}
+.guia-item p{padding:0 12px 10px;font-size:12.5px;line-height:1.6;color:#c9c9c9}
+
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--text);color:var(--bg);padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;z-index:99;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* MOBILE */
+@media(max-width:768px){
+  html,body{height:auto;overflow:auto}
+  .main{flex-direction:column;overflow:visible}
+  .left-panel{width:100%;border-right:none;border-bottom:1px solid var(--border);overflow:visible}
+  .panel-scroll{overflow:visible;padding:10px}
+  .right-panel{padding:10px}
+  .right-panel .output-area{min-height:300px}
+  .damage-grid{grid-template-columns:repeat(2,1fr)}
+  #tab-carfax{flex-direction:column !important;overflow:visible !important}
+  #tab-carfax .left-panel{width:100% !important}
+  #tab-carfax .right-panel{min-height:300px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+        <path d="m4.93 4.93 2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/>
+      </svg>
+    </div>
+    <div><h1>Analizador de Lotes</h1><p>Copart · IAAI · Manheim</p></div>
+  </div>
+  <span class="ai-badge">✦ IA</span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('analyzer',this)">Analizar</button>
+  <button class="tab" onclick="showTab('carfax',this)">Carfax</button>
+  <button class="tab" onclick="showTab('guia',this)">Guía</button>
+  <button class="tab" onclick="showTab('history',this)">Historial</button>
+</div>
+
+<div class="main">
+
+  <!-- LEFT: FORM -->
+  <div class="left-panel" id="tab-analyzer">
+    <div class="panel-scroll">
+
+      <div class="card">
+        <div class="section-label">Lote y vehículo</div>
+        <div class="paste-wrap">
+          <input id="quick-paste" placeholder="49180866 - 2012 TOYOTA PRIUS FOUR" oninput="parsePaste(this.value)">
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('quick-paste').value='';clearParsed()">✕</button>
+        </div>
+        <p class="paste-hint">Lote, año, marca y modelo se llenan automáticamente</p>
+        <input type="hidden" id="lot-hidden">
+        <input type="hidden" id="year-hidden">
+        <input type="hidden" id="make-hidden">
+        <input type="hidden" id="model-hidden">
+
+        <div class="mb5"><input id="vin" placeholder="VIN"></div>
+        <div class="grid2">
+          <input id="client-name" placeholder="Nombre del cliente">
+          <select id="client-source">
+            <option value="">Origen...</option>
+            <option value="CRM">CRM</option>
+            <option value="WhatsApp">WhatsApp</option>
+          </select>
+        </div>
+        <div class="grid2">
+          <select id="title-type">
+            <option value="">Tipo de título...</option>
+            <option>Clean</option><option>Salvage</option><option>Rebuilt</option>
+            <option>Parts Only</option><option>Certificate of Destruction / Junk</option>
+          </select>
+          <select id="auction">
+            <option value="">Subasta...</option>
+            <option>Copart</option><option>IAAI</option><option>Manheim</option>
+          </select>
+        </div>
+        <div class="grid2">
+          <input id="miles" placeholder="Millas (ej: 80,422)">
+          <select id="miles-status">
+            <option value="">Tipo de millas...</option>
+            <option>Actuales</option><option>No actuales (TMU)</option><option>Exentas</option>
+          </select>
+        </div>
+
+        <div class="toggle-row">
+          <button id="btn-moto" class="toggle-btn" onclick="toggleMoto()">🏍 Motocicleta</button>
+          <button id="btn-copartgo" class="toggle-btn" onclick="toggleFlag('copartgo')">CopartGO</button>
+          <button id="btn-externallot" class="toggle-btn" onclick="toggleFlag('externallot')">Lote Externo</button>
+          <button id="btn-tituloausente" class="toggle-btn" onclick="toggleFlag('tituloausente')">Título Ausente</button>
+          <button id="btn-fechafuturo" class="toggle-btn" onclick="toggleFlag('fechafuturo')">Fecha Futuro</button>
+          <button id="btn-excelente" class="toggle-btn" onclick="toggleFlag('excelente')">Excelente Estado</button>
+        </div>
+
+
+        <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Tipo de daño</span>
+          <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 8px" onclick="openTemplates()">⊞ Plantillas</button>
+        </div>
+        <div class="damage-grid" id="damage-grid">
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Granizo"><span>Granizo</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño frontal"><span>Daño frontal</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño trasero"><span>Daño trasero</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño lateral"><span>Daño lateral</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Volcado"><span>Volcado</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Inundación/Agua"><span>Inundación/Agua</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Fuego"><span>Fuego</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Vandalismo"><span>Vandalismo</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Mecánico"><span>Mecánico</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Undercarriage"><span>Undercarriage</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Minor Dent/Scratches"><span>Minor Dent/Scratches</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Normal Wear"><span>Normal Wear</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="All Over"><span>All Over</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Damage History"><span>Damage History</span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-label">Estado mecánico</div>
+        <input type="hidden" id="mechanical-status" value="">
+        <div class="mech-grid">
+          <div class="mech" data-value="no-enciende" onclick="selectMech(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/></svg>
+            <span>No enciende</span>
+          </div>
+          <div class="mech" data-value="solo-enciende" onclick="selectMech(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 9"/></svg>
+            <span>Solo enciende</span>
+          </div>
+          <div class="mech" data-value="enciende-no-rueda" onclick="selectMech(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
+            <span>Enciende, no rueda</span>
+          </div>
+          <div class="mech" data-value="enciende-rueda" onclick="selectMech(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>
+            <span>Enciende y rueda</span>
+          </div>
+        </div>
+
+        <div class="section-label">Luces del tablero</div>
+        <input type="hidden" id="dash-lights" value="none">
+        <div class="lights-grid">
+          <div class="light selected" data-value="none" onclick="selectLight(this)">
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="16" stroke="#555" stroke-width="2" stroke-dasharray="4 3"/><line x1="12" y1="12" x2="28" y2="28" stroke="#555" stroke-width="2.5" stroke-linecap="round"/></svg>
+            <span>Sin luces</span>
+          </div>
+          <div class="light" data-value="check-engine" onclick="selectLight(this)">
+            <svg viewBox="0 0 40 40" fill="none"><path d="M8 28 L14 16 Q16 12 20 12 Q24 12 26 16 L32 28 Q33 30 31 30 L9 30 Q7 30 8 28Z" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="24" r="1.5" fill="currentColor"/><line x1="20" y1="19" x2="20" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <span>Check Engine</span>
+          </div>
+          <div class="light" data-value="airbag" onclick="selectLight(this)">
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="10" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="20" r="2.5" fill="currentColor"/><text x="20" y="36" text-anchor="middle" font-size="7" fill="currentColor" font-family="sans-serif" font-weight="bold">SRS</text></svg>
+            <span>Airbag/SRS</span>
+          </div>
+          <div class="light" data-value="abs" onclick="selectLight(this)">
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2"/><text x="20" y="24" text-anchor="middle" font-size="9" fill="currentColor" font-family="sans-serif" font-weight="bold">ABS</text></svg>
+            <span>ABS</span>
+          </div>
+          <div class="light" data-value="transmission" onclick="selectLight(this)">
+            <svg viewBox="0 0 40 40" fill="none"><rect x="10" y="14" width="20" height="12" rx="2" stroke="currentColor" stroke-width="2"/><line x1="15" y1="14" x2="15" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="14" x2="20" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="25" y1="14" x2="25" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="10" y1="20" x2="30" y2="20" stroke="currentColor" stroke-width="1.5"/></svg>
+            <span>Transmisión</span>
+          </div>
+          <div class="light" data-value="battery" onclick="selectLight(this)">
+            <svg viewBox="0 0 40 40" fill="none"><rect x="7" y="14" width="24" height="14" rx="2" stroke="currentColor" stroke-width="2"/><rect x="31" y="18" width="3" height="6" rx="1" fill="currentColor"/><line x1="13" y1="19" x2="13" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="11" y1="21" x2="15" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="23" y1="21" x2="27" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <span>Batería</span>
+          </div>
+          <div class="light" data-value="oil" onclick="selectLight(this)">
+            <svg viewBox="0 0 40 40" fill="none"><path d="M14 28 L14 18 Q14 14 18 14 L22 14 Q24 14 25 16 L28 20 Q30 22 28 24 L26 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 28 Q14 32 18 32 L22 32 Q26 32 26 28 L26 24 L14 24 Z" stroke="currentColor" stroke-width="2"/></svg>
+            <span>Aceite</span>
+          </div>
+          <div class="light" data-value="temperature" onclick="selectLight(this)">
+            <svg viewBox="0 0 40 40" fill="none"><path d="M20 8 Q24 10 24 16 L24 26 Q24 32 20 34 Q16 32 16 26 L16 16 Q16 10 20 8Z" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="28" r="3" fill="currentColor"/></svg>
+            <span>Temperatura</span>
+          </div>
+          <div class="light" data-value="multiple" onclick="selectLight(this)">
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="12" cy="20" r="5" stroke="currentColor" stroke-width="2"/><circle cx="28" cy="20" r="5" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="12" r="5" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="28" r="5" stroke="currentColor" stroke-width="2"/></svg>
+            <span>Múltiples</span>
+          </div>
+          <div class="light" data-value="custom" onclick="selectLight(this)">
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"/><text x="20" y="25" text-anchor="middle" font-size="16" fill="currentColor" font-family="sans-serif">?</text></svg>
+            <span>Otras</span>
+          </div>
+        </div>
+        <div id="lights-custom-row" style="display:none;margin-bottom:4px">
+          <input id="lights-custom" placeholder="Especificar luces (ej: TPMS, ESP...)">
+        </div>
+
+        <div class="section-label">Observaciones</div>
+        <div class="mb5"><textarea id="observations" placeholder="Escríbelas como quieras, la IA las mejora..."></textarea></div>
+
+        <div class="section-label">Oferta</div>
+        <div class="grid2">
+          <input id="offer-min" type="number" placeholder="Mínimo ($)">
+          <input id="offer-max" type="number" placeholder="Máximo ($)">
+        </div>
+        <div class="grid2">
+          <input id="buy-now" type="number" placeholder="Buy Now ($) — opcional">
+          <input id="reserve-price" type="number" placeholder="Reserve Price ($) — opcional">
+        </div>
+        <div class="mb5"><textarea id="offer-notes" placeholder="Notas sobre la oferta (opcional), la IA las mejora..."></textarea></div>
+
+        <button class="btn btn-accent" id="gen-btn" onclick="generateAnalysis()" style="margin-top:7px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Generar análisis
+        </button>
+        <div class="error" id="error-gen"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: OUTPUT -->
+  <div class="right-panel" id="right-panel">
+    <div class="output-area">
+      <div class="output-header" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Análisis generado</span>
+        <span id="presence-indicator" style="font-size:11px;font-weight:400;color:var(--muted);display:flex;align-items:center;gap:5px"></span>
+      </div>
+      <div class="output-body" id="output-body">
+        <div class="output-empty">El análisis aparecerá aquí una vez que generes uno →</div>
+      </div>
+      <div class="output-actions" id="output-actions" style="display:none">
+        <button class="btn btn-accent" onclick="copyOutput()" style="flex:1">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copiar para WhatsApp
+        </button>
+        <button class="btn btn-outline btn-sm" id="edit-btn" onclick="toggleEdit()">Editar</button>
+        <button class="btn btn-outline btn-sm" onclick="resetAll()">Nuevo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARFAX -->
+  <div id="tab-carfax" style="display:none;flex:1;overflow:hidden;flex-direction:row">
+    <div class="left-panel" style="width:420px">
+      <div class="panel-scroll">
+        <div class="card">
+          <div class="section-label">Reporte Carfax / AutoCheck</div>
+          <div class="upload-zone" id="carfax-dropzone" onclick="document.getElementById('carfax-file').click()" style="border:1.5px dashed var(--border);border-radius:var(--r);padding:24px 16px;text-align:center;cursor:pointer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;color:var(--muted);margin-bottom:8px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <p style="color:var(--muted);font-size:13px">Toca para subir el PDF del Carfax</p>
+            <span style="font-size:11px;color:#555">Solo PDF de texto (no escaneado)</span>
+          </div>
+          <input type="file" id="carfax-file" accept="application/pdf" style="display:none" onchange="handleCarfax(event)">
+          <div id="carfax-filename" style="display:none;margin-top:8px;font-size:12px;color:var(--accent)"></div>
+          <button class="btn btn-accent" id="carfax-btn" onclick="analyzeCarfax()" style="margin-top:10px;display:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Resumir y dar punto de vista
+          </button>
+          <div class="error" id="carfax-error"></div>
+        </div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="output-area">
+        <div class="output-header">Resumen del Carfax</div>
+        <div class="output-body" id="carfax-output">
+          <div class="output-empty">Sube un PDF de Carfax y genera el resumen →</div>
+        </div>
+        <div class="output-actions" id="carfax-actions" style="display:none">
+          <button class="btn btn-accent" onclick="copyCarfax()" style="flex:1">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copiar para WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GUÍA DE TÍTULOS -->
+  <div id="tab-guia" style="display:none;flex:1;overflow-y:auto;padding:12px">
+    <div style="max-width:760px;margin:0 auto">
+
+      <div class="card">
+        <div class="section-label">Tipos de título</div>
+        <details class="guia-item" open>
+          <summary>Clean / Clear</summary>
+          <p>El vehículo no ha sido declarado pérdida total por una aseguradora. Ojo: un título clean en subasta puede ser reclasificado a salvage al momento de registrarlo si NMVTIS (la base de datos nacional) tiene marcado un total loss previo que aún no se refleja en el papel. Por eso siempre se recomienda revisar el Carfax y confirmar con el DMV.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Salvage</summary>
+          <p>La aseguradora declaró el vehículo pérdida total porque el costo de reparación superó el umbral del estado. No puede circular legalmente hasta ser reparado, inspeccionado y re-titulado como Rebuilt. La marca salvage de un estado acompaña al vehículo aunque se registre en otro estado.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Rebuilt / Reconstructed</summary>
+          <p>Vehículo que fue salvage, se reparó y pasó la inspección estatal. Puede circular legalmente. La marca "Rebuilt" es permanente y acompaña al vehículo en cada venta futura. El seguro suele ser más limitado y el valor de reventa es típicamente 20-40% menor que un clean equivalente.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Parts Only / Bill of Sale</summary>
+          <p>No otorga propiedad para circular: el vehículo jamás podrá registrarse. Solo sirve para piezas, uso fuera de carretera o exportación (verificar reglas del estado emisor).</p>
+        </details>
+        <details class="guia-item">
+          <summary>Certificate of Destruction / Junk</summary>
+          <p>El vehículo JAMÁS podrá circular legalmente en las carreteras de Estados Unidos. Solo chatarra o venta de piezas. El VIN se retira de la base nacional. En muchos estados se requiere licencia de desmantelador para comprarlos.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Non-Repairable</summary>
+          <p>Similar al Junk: nunca podrá volver a circular en EE.UU. Diferencia clave para exportadores: en varios estados se permite exportarlo antes del desguace. Verificar siempre las reglas del estado emisor antes de comprar para exportar.</p>
+        </details>
+      </div>
+
+      <div class="card">
+        <div class="section-label">Umbrales de pérdida total por estado</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Porcentaje del valor del vehículo que debe alcanzar el daño para que la aseguradora lo declare pérdida total (y normalmente pase a salvage). Mientras más bajo el umbral, más fácil que un carro reciba salvage.</p>
+        <details class="guia-item">
+          <summary>100% — Colorado, Texas</summary>
+          <p>El daño debe igualar el valor total del vehículo. Por eso Texas "perdona" más: muchos carros dañados conservan título clean. Además, en Texas el cálculo excluye el costo de repintado y el daño por granizo.</p>
+        </details>
+        <details class="guia-item">
+          <summary>80% — Florida, Minnesota, Missouri, Oregon</summary>
+          <p>El daño debe alcanzar el 80% del valor.</p>
+        </details>
+        <details class="guia-item">
+          <summary>75% — La mayoría de los estados</summary>
+          <p>Alabama, Kansas, Kentucky, Louisiana, Maryland, Michigan, Nebraska, New Hampshire, New York, North Carolina, North Dakota, Rhode Island, South Carolina, Tennessee, Virginia, West Virginia, Wyoming, DC.</p>
+        </details>
+        <details class="guia-item">
+          <summary>70% — Arkansas, Indiana, Iowa, Wisconsin</summary>
+          <p>Umbral más estricto: con 70% de daño ya es pérdida total.</p>
+        </details>
+        <details class="guia-item">
+          <summary>60-65% — Oklahoma (60%), Nevada (65%)</summary>
+          <p>Los más estrictos del país. Un carro de estos estados se "salvagea" con menos daño que en cualquier otro.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Fórmula TLF — California, Arizona, Georgia y otros</summary>
+          <p>Alaska, Arizona, California, Connecticut, Delaware, Georgia, Hawaii, Idaho, Illinois, Maine, Massachusetts, Mississippi, Montana, New Jersey, New Mexico, Ohio, Pennsylvania, South Dakota, Utah, Vermont, Washington usan una fórmula: si costo de reparación + valor de salvage ≥ valor del vehículo → pérdida total.</p>
+        </details>
+      </div>
+
+      <div class="card">
+        <div class="section-label">Reglas clave que debes recordar</div>
+        <details class="guia-item" open>
+          <summary>Granizo y Texas (confirmado por ley)</summary>
+          <p>Desde el 11 de septiembre de 2017, Texas no emite títulos salvage para vehículos dañados exclusivamente por granizo — la ley los excluye de la definición de vehículo salvage. En la mayoría de los demás estados, el granizo severo sí puede generar salvage al registrarse.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Clean en subasta ≠ Clean garantizado</summary>
+          <p>Si el Carfax muestra un total loss pero el título dice clean, al registrar el vehículo el DMV puede reclasificarlo a salvage usando los datos de NMVTIS. Siempre advertir al cliente y recomendar verificar con el DMV.</p>
+        </details>
+        <details class="guia-item">
+          <summary>La marca salvage sigue al vehículo</summary>
+          <p>Un salvage de otro estado no se "limpia" registrándolo en Texas ni en ningún estado serio. El intento de lavar títulos (title washing) es fraude.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Daños que NO cambian el título</summary>
+          <p>Daño frontal, trasero, lateral, volcadura o falla mecánica por sí solos no cambian un título clean — solo importa si la aseguradora declaró pérdida total. Los daños que típicamente disparan salvage al registrar: granizo (salvo Texas), inundación/agua, fuego y vandalismo severo.</p>
+        </details>
+      </div>
+
+      <p style="font-size:11px;color:#555;text-align:center;padding:8px 0 20px">Fuentes: TxDMV, NMVTIS / vehiclehistory.gov, leyes estatales de pérdida total. Actualizado julio 2026.</p>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="tab-history" style="display:none;flex:1;overflow-y:auto;padding:12px">
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">
+        <span class="section-label" style="margin:0">Puntos de vista por día</span>
+        <input type="date" id="stats-date" style="width:auto;font-size:11.5px;padding:3px 6px" onchange="onDateChange()">
+      </div>
+      <div id="stats-content" style="font-size:12.5px;color:var(--muted)">Cargando...</div>
+    </div>
+    <input id="history-search" placeholder="Buscar por cliente, lote, marca o modelo..." style="margin-bottom:10px" oninput="renderHistory(true)">
+    <div id="history-list"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL IDENTIDAD (primera vez) -->
+<div id="identity-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);width:100%;max-width:360px;padding:22px">
+    <div style="font-weight:600;font-size:16px;margin-bottom:6px">¿Quién eres?</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Selecciona tu nombre. Solo se pide una vez y quedará guardado en este dispositivo.</div>
+    <div id="identity-buttons" style="display:flex;flex-direction:column;gap:7px"></div>
+    <div id="identity-custom-row" style="display:none;margin-top:10px">
+      <input id="identity-custom" placeholder="Escribe tu nombre">
+      <button class="btn btn-accent" style="width:100%;margin-top:8px" onclick="saveCustomIdentity()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PLANTILLAS -->
+<div id="templates-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <span style="font-weight:600;font-size:14px">Plantillas</span>
+      <button class="btn btn-outline btn-sm" onclick="closeTemplates()">✕</button>
+    </div>
+    <div style="padding:14px;overflow-y:auto;flex:1">
+      <button class="btn btn-accent btn-sm" style="width:100%;margin-bottom:12px" onclick="saveTemplate()">+ Guardar punto de vista actual como plantilla</button>
+      <div id="templates-list"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ---- SUPABASE (historial compartido del equipo) ----
+const SUPABASE_URL='https://acnzhwfkwrtrmkanwbtp.supabase.co';
+const SUPABASE_KEY='sb_publishable_BC5a1ZI6M6-UnS_QYZN3Kg_dyVm1Ogg';
+let supa=null;
+try{ supa=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ console.error('Supabase init',e); }
+
+const TEAM=['Axel','Christian','Gerald','Javier','Eduardo'];
+let currentUser=localStorage.getItem('lot-user')||'';
+
+let currentOutput='';
+
+// Atajo Ctrl+Enter para generar análisis rápido
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
+    const analyzerVisible=document.getElementById('tab-analyzer').style.display!=='none';
+    const carfaxVisible=document.getElementById('tab-carfax')&&document.getElementById('tab-carfax').style.display!=='none';
+    if(analyzerVisible&&!document.getElementById('gen-btn').disabled){
+      generateAnalysis();
+    } else if(carfaxVisible&&document.getElementById('carfax-btn').style.display!=='none'&&!document.getElementById('carfax-btn').disabled){
+      analyzeCarfax();
+    }
+  }
+});
+
+let lotTemplates=[];
+try{lotTemplates=JSON.parse(localStorage.getItem('lot-templates')||'[]')}catch(e){}
+
+function openTemplates(){
+  document.getElementById('templates-modal').style.display='flex';
+  renderTemplates();
+}
+function closeTemplates(){
+  document.getElementById('templates-modal').style.display='none';
+}
+
+function saveTemplate(){
+  const damages=getSelectedDamages();
+  const lights=Array.from(document.querySelectorAll('.light.selected')).map(x=>x.dataset.value).filter(v=>v!=='none');
+  const observations=document.getElementById('observations').value;
+  const mechanical=document.getElementById('mechanical-status').value;
+  if(!damages.length&&!lights.length&&!observations&&!mechanical){
+    showToast('Selecciona algo primero');return;
+  }
+  const name=prompt('Nombre de la plantilla (ej: Granizo techo y capó):');
+  if(!name)return;
+  const tpl={id:Date.now(),name,damages,lights,observations,mechanical};
+  lotTemplates.unshift(tpl);
+  try{localStorage.setItem('lot-templates',JSON.stringify(lotTemplates))}catch(e){}
+  renderTemplates();
+  showToast('Plantilla guardada ✓');
+}
+
+function applyTemplate(id){
+  const tpl=lotTemplates.find(t=>t.id===id);
+  if(!tpl)return;
+  // Limpiar daños actuales
+  document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb=>{cb.checked=false;cb.closest('.dmg').classList.remove('checked')});
+  // Aplicar daños
+  (tpl.damages||[]).forEach(val=>{
+    const cb=document.querySelector(`#damage-grid input[value="${val}"]`);
+    if(cb){cb.checked=true;cb.closest('.dmg').classList.add('checked')}
+  });
+  // Limpiar y aplicar luces
+  document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
+  if((tpl.lights||[]).length>0){
+    tpl.lights.forEach(val=>{
+      const el=document.querySelector(`.light[data-value="${val}"]`);
+      if(el)el.classList.add('selected');
+    });
+    const customSel=document.querySelector('.light[data-value="custom"]')?.classList.contains('selected');
+    document.getElementById('lights-custom-row').style.display=customSel?'block':'none';
+  } else {
+    document.querySelector('.light[data-value="none"]').classList.add('selected');
+  }
+  // Observaciones
+  if(tpl.observations)document.getElementById('observations').value=tpl.observations;
+  // Mecánico
+  document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
+  if(tpl.mechanical){
+    const m=document.querySelector(`.mech[data-value="${tpl.mechanical}"]`);
+    if(m)m.classList.add('selected');
+    document.getElementById('mechanical-status').value=tpl.mechanical;
+  }
+  closeTemplates();
+  showToast('Plantilla aplicada ✓');
+}
+
+function deleteTemplate(id){
+  lotTemplates=lotTemplates.filter(t=>t.id!==id);
+  try{localStorage.setItem('lot-templates',JSON.stringify(lotTemplates))}catch(e){}
+  renderTemplates();
+}
+
+function renderTemplates(){
+  const c=document.getElementById('templates-list');
+  if(!lotTemplates.length){c.innerHTML='<div class="empty" style="padding:20px">No tienes plantillas guardadas</div>';return}
+  c.innerHTML=lotTemplates.map(t=>{
+    const parts=[];
+    if(t.damages&&t.damages.length)parts.push(t.damages.join(', '));
+    if(t.lights&&t.lights.length)parts.push('Luces: '+t.lights.length);
+    if(t.mechanical)parts.push('Mecánico');
+    return `<div class="history-item">
+      <div class="history-title" style="margin-bottom:4px">${t.name}</div>
+      <div class="history-preview">${parts.join(' · ')||'Sin detalles'}</div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn btn-accent btn-sm" onclick="applyTemplate(${t.id})">Aplicar</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteTemplate(${t.id})">Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleFlag(flag){
+  document.getElementById('btn-'+flag).classList.toggle('active');
+}
+
+// Motocicleta: las motos no tienen airbag
+function toggleMoto(){
+  const btn=document.getElementById('btn-moto');
+  btn.classList.toggle('active');
+  const esMoto=btn.classList.contains('active');
+  const airbagEl=document.querySelector('.light[data-value="airbag"]');
+  if(esMoto){
+    // Deseleccionar y ocultar la luz de airbag
+    if(airbagEl){
+      airbagEl.classList.remove('selected');
+      airbagEl.style.display='none';
+    }
+    // Si no queda ninguna luz seleccionada, activar "Sin luces"
+    if(document.querySelectorAll('.light.selected').length===0){
+      document.querySelector('.light[data-value="none"]').classList.add('selected');
+    }
+  }else{
+    if(airbagEl) airbagEl.style.display='';
+  }
+}
+
+function parsePaste(text){
+  const m=text.trim().match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
+  if(m){
+    const p=m[3].trim().split(/\s+/);
+    document.getElementById('lot-hidden').value=m[1];
+    document.getElementById('year-hidden').value=m[2];
+    document.getElementById('make-hidden').value=p[0];
+    document.getElementById('model-hidden').value=p.slice(1).join(' ');
+  }else{
+    clearParsed();
+  }
+}
+function clearParsed(){['lot-hidden','year-hidden','make-hidden','model-hidden'].forEach(id=>document.getElementById(id).value='')}
+
+function toggleDamage(label){
+  const cb=label.querySelector('input[type="checkbox"]');
+  cb.checked=!cb.checked;
+  label.classList.toggle('checked',cb.checked);
+}
+function getSelectedDamages(){
+  return Array.from(document.querySelectorAll('#damage-grid input[type="checkbox"]:checked')).map(cb=>cb.value);
+}
+
+function selectMech(el){
+  document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('mechanical-status').value=el.dataset.value;
+}
+function selectLight(el){
+  const val=el.dataset.value;
+  if(val==='none'){
+    // Si selecciona "Sin luces", deselecciona todo lo demás
+    document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('lights-custom-row').style.display='none';
+  } else {
+    // Deselecciona "Sin luces" si estaba activo
+    document.querySelector('.light[data-value="none"]').classList.remove('selected');
+    el.classList.toggle('selected');
+    // Si no queda ninguna seleccionada, activa "Sin luces" de nuevo
+    const anySelected=document.querySelectorAll('.light.selected').length>0;
+    if(!anySelected) document.querySelector('.light[data-value="none"]').classList.add('selected');
+    // Mostrar campo custom si está seleccionado
+    const customSelected=document.querySelector('.light[data-value="custom"]')?.classList.contains('selected');
+    document.getElementById('lights-custom-row').style.display=customSelected?'block':'none';
+  }
+}
+
+function showTab(t,el){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  const analyzer=document.getElementById('tab-analyzer');
+  const history=document.getElementById('tab-history');
+  const carfax=document.getElementById('tab-carfax');
+  const guia=document.getElementById('tab-guia');
+  const right=document.getElementById('right-panel');
+  analyzer.style.display='none';
+  history.style.display='none';
+  carfax.style.display='none';
+  guia.style.display='none';
+  right.style.display='none';
+  if(t==='analyzer'){
+    analyzer.style.display='flex';
+    right.style.display='flex';
+  } else if(t==='carfax'){
+    carfax.style.display='flex';
+  } else if(t==='guia'){
+    guia.style.display='block';
+  } else {
+    history.style.display='block';
+    renderHistory();
+  }
+}
+
+function showError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block'}
+function hideError(id){document.getElementById(id).style.display='none'}
+
+// ---- CARFAX ----
+let carfaxText='';
+let carfaxOutput='';
+
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+async function handleCarfax(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  hideError('carfax-error');
+  document.getElementById('carfax-filename').style.display='block';
+  document.getElementById('carfax-filename').textContent='📄 '+file.name+' — leyendo...';
+  try{
+    const buffer=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buffer}).promise;
+    let fullText='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const content=await page.getTextContent();
+      fullText+=content.items.map(it=>it.str).join(' ')+'\n';
+    }
+    carfaxText=fullText.trim();
+    if(carfaxText.length<50){
+      showError('carfax-error','El PDF no contiene texto legible. Puede ser un documento escaneado (imagen). Prueba con un Carfax en formato de texto.');
+      document.getElementById('carfax-filename').textContent='📄 '+file.name+' — sin texto';
+      document.getElementById('carfax-btn').style.display='none';
+      return;
+    }
+    document.getElementById('carfax-filename').textContent='📄 '+file.name+' ✓';
+    document.getElementById('carfax-btn').style.display='inline-flex';
+  }catch(err){
+    showError('carfax-error','Error al leer el PDF: '+err.message);
+    document.getElementById('carfax-filename').textContent='📄 error';
+  }
+}
+
+async function analyzeCarfax(){
+  if(!carfaxText){showError('carfax-error','Primero sube un PDF');return}
+  hideError('carfax-error');
+  const out=document.getElementById('carfax-output');
+  out.innerHTML='<div class="loading"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Analizando Carfax...</span></div>';
+  document.getElementById('carfax-actions').style.display='none';
+  const btn=document.getElementById('carfax-btn');
+  btn.disabled=true;
+  try{
+    const res=await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mode:'carfax',carfaxText})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Error desconocido');
+    carfaxOutput=data.result.trim();
+    out.textContent=carfaxOutput;
+    document.getElementById('carfax-actions').style.display='flex';
+  }catch(err){
+    out.innerHTML='<div class="output-empty" style="color:var(--danger)">Error: '+err.message+'</div>';
+  }
+  btn.disabled=false;
+}
+
+function copyCarfax(){
+  if(!carfaxOutput)return;
+  navigator.clipboard.writeText(carfaxOutput)
+    .then(()=>showToast('¡Copiado para WhatsApp ✓'))
+    .catch(()=>{const ta=document.createElement('textarea');ta.value=carfaxOutput;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('¡Copiado ✓')});
+}
+
+async function generateAnalysis(){
+  const get=id=>document.getElementById(id).value;
+  const flag=(id,msg)=>{
+    showError('error-gen',msg);
+    const el=document.getElementById(id);
+    el.focus(); el.style.borderColor='var(--danger)';
+  };
+  // Limpiar marcas de error previas
+  ['client-name','client-source','vin','title-type','auction','miles-status'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.borderColor='';
+  });
+  // Validaciones obligatorias
+  const clientName=get('client-name').trim();
+  if(!clientName){ flag('client-name','Escribe el nombre del cliente antes de generar.'); return; }
+  if(!get('client-source')){ flag('client-source','Selecciona el origen del cliente (CRM o WhatsApp).'); return; }
+  if(!get('vin').trim()){ flag('vin','Coloca el VIN del vehículo.'); return; }
+  if(!get('title-type')){ flag('title-type','Selecciona el tipo de título.'); return; }
+  if(!get('auction')){ flag('auction','Selecciona la subasta (Copart, IAAI o Manheim).'); return; }
+  if(!get('miles-status')){ flag('miles-status','Selecciona el tipo de millas (Actuales, No actuales o Exentas).'); return; }
+  // Validar rango de oferta coherente
+  const oMin=get('offer-min').trim(), oMax=get('offer-max').trim();
+  ['offer-min','offer-max'].forEach(id=>{const el=document.getElementById(id); if(el) el.style.borderColor='';});
+  if(oMin && oMax && parseFloat(oMax) < parseFloat(oMin)){
+    flag('offer-max','El monto máximo no puede ser menor que el mínimo.');
+    document.getElementById('offer-min').style.borderColor='var(--danger)';
+    return;
+  }
+  if((oMin && !oMax) || (!oMin && oMax)){
+    flag(oMin?'offer-max':'offer-min','Completa ambos montos de la oferta (mínimo y máximo).');
+    return;
+  }
+  hideError('error-gen');
+  const body=document.getElementById('output-body');
+  body.innerHTML='<div class="loading"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Redactando análisis...</span></div>';
+  document.getElementById('output-actions').style.display='none';
+  const btn=document.getElementById('gen-btn');
+  btn.disabled=true;
+  try{
+    const res=await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mode:'generate',fields:{
+        lot:get('lot-hidden'),year:get('year-hidden'),make:get('make-hidden'),model:get('model-hidden'),
+        vin:get('vin'),titleType:get('title-type'),auction:get('auction'),
+        miles:get('miles'),milesStatus:get('miles-status'),
+        damages:getSelectedDamages(),
+        dashLights:Array.from(document.querySelectorAll('.light.selected')).map(x=>x.dataset.value).filter(v=>v!=='none'),
+        observations:get('observations'),
+        mechanicalStatus:get('mechanical-status'),
+        offerMin:get('offer-min'),offerMax:get('offer-max'),
+        buyNow:get('buy-now'),reservePrice:get('reserve-price'),
+        offerNotes:get('offer-notes'),
+        copartGo:document.getElementById('btn-copartgo').classList.contains('active'),
+        externalLot:document.getElementById('btn-externallot').classList.contains('active'),
+        tituloAusente:document.getElementById('btn-tituloausente').classList.contains('active'),
+        fechaFuturo:document.getElementById('btn-fechafuturo').classList.contains('active'),
+        excelente:document.getElementById('btn-excelente').classList.contains('active'),
+        esMoto:document.getElementById('btn-moto').classList.contains('active')
+      }})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Error desconocido');
+    currentOutput=data.result.trim();
+    editing=false;currentRecordId=null;
+    document.getElementById('edit-btn').textContent='Editar';
+    document.getElementById('edit-btn').classList.remove('btn-accent');
+    document.getElementById('edit-btn').classList.add('btn-outline');
+    body.textContent=currentOutput;
+    document.getElementById('output-actions').style.display='flex';
+    // Guardar automáticamente en el historial compartido
+    autoSaveToCloud(clientName);
+  }catch(err){
+    body.innerHTML='<div class="output-empty" style="color:var(--danger)">Error: '+err.message+'</div>';
+    showError('error-gen',`Error: ${err.message}`);
+  }
+  btn.disabled=false;
+}
+
+function copyOutput(){
+  if(!currentOutput)return;
+  navigator.clipboard.writeText(currentOutput)
+    .then(()=>showToast('¡Copiado para WhatsApp ✓'))
+    .catch(()=>{const ta=document.createElement('textarea');ta.value=currentOutput;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('¡Copiado ✓')});
+}
+
+// ---- EDITAR ANÁLISIS ----
+let editing=false;
+function toggleEdit(){
+  const body=document.getElementById('output-body');
+  const btn=document.getElementById('edit-btn');
+  if(!editing){
+    // Entrar en modo edición
+    editing=true;
+    body.innerHTML='';
+    const ta=document.createElement('textarea');
+    ta.id='edit-textarea';
+    ta.value=currentOutput;
+    ta.style.cssText='width:100%;height:100%;min-height:300px;background:var(--surface2);border:1px solid var(--accent);border-radius:var(--rs);color:var(--text);font-size:13px;line-height:1.7;padding:12px;font-family:inherit;resize:none';
+    body.appendChild(ta);
+    ta.focus();
+    btn.textContent='Guardar cambios';
+    btn.classList.remove('btn-outline');
+    btn.classList.add('btn-accent');
+  }else{
+    // Guardar cambios
+    const ta=document.getElementById('edit-textarea');
+    currentOutput=ta.value.trim();
+    editing=false;
+    body.textContent=currentOutput;
+    btn.textContent='Editar';
+    btn.classList.remove('btn-accent');
+    btn.classList.add('btn-outline');
+    updateAnalysisInCloud();
+  }
+}
+
+async function updateAnalysisInCloud(){
+  if(!currentRecordId||!supa){ showToast('Cambios aplicados'); return; }
+  try{
+    const {error}=await supa.from('lot_history').update({analysis:currentOutput}).eq('id',currentRecordId);
+    if(error) throw error;
+    showToast('Cambios guardados en el historial ✓');
+  }catch(e){
+    console.error('update',e);
+    showToast('Cambios aplicados (no se pudo actualizar historial)');
+  }
+}
+
+// ---- HISTORIAL COMPARTIDO (Supabase) ----
+let cloudHistory=[];
+let currentRecordId=null;
+
+async function autoSaveToCloud(clientName){
+  const g=id=>document.getElementById(id).value;
+  const recId=Date.now();
+  const entry={
+    id:recId,
+    lot_title:`${g('lot-hidden')} · ${g('year-hidden')} ${g('make-hidden')} ${g('model-hidden')}`.trim(),
+    client:clientName,
+    source:g('client-source')||null,
+    author:currentUser||'Desconocido',
+    analysis:currentOutput
+  };
+  if(!supa){ showToast('Guardado local (sin conexión)'); return; }
+  try{
+    const {error}=await supa.from('lot_history').insert(entry);
+    if(error) throw error;
+    currentRecordId=recId;
+    showToast('Análisis guardado ✓');
+  }catch(e){
+    console.error('save cloud',e);
+    showToast('No se pudo guardar en la nube');
+  }
+}
+
+// Botón manual "Guardar" (por si acaso) — reusa el autosave
+function saveToHistory(){
+  const clientName=document.getElementById('client-name').value.trim();
+  if(!currentOutput)return;
+  if(!clientName){ showToast('Falta el nombre del cliente'); return; }
+  autoSaveToCloud(clientName);
+}
+
+// ---- ESTADÍSTICAS POR DÍA ----
+function toLocalDateStr(d){
+  const dt=new Date(d);
+  const y=dt.getFullYear(), m=String(dt.getMonth()+1).padStart(2,'0'), day=String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+let authorFilter='';      // autor seleccionado
+let filterAllDates=false; // true = ver todos sus reportes, no solo del día
+
+function filterByAuthor(autor){
+  if(authorFilter===autor && !filterAllDates){ authorFilter=''; }
+  else { authorFilter=autor; filterAllDates=false; }
+  renderStats(); renderHistory(true);
+}
+function clearAuthorFilter(){
+  authorFilter=''; filterAllDates=false;
+  renderStats(); renderHistory(true);
+}
+function verTodosDelAutor(){
+  filterAllDates=true;
+  renderStats(); renderHistory(true);
+}
+
+function onDateChange(){
+  filterAllDates=false; authorFilter='';
+  renderStats(); renderHistory(true);
+}
+
+function renderStats(){
+  const cont=document.getElementById('stats-content');
+  if(!cont)return;
+  const dateInput=document.getElementById('stats-date');
+  const sel=dateInput.value||toLocalDateStr(new Date());
+  if(!dateInput.value) dateInput.value=sel;
+  const delDia=cloudHistory.filter(h=>h.created_at && toLocalDateStr(h.created_at)===sel);
+  if(!delDia.length){ cont.innerHTML='<span style="color:var(--muted)">Sin puntos de vista este día</span>'; return; }
+  const conteo={};
+  delDia.forEach(h=>{ const a=h.author||'Desconocido'; conteo[a]=(conteo[a]||0)+1; });
+  const orden=Object.entries(conteo).sort((a,b)=>b[1]-a[1]);
+  const total=delDia.length;
+  const esHoy=sel===toLocalDateStr(new Date());
+  const totalAutor=authorFilter?cloudHistory.filter(h=>(h.author||'Desconocido')===authorFilter).length:0;
+
+  let aviso;
+  if(authorFilter){
+    aviso=`<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+      <span style="font-size:11.5px;color:var(--accent);font-weight:600">
+        Mostrando ${filterAllDates?`todos los reportes de ${authorFilter} (${totalAutor})`:`los reportes de ${authorFilter} ${esHoy?'de hoy':'de ese día'} (${conteo[authorFilter]||0})`}
+      </span>
+      ${!filterAllDates&&totalAutor>(conteo[authorFilter]||0)?`<button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px" onclick="verTodosDelAutor()">Ver todos sus reportes (${totalAutor})</button>`:''}
+      <button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px" onclick="clearAuthorFilter()">✕ Quitar filtro</button>
+    </div>`;
+  }else{
+    aviso=`<span style="font-size:11.5px;color:var(--muted)">${esHoy?'Hoy':'Ese día'}: ${total} punto${total===1?'':'s'} de vista en total · toca un nombre para ver sus reportes</span>`;
+  }
+
+  cont.innerHTML=
+    `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">`+
+    orden.map(([autor,n])=>{
+      const yo=autor===currentUser;
+      const activo=authorFilter===autor;
+      const bg=activo?'var(--accent)':(yo?'rgba(232,255,77,.12)':'var(--surface2)');
+      const bd=activo||yo?'var(--accent)':'var(--border)';
+      const col=activo?'#000':(yo?'var(--accent)':'var(--text)');
+      return `<span onclick="filterByAuthor('${autor.replace(/'/g,"\\'")}')" title="Ver los reportes de ${autor}" style="cursor:pointer;background:${bg};border:1px solid ${bd};color:${col};border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;transition:.15s">${autor} <span style="opacity:.8">${n}</span></span>`;
+    }).join('')+
+    `</div>`+aviso;
+}
+
+async function renderHistory(skipFetch){
+  const c=document.getElementById('history-list');
+  if(!skipFetch){
+    c.innerHTML='<div class="loading" style="padding:20px"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Cargando historial del equipo...</span></div>';
+    if(!supa){ c.innerHTML='<div class="empty">Sin conexión a la nube</div>'; return; }
+    try{
+      const {data,error}=await supa.from('lot_history').select('*').order('created_at',{ascending:false}).limit(500);
+      if(error) throw error;
+      cloudHistory=data||[];
+      renderStats();
+    }catch(e){
+      console.error('load history',e);
+      c.innerHTML='<div class="empty">Error al cargar el historial</div>';
+      return;
+    }
+  }
+  const search=(document.getElementById('history-search')?.value||'').toLowerCase().trim();
+  let items=cloudHistory;
+  // Filtro por autor (al tocar su nombre en el marcador)
+  if(authorFilter){
+    items=items.filter(h=>(h.author||'Desconocido')===authorFilter);
+    if(!filterAllDates){
+      const sel=document.getElementById('stats-date')?.value||toLocalDateStr(new Date());
+      items=items.filter(h=>h.created_at && toLocalDateStr(h.created_at)===sel);
+    }
+  }
+  if(search) items=items.filter(h=>
+    (h.lot_title||'').toLowerCase().includes(search)||
+    (h.analysis||'').toLowerCase().includes(search)||
+    (h.client||'').toLowerCase().includes(search)||
+    (h.source||'').toLowerCase().includes(search)||
+    (h.author||'').toLowerCase().includes(search)
+  );
+  if(!items.length){c.innerHTML=`<div class="empty">${search||authorFilter?'No se encontraron resultados':'No hay análisis guardados aún'}</div>`;return}
+  c.innerHTML=items.map(h=>{
+    const fecha=h.created_at?new Date(h.created_at).toLocaleDateString('es-PA')+' · '+new Date(h.created_at).toLocaleTimeString('es-PA',{hour:'2-digit',minute:'2-digit'}):'';
+    const canDelete=h.author===currentUser;
+    return `<div class="history-item">
+      <div class="history-header"><span class="history-title">${h.lot_title||'Sin lote'}</span><span class="history-date">${fecha}</span></div>
+      <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">
+        ${h.author||'?'}${h.client?` → ${h.client}`:''}${h.source?` <span style="color:var(--muted);font-weight:400">· ${h.source}</span>`:''}
+      </div>
+      <div class="history-preview">${(h.analysis||'').substring(0,100)}...</div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn btn-outline btn-sm" onclick="copyHistoryItem(${h.id})">Copiar</button>
+        ${canDelete?`<button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteHistoryItem(${h.id})">Eliminar</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function copyHistoryItem(id){const item=cloudHistory.find(h=>h.id===id);if(item)navigator.clipboard.writeText(item.analysis).then(()=>showToast('Copiado ✓'))}
+async function deleteHistoryItem(id){
+  const item=cloudHistory.find(h=>h.id===id);
+  if(!item)return;
+  if(item.author!==currentUser){ showToast('Solo el autor puede borrar'); return; }
+  if(!confirm('¿Eliminar este análisis?'))return;
+  try{
+    const {error}=await supa.from('lot_history').delete().eq('id',id);
+    if(error) throw error;
+    cloudHistory=cloudHistory.filter(h=>h.id!==id);
+    renderHistory();
+    showToast('Eliminado ✓');
+  }catch(e){ console.error('delete',e); showToast('No se pudo eliminar'); }
+}
+
+function resetAll(){
+  ['quick-paste','lot-hidden','year-hidden','make-hidden','model-hidden','vin','client-name','miles','observations','offer-min','offer-max','buy-now','reserve-price','offer-notes','lights-custom','mechanical-status']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  // Resetear selectores a su primer valor
+  document.getElementById('title-type').selectedIndex=0;
+  document.getElementById('auction').selectedIndex=0;
+  document.getElementById('miles-status').selectedIndex=0;
+  document.getElementById('client-source').selectedIndex=0;
+  // Limpiar marcas rojas de error
+  ['client-name','client-source','vin','title-type','auction','miles-status','offer-min','offer-max'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.borderColor='';
+  });
+  hideError('error-gen');
+  document.querySelectorAll('#damage-grid input[type="checkbox"]').forEach(cb=>{cb.checked=false;cb.closest('.dmg').classList.remove('checked')});
+  document.querySelectorAll('.light').forEach(x=>x.classList.remove('selected'));
+  document.querySelector('.light[data-value="none"]').classList.add('selected');
+  document.getElementById('dash-lights').value='none';
+  document.getElementById('lights-custom-row').style.display='none';
+  document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
+  document.getElementById('mechanical-status').value='';
+  document.querySelectorAll('.toggle-btn').forEach(x=>x.classList.remove('active'));
+  // Restaurar visibilidad de la luz de airbag (por si estaba en modo moto)
+  const airbagEl=document.querySelector('.light[data-value="airbag"]');
+  if(airbagEl) airbagEl.style.display='';
+  currentOutput='';
+  const body=document.getElementById('output-body');
+  body.innerHTML='<div class="output-empty">El análisis aparecerá aquí una vez que generes uno →</div>';
+  document.getElementById('output-actions').style.display='none';
+  // Scroll al inicio del formulario
+  const panel=document.querySelector('.panel-scroll');
+  if(panel)panel.scrollTo(0,0);
+  window.scrollTo(0,0);
+  showToast('Listo para nuevo análisis ✓');
+}
+
+// ---- IDENTIDAD DEL USUARIO ----
+function showIdentityModal(){
+  const cont=document.getElementById('identity-buttons');
+  cont.innerHTML=TEAM.map(n=>`<button class="btn btn-outline" style="width:100%;justify-content:center" onclick="setIdentity('${n}')">${n}</button>`).join('')
+    +`<button class="btn btn-outline" style="width:100%;justify-content:center;border-style:dashed" onclick="showCustomIdentity()">Otro (nuevo integrante)</button>`;
+  document.getElementById('identity-modal').style.display='flex';
+}
+function setIdentity(name){
+  currentUser=name;
+  localStorage.setItem('lot-user',name);
+  document.getElementById('identity-modal').style.display='none';
+  showToast('Bienvenido, '+name);
+  heartbeat();
+  renderPresence();
+}
+function showCustomIdentity(){
+  document.getElementById('identity-buttons').style.display='none';
+  document.getElementById('identity-custom-row').style.display='block';
+  document.getElementById('identity-custom').focus();
+}
+function saveCustomIdentity(){
+  const name=document.getElementById('identity-custom').value.trim();
+  if(!name){showToast('Escribe tu nombre');return}
+  setIdentity(name);
+}
+
+// ---- PRESENCIA (quién está conectado) ----
+async function heartbeat(){
+  if(!supa||!currentUser)return;
+  try{
+    await supa.from('lot_presence').upsert({author:currentUser,last_seen:new Date().toISOString()});
+  }catch(e){ /* silencioso */ }
+}
+async function renderPresence(){
+  if(!supa){return}
+  try{
+    const {data,error}=await supa.from('lot_presence').select('*');
+    if(error)throw error;
+    const now=Date.now();
+    // Activos = vistos en los últimos 90 segundos
+    const active=(data||[]).filter(p=>now-new Date(p.last_seen).getTime()<90000).map(p=>p.author);
+    const ind=document.getElementById('presence-indicator');
+    if(!ind)return;
+    if(active.length===0){ ind.innerHTML=''; return; }
+    const others=active.filter(a=>a!==currentUser);
+    const dot='<span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block"></span>';
+    if(others.length===0){
+      ind.innerHTML=`${dot} Solo tú en línea`;
+    }else{
+      ind.innerHTML=`${dot} En línea: ${active.join(', ')}`;
+    }
+  }catch(e){ /* silencioso */ }
+}
+
+// Al cargar: si no hay usuario registrado, pedirlo
+window.addEventListener('DOMContentLoaded',()=>{
+  if(!currentUser){ showIdentityModal(); }
+  else { heartbeat(); renderPresence(); }
+});
+
+// Latido cada 30s + refresco de presencia cada 20s
+setInterval(()=>{ heartbeat(); },30000);
+setInterval(()=>{ renderPresence(); },20000);
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// Install PWA prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();
+  deferredPrompt=e;
+});
+</script>
+</body>
+</html>
