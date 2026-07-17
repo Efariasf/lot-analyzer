@@ -987,6 +987,7 @@ function toLocalDateStr(d){
   const y=dt.getFullYear(), m=String(dt.getMonth()+1).padStart(2,'0'), day=String(dt.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
 }
+let expandedId=null;      // reporte abierto en el historial
 let authorFilter='';      // autor seleccionado
 let filterAllDates=false; // true = ver todos sus reportes, no solo del día
 
@@ -1087,18 +1088,31 @@ async function renderHistory(skipFetch){
   c.innerHTML=items.map(h=>{
     const fecha=h.created_at?new Date(h.created_at).toLocaleDateString('es-PA')+' · '+new Date(h.created_at).toLocaleTimeString('es-PA',{hour:'2-digit',minute:'2-digit'}):'';
     const canDelete=h.author===currentUser;
+    const abierto=expandedId===h.id;
     return `<div class="history-item">
-      <div class="history-header"><span class="history-title">${h.lot_title||'Sin lote'}</span><span class="history-date">${fecha}</span></div>
-      <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">
-        ${h.author||'?'}${h.client?` → ${h.client}`:''}${h.source?` <span style="color:var(--muted);font-weight:400">· ${h.source}</span>`:''}
+      <div onclick="toggleExpand(${h.id})" style="cursor:pointer">
+        <div class="history-header"><span class="history-title">${h.lot_title||'Sin lote'}</span><span class="history-date">${fecha}</span></div>
+        <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">
+          ${h.author||'?'}${h.client?` → ${h.client}`:''}${h.source?` <span style="color:var(--muted);font-weight:400">· ${h.source}</span>`:''}
+        </div>
+        ${abierto
+          ? `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin:6px 0;font-size:12.5px;line-height:1.65;white-space:pre-wrap;color:var(--text)">${escapeHtml(h.analysis||'')}</div>`
+          : `<div class="history-preview">${escapeHtml((h.analysis||'').substring(0,100))}...</div>`}
       </div>
-      <div class="history-preview">${(h.analysis||'').substring(0,100)}...</div>
-      <div style="display:flex;gap:6px;margin-top:6px">
+      <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+        <button class="btn btn-outline btn-sm" onclick="toggleExpand(${h.id})">${abierto?'Cerrar':'Ver completo'}</button>
         <button class="btn btn-outline btn-sm" onclick="copyHistoryItem(${h.id})">Copiar</button>
         ${canDelete?`<button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteHistoryItem(${h.id})">Eliminar</button>`:''}
       </div>
     </div>`;
   }).join('');
+}
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function toggleExpand(id){
+  expandedId = (expandedId===id) ? null : id;
+  renderHistory(true);
 }
 function copyHistoryItem(id){const item=cloudHistory.find(h=>h.id===id);if(item)navigator.clipboard.writeText(item.analysis).then(()=>showToast('Copiado ✓'))}
 async function deleteHistoryItem(id){
