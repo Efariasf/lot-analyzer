@@ -173,7 +173,7 @@ ${carfaxText.substring(0, 14000)}`;
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
             offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente, esMoto,
-            vinContext, recallsText } = fields;
+            vinContext, recallsText, lotRaw } = fields;
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
 
@@ -433,8 +433,9 @@ REGLAS ESTRICTAS:
 
     // ---- ENSAMBLAR EL TEXTO FINAL (controlado) ----
     const vehParts = [year, (make||'').toUpperCase(), (model||'').toUpperCase()].filter(Boolean).join(' ');
-    // Si falta el lote o el vehículo, no dejar guiones sueltos colgando
-    const header = [lot, vehParts].filter(Boolean).join(' - ');
+    // Encabezado: si el campo no traía el formato "lote - año marca modelo"
+    // (el broker escribió un punto o texto libre), se respeta tal cual lo escribió.
+    const header = [lot, vehParts].filter(Boolean).join(' - ') || (lotRaw || '').trim();
 
     const blocks = [
       firstParagraph,
