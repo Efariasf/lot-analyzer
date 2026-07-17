@@ -779,6 +779,10 @@ function parsePaste(text){
   // Sin lote: "2012 TOYOTA PRIUS FOUR" (queda así al aplicar el VIN antes de pegar el lote)
   m=t.match(/^((?:19|20)\d{2})\s+(.+)$/);
   if(m){ setParsed('',m[1],m[2]); return; }
+  // Solo el lote: "49180866"
+  m=t.match(/^(\d{7,9})$/);
+  if(m){ setParsed(m[1],'',''); return; }
+  // Cualquier otra cosa (un punto, texto libre): se respeta tal cual en el encabezado
   clearParsed();
 }
 function clearParsed(){['lot-hidden','year-hidden','make-hidden','model-hidden'].forEach(id=>document.getElementById(id).value='')}
@@ -1283,11 +1287,10 @@ function applyVinToForm(){
   // Volver a la pestaña Analizar
   document.querySelector('.tab').click();
   if(!lot){
-    // NHTSA no conoce el número de lote: hay que pegarlo a mano
+    // NHTSA no conoce el número de lote: si lo quieren, lo escriben al inicio
     const qp=document.getElementById('quick-paste');
     qp.focus(); qp.setSelectionRange(0,0);
-    qp.style.borderColor='var(--danger)';
-    showToast('Datos aplicados — falta el lote, escríbelo al inicio');
+    showToast('Datos aplicados ✓ — el lote va al inicio, si lo tienes');
   }else{
     showToast('Datos aplicados'+(esMoto?' · moto detectada 🏍':'')+' ✓');
   }
@@ -1376,7 +1379,6 @@ async function generateAnalysis(){
     const el=document.getElementById(id); if(el) el.style.borderColor='';
   });
   // Validaciones obligatorias
-  if(!get('lot-hidden')){ flag('quick-paste','Falta el número de lote. Pega el lote completo arriba (ej: 49180866 - 2012 TOYOTA PRIUS FOUR).'); return; }
   const clientName=get('client-name').trim();
   if(!clientName){ flag('client-name','Escribe el nombre del cliente antes de generar.'); return; }
   if(!get('client-source')){ flag('client-source','Selecciona el origen del cliente (CRM o WhatsApp).'); return; }
@@ -1408,6 +1410,7 @@ async function generateAnalysis(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({mode:'generate',fields:{
         lot:get('lot-hidden'),year:get('year-hidden'),make:get('make-hidden'),model:get('model-hidden'),
+        lotRaw:get('quick-paste').trim(),
         vin:get('vin'),titleType:get('title-type'),auction:get('auction'),
         miles:get('miles'),milesStatus:get('miles-status'),
         damages:getSelectedDamages(),
@@ -1499,12 +1502,20 @@ async function updateAnalysisInCloud(){
 let cloudHistory=[];
 let currentRecordId=null;
 
+// Arma el título del historial. Si el campo no tiene el formato esperado
+// (ej. solo un punto), se respeta el texto tal cual lo escribió el broker.
+function buildLotTitle(){
+  const g=id=>(document.getElementById(id).value||'').trim();
+  const veh=[g('year-hidden'),g('make-hidden'),g('model-hidden')].filter(Boolean).join(' ');
+  return [g('lot-hidden'),veh].filter(Boolean).join(' · ') || g('quick-paste') || 'Sin lote';
+}
+
 async function autoSaveToCloud(clientName){
   const g=id=>document.getElementById(id).value;
   const recId=Date.now();
   const entry={
     id:recId,
-    lot_title:`${g('lot-hidden')} · ${g('year-hidden')} ${g('make-hidden')} ${g('model-hidden')}`.trim(),
+    lot_title:buildLotTitle(),
     client:clientName,
     source:g('client-source')||null,
     author:currentUser||'Desconocido',
