@@ -6,6 +6,105 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { mode, fields } = req.body;
+
+  // ---- MODO NHTSA (recalls, quejas y ratings) ----
+  // Se hace del lado del servidor porque api.nhtsa.gov no garantiza CORS.
+  // Todos los endpoints son gratuitos y no requieren API key.
+  if (mode === 'nhtsa') {
+    const { make, model, year } = req.body;
+    if (!make || !model || !year) {
+      return res.status(400).json({ error: 'Faltan make, model o year' });
+    }
+    const q = `make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&modelYear=${encodeURIComponent(year)}`;
+
+    // Timeout defensivo: NHTSA a veces tarda
+    const grab = async (url, ms = 9000) => {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), ms);
+      try {
+        const r = await fetch(url, { signal: ctrl.signal });
+        if (!r.ok) return null;
+        return await r.json();
+      } catch { return null; }
+      finally { clearTimeout(t); }
+    };
+
+    try {
+      const [recallsJson, complaintsJson, variantsJson] = await Promise.all([
+        grab(`https://api.nhtsa.gov/recalls/recallsByVehicle?${q}`),
+        grab(`https://api.nhtsa.gov/complaints/complaintsByVehicle?${q}`),
+        grab(`https://api.nhtsa.gov/SafetyRatings/modelyear/${encodeURIComponent(year)}/make/${encodeURIComponent(make)}/model/${encodeURIComponent(model)}`)
+      ]);
+
+      // --- RECALLS ---
+      const recalls = (recallsJson?.results || []).map(r => ({
+        campaign: r.NHTSACampaignNumber || '',
+        component: r.Component || '',
+        summary: r.Summary || '',
+        consequence: r.Consequence || '',
+        remedy: r.Remedy || '',
+        manufacturer: r.Manufacturer || '',
+        date: r.ReportReceivedDate || '',
+        parkIt: !!r.parkIt,
+        parkOutside: !!r.parkOutSide
+      }));
+
+      // --- QUEJAS ---
+      const rawComplaints = complaintsJson?.results || [];
+      const byComponent = {};
+      let crashes = 0, fires = 0, injuries = 0, deaths = 0;
+      rawComplaints.forEach(c => {
+        String(c.components || 'OTROS').split(',').forEach(comp => {
+          const k = comp.trim();
+          if (k) byComponent[k] = (byComponent[k] || 0) + 1;
+        });
+        if (c.crash) crashes++;
+        if (c.fire) fires++;
+        injuries += Number(c.numberOfInjuries) || 0;
+        deaths += Number(c.numberOfDeaths) || 0;
+      });
+      const complaints = {
+        total: rawComplaints.length,
+        crashes, fires, injuries, deaths,
+        topComponents: Object.entries(byComponent).sort((a, b) => b[1] - a[1]).slice(0, 8),
+        items: rawComplaints.slice(0, 25).map(c => ({
+          odi: c.odiNumber,
+          components: c.components || '',
+          summary: (c.summary || '').substring(0, 700),
+          date: c.dateOfIncident || c.dateComplaintFiled || '',
+          crash: !!c.crash,
+          fire: !!c.fire,
+          injuries: Number(c.numberOfInjuries) || 0,
+          deaths: Number(c.numberOfDeaths) || 0
+        }))
+      };
+
+      // --- RATINGS NCAP (dos pasos) ---
+      let ratings = [];
+      const variants = (variantsJson?.Results || []).slice(0, 4);
+      if (variants.length) {
+        const detail = await Promise.all(
+          variants.map(v => grab(`https://api.nhtsa.gov/SafetyRatings/VehicleId/${v.VehicleId}`))
+        );
+        ratings = detail.map((d, i) => {
+          const r = d?.Results?.[0];
+          if (!r) return null;
+          return {
+            description: r.VehicleDescription || variants[i].VehicleDescription || '',
+            overall: r.OverallRating || '',
+            front: r.OverallFrontCrashRating || '',
+            side: r.OverallSideCrashRating || '',
+            rollover: r.RolloverRating || ''
+          };
+        }).filter(Boolean);
+      }
+
+      return res.status(200).json({ recalls, complaints, ratings });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   const GROQ_KEY = process.env.GROQ_API_KEY;
   if (!GROQ_KEY) return res.status(500).json({ error: 'API key no configurada' });
 
@@ -73,7 +172,8 @@ ${carfaxText.substring(0, 14000)}`;
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
-            offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente, esMoto } = fields;
+            offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente, esMoto,
+            vinContext, recallsText } = fields;
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
 
@@ -233,7 +333,12 @@ Datos:
 - Título: ${titleType} (significa: ${titleExplain[titleType] || ''})
 - Daños: ${damageClean || 'ninguno especificado'}
 ${miles ? `- Millas: ${miles} ${(milesStatus||'').toLowerCase()}` : '- Millas: no especificadas (NO las menciones)'}
+${vinContext && vinContext.trim() ? `
+FICHA TÉCNICA OFICIAL (decodificada del VIN en la base de datos de NHTSA):
+${vinContext.trim()}
 
+CÓMO USAR LA FICHA TÉCNICA: es solo una REFERENCIA DE EXACTITUD, no contenido para agregar. NO la enumeres, NO listes el motor, la tracción, la transmisión ni la planta de fabricación, y NO alargues el párrafo por ella. Su única función es que, si mencionas algo del vehículo de forma natural, no lo contradigas ni lo inventes. Si la ficha dice que es una motocicleta, trátalo como motocicleta. El párrafo debe quedar igual de corto que sin esta ficha.
+` : ''}
 Reglas:
 - Empieza indicando el título sin afirmarlo con certeza absoluta, atribuyéndolo a la subasta. VARÍA la forma de decirlo cada vez, usa diferentes opciones como: "La subasta indica título ${titleType}", "El lote figura con título ${titleType}", "De acuerdo a la subasta, el título es ${titleType}", "${auction} reporta título ${titleType}", "El vehículo aparece listado con título ${titleType}", "Registrado en la subasta como título ${titleType}". NUNCA uses siempre la misma frase, NUNCA digas "El título de ${titleType}".
 - Al explicar el significado del título, SIEMPRE atribúyelo a la subasta, nunca lo afirmes como un hecho propio. Usa fórmulas como "según ${auction}, este título indica que...", "de acuerdo a la información de la subasta, esto significa que...". Para Salvage: "según la subasta, este título indica que el vehículo habría sufrido un daño suficientemente severo para ser declarado pérdida total". Siempre dejamos claro que solo repetimos la información de la subasta, no la verificamos nosotros.
@@ -337,6 +442,7 @@ REGLAS ESTRICTAS:
       milesWarning,
       salvageWarning,
       destructionWarning,
+      (recallsText && recallsText.trim() ? recallsText.trim() : ''),
       copartGoText,
       externalLotText,
       fechaFuturoText,
