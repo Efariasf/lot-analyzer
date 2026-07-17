@@ -433,7 +433,8 @@ REGLAS ESTRICTAS:
 
     // ---- ENSAMBLAR EL TEXTO FINAL (controlado) ----
     const vehParts = [year, (make||'').toUpperCase(), (model||'').toUpperCase()].filter(Boolean).join(' ');
-    const header = vehParts ? `${lot} - ${vehParts}` : `${lot}`;
+    // Si falta el lote o el vehículo, no dejar guiones sueltos colgando
+    const header = [lot, vehParts].filter(Boolean).join(' - ');
 
     const blocks = [
       firstParagraph,
