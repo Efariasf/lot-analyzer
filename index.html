@@ -636,7 +636,7 @@ function renderTemplates(){
     if(t.lights&&t.lights.length)parts.push('Luces: '+t.lights.length);
     if(t.mechanical)parts.push('Mecánico');
     return `<div class="history-item">
-      <div class="history-title" style="margin-bottom:4px">${t.name}</div>
+      <div class="history-title" style="margin-bottom:4px">${escapeHtml(t.name)}</div>
       <div class="history-preview">${parts.join(' · ')||'Sin detalles'}</div>
       <div style="display:flex;gap:6px;margin-top:6px">
         <button class="btn btn-accent btn-sm" onclick="applyTemplate(${t.id})">Aplicar</button>
@@ -1029,7 +1029,7 @@ function renderStats(){
   if(authorFilter){
     aviso=`<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
       <span style="font-size:11.5px;color:var(--accent);font-weight:600">
-        Mostrando ${filterAllDates?`todos los reportes de ${authorFilter} (${totalAutor})`:`los reportes de ${authorFilter} ${esHoy?'de hoy':'de ese día'} (${conteo[authorFilter]||0})`}
+        Mostrando ${filterAllDates?`todos los reportes de ${escapeHtml(authorFilter)} (${totalAutor})`:`los reportes de ${escapeHtml(authorFilter)} ${esHoy?'de hoy':'de ese día'} (${conteo[authorFilter]||0})`}
       </span>
       ${!filterAllDates&&totalAutor>(conteo[authorFilter]||0)?`<button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px" onclick="verTodosDelAutor()">Ver todos sus reportes (${totalAutor})</button>`:''}
       <button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px" onclick="clearAuthorFilter()">✕ Quitar filtro</button>
@@ -1046,7 +1046,7 @@ function renderStats(){
       const bg=activo?'var(--accent)':(yo?'rgba(232,255,77,.12)':'var(--surface2)');
       const bd=activo||yo?'var(--accent)':'var(--border)';
       const col=activo?'#000':(yo?'var(--accent)':'var(--text)');
-      return `<span onclick="filterByAuthor('${autor.replace(/'/g,"\\'")}')" title="Ver los reportes de ${autor}" style="cursor:pointer;background:${bg};border:1px solid ${bd};color:${col};border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;transition:.15s">${autor} <span style="opacity:.8">${n}</span></span>`;
+      return `<span onclick="filterByAuthor('${autor.replace(/'/g,"\\'")}')" title="Ver los reportes de ${escapeHtml(autor)}" style="cursor:pointer;background:${bg};border:1px solid ${bd};color:${col};border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;transition:.15s">${escapeHtml(autor)} <span style="opacity:.8">${n}</span></span>`;
     }).join('')+
     `</div>`+aviso;
 }
@@ -1091,9 +1091,9 @@ async function renderHistory(skipFetch){
     const abierto=expandedId===h.id;
     return `<div class="history-item">
       <div onclick="toggleExpand(${h.id})" style="cursor:pointer">
-        <div class="history-header"><span class="history-title">${h.lot_title||'Sin lote'}</span><span class="history-date">${fecha}</span></div>
+        <div class="history-header"><span class="history-title">${escapeHtml(h.lot_title||'Sin lote')}</span><span class="history-date">${fecha}</span></div>
         <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">
-          ${h.author||'?'}${h.client?` → ${h.client}`:''}${h.source?` <span style="color:var(--muted);font-weight:400">· ${h.source}</span>`:''}
+          ${escapeHtml(h.author||'?')}${h.client?` → ${escapeHtml(h.client)}`:''}${h.source?` <span style="color:var(--muted);font-weight:400">· ${escapeHtml(h.source)}</span>`:''}
         </div>
         ${abierto
           ? `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin:6px 0;font-size:12.5px;line-height:1.65;white-space:pre-wrap;color:var(--text)">${escapeHtml(h.analysis||'')}</div>`
