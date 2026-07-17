@@ -133,6 +133,16 @@ textarea{resize:none;height:52px}
 .guia-item[open] summary::after{content:'−'}
 .guia-item p{padding:0 12px 10px;font-size:12.5px;line-height:1.6;color:#c9c9c9}
 
+/* VIN TAB */
+#tab-vin{flex:1;display:none;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+#tab-vin::-webkit-scrollbar{width:4px}
+#tab-vin::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.vin-cell{display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:5px 7px}
+.vin-cell .k{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.vin-cell .v{font-size:11.5px;color:var(--text);line-height:1.3;word-break:break-word}
+.vin-cell .v.empty{color:#4a4a52}
+#vin-input{text-transform:uppercase;letter-spacing:.1em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--text);color:var(--bg);padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;z-index:99;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -148,6 +158,8 @@ textarea{resize:none;height:52px}
   #tab-carfax{flex-direction:column !important;overflow:visible !important}
   #tab-carfax .left-panel{width:100% !important}
   #tab-carfax .right-panel{min-height:300px}
+  #tab-vin{overflow:visible}
+  .tab{font-size:11px;padding:6px 2px}
 }
 </style>
 </head>
@@ -168,6 +180,7 @@ textarea{resize:none;height:52px}
 
 <div class="tabs">
   <button class="tab active" onclick="showTab('analyzer',this)">Analizar</button>
+  <button class="tab" onclick="showTab('vin',this)">VIN</button>
   <button class="tab" onclick="showTab('carfax',this)">Carfax</button>
   <button class="tab" onclick="showTab('guia',this)">Guía</button>
   <button class="tab" onclick="showTab('history',this)">Historial</button>
@@ -228,6 +241,10 @@ textarea{resize:none;height:52px}
           <button id="btn-excelente" class="toggle-btn" onclick="toggleFlag('excelente')">Excelente Estado</button>
         </div>
 
+        <div id="vin-context-badge" style="display:none;background:rgba(232,255,77,.08);border:1px solid rgba(232,255,77,.3);border-radius:var(--rs);padding:5px 8px;font-size:10.5px;color:var(--accent);margin-bottom:6px;align-items:center;justify-content:space-between;gap:6px">
+          <span id="vin-context-text">✓ Datos NHTSA cargados</span>
+          <span style="cursor:pointer;color:var(--muted);font-weight:700" onclick="clearVinContext()" title="Quitar contexto NHTSA">✕</span>
+        </div>
 
         <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
           <span>Tipo de daño</span>
@@ -362,6 +379,55 @@ textarea{resize:none;height:52px}
         </button>
         <button class="btn btn-outline btn-sm" id="edit-btn" onclick="toggleEdit()">Editar</button>
         <button class="btn btn-outline btn-sm" onclick="resetAll()">Nuevo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIN / NHTSA -->
+  <div id="tab-vin" style="display:none">
+    <div style="max-width:900px;margin:0 auto">
+
+      <div class="card">
+        <div class="section-label">Decodificar VIN — NHTSA vPIC · gratis, oficial, sin límite</div>
+        <div class="paste-wrap">
+          <input id="vin-input" maxlength="17" placeholder="1FTFW1ET5DFC10312" onkeydown="if(event.key==='Enter')decodeVin()">
+          <button class="btn btn-accent" style="width:auto;padding:5px 14px;font-size:12px" onclick="decodeVin()">Decodificar</button>
+          <button class="btn btn-outline btn-sm" onclick="clearVin()">✕</button>
+        </div>
+        <p class="paste-hint">Valida el dígito verificador y trae año, marca, modelo, motor y airbags de fábrica</p>
+        <div class="toggle-row" id="vin-samples"></div>
+        <div class="error" id="vin-error"></div>
+      </div>
+
+      <div id="vin-status" style="display:none;border-radius:var(--rs);padding:8px 11px;font-size:12.5px;margin-bottom:6px;line-height:1.5"></div>
+
+      <div id="vin-results" style="display:none">
+
+        <div class="card">
+          <div class="section-label">Detección automática</div>
+          <div class="toggle-row" id="vin-flags"></div>
+          <button class="btn btn-accent" onclick="applyVinToForm()">↓ Aplicar al formulario de Analizar</button>
+        </div>
+
+        <div class="card">
+          <div class="section-label">Vehículo</div>
+          <div class="damage-grid" id="vin-basic"></div>
+          <div class="section-label">Ficha técnica</div>
+          <div class="damage-grid" id="vin-tech"></div>
+          <div class="section-label">Airbags de fábrica</div>
+          <div class="damage-grid" id="vin-bags"></div>
+        </div>
+
+        <div class="card">
+          <div class="section-label">Contexto que se enviará a la IA</div>
+          <div id="vin-ctx" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;font-size:12px;line-height:1.6;white-space:pre-wrap;color:#c9c9c9"></div>
+        </div>
+
+        <details class="guia-item" style="margin-bottom:20px">
+          <summary>Respuesta cruda de NHTSA</summary>
+          <p id="vin-raw" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;white-space:pre-wrap;max-height:320px;overflow:auto;color:#9a9aa4"></p>
+        </details>
+
       </div>
     </div>
   </div>
@@ -550,7 +616,10 @@ document.addEventListener('keydown',function(e){
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
     const analyzerVisible=document.getElementById('tab-analyzer').style.display!=='none';
     const carfaxVisible=document.getElementById('tab-carfax')&&document.getElementById('tab-carfax').style.display!=='none';
-    if(analyzerVisible&&!document.getElementById('gen-btn').disabled){
+    const vinVisible=document.getElementById('tab-vin')&&document.getElementById('tab-vin').style.display!=='none';
+    if(vinVisible){
+      decodeVin();
+    } else if(analyzerVisible&&!document.getElementById('gen-btn').disabled){
       generateAnalysis();
     } else if(carfaxVisible&&document.getElementById('carfax-btn').style.display!=='none'&&!document.getElementById('carfax-btn').disabled){
       analyzeCarfax();
@@ -722,31 +791,273 @@ function selectLight(el){
 function showTab(t,el){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
-  const analyzer=document.getElementById('tab-analyzer');
-  const history=document.getElementById('tab-history');
-  const carfax=document.getElementById('tab-carfax');
-  const guia=document.getElementById('tab-guia');
+  const panels=['tab-analyzer','tab-vin','tab-history','tab-carfax','tab-guia'];
+  panels.forEach(id=>{const n=document.getElementById(id);if(n)n.style.display='none'});
   const right=document.getElementById('right-panel');
-  analyzer.style.display='none';
-  history.style.display='none';
-  carfax.style.display='none';
-  guia.style.display='none';
   right.style.display='none';
   if(t==='analyzer'){
-    analyzer.style.display='flex';
+    document.getElementById('tab-analyzer').style.display='flex';
     right.style.display='flex';
+  } else if(t==='vin'){
+    document.getElementById('tab-vin').style.display='block';
+    // Si el formulario ya tiene un VIN escrito, precargarlo
+    const vinForm=document.getElementById('vin').value.trim().toUpperCase();
+    const vinField=document.getElementById('vin-input');
+    if(vinForm && !vinField.value) vinField.value=vinForm;
+    vinField.focus();
   } else if(t==='carfax'){
-    carfax.style.display='flex';
+    document.getElementById('tab-carfax').style.display='flex';
   } else if(t==='guia'){
-    guia.style.display='block';
+    document.getElementById('tab-guia').style.display='block';
   } else {
-    history.style.display='block';
+    document.getElementById('tab-history').style.display='block';
     renderHistory();
   }
 }
 
 function showError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block'}
 function hideError(id){document.getElementById(id).style.display='none'}
+
+// ================= VIN / NHTSA =================
+// API vPIC de NHTSA: gratuita, oficial, sin API key, permite CORS.
+let vinData=null;
+let vinContext='';
+
+const VIN_SAMPLES=[
+  ['JTDKN3DU0C1234567','Prius 2012'],
+  ['1FTFW1ET5DFC10312','F-150 2013'],
+  ['5YJ3E1EA7KF317726','Tesla M3 2019'],
+  ['JH2SC5905XM100001','Moto Honda'],
+  ['1HGCM82633A004352','Accord 2003'],
+  ['1HGCM82633A004353','VIN inválido']
+];
+
+function initVinSamples(){
+  const c=document.getElementById('vin-samples');
+  if(!c)return;
+  c.innerHTML=VIN_SAMPLES.map(([v,l])=>
+    `<button class="toggle-btn" onclick="loadSampleVin('${v}')">${l}</button>`).join('');
+}
+function loadSampleVin(v){
+  document.getElementById('vin-input').value=v;
+  decodeVin();
+}
+
+function vinStatus(msg,kind){
+  const s=document.getElementById('vin-status');
+  const c={
+    ok:['rgba(74,222,128,.1)','rgba(74,222,128,.35)','#4ade80'],
+    warn:['rgba(232,255,77,.1)','rgba(232,255,77,.35)','#e8ff4d'],
+    err:['rgba(255,92,92,.1)','rgba(255,92,92,.3)','#ff5c5c'],
+    info:['#242424','#2e2e2e','#666']
+  }[kind];
+  s.style.display='block';
+  s.style.background=c[0];
+  s.style.border='1px solid '+c[1];
+  s.style.color=c[2];
+  s.textContent=msg;
+}
+
+function vinCell(k,v){
+  const empty=!v||v===''||v==='Not Applicable';
+  return `<div class="vin-cell">
+    <span class="k">${k}</span>
+    <span class="v ${empty?'empty':''}">${empty?'—':escapeHtml(v)}</span>
+  </div>`;
+}
+
+function clearVin(){
+  document.getElementById('vin-input').value='';
+  document.getElementById('vin-results').style.display='none';
+  document.getElementById('vin-status').style.display='none';
+  hideError('vin-error');
+  vinData=null;
+  document.getElementById('vin-input').focus();
+}
+
+function clearVinContext(){
+  vinContext='';
+  document.getElementById('vin-context-badge').style.display='none';
+  showToast('Contexto NHTSA quitado');
+}
+
+async function decodeVin(){
+  const inp=document.getElementById('vin-input');
+  const vin=inp.value.trim().toUpperCase();
+  inp.value=vin;
+  hideError('vin-error');
+  document.getElementById('vin-results').style.display='none';
+
+  if(vin.length!==17){
+    showError('vin-error','El VIN debe tener exactamente 17 caracteres (tiene '+vin.length+').');
+    document.getElementById('vin-status').style.display='none';
+    return;
+  }
+  if(/[IOQ]/.test(vin)){
+    showError('vin-error','Un VIN nunca contiene las letras I, O ni Q. Revisa si en realidad son 1 y 0.');
+    document.getElementById('vin-status').style.display='none';
+    return;
+  }
+
+  vinStatus('Consultando NHTSA...','info');
+  const t0=performance.now();
+  try{
+    const url='https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/'+encodeURIComponent(vin)+'?format=json';
+    const res=await fetch(url);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json=await res.json();
+    const d=json.Results&&json.Results[0];
+    if(!d) throw new Error('Respuesta vacía de la API');
+    vinData=d;
+    renderVin(d,Math.round(performance.now()-t0));
+  }catch(e){
+    vinStatus('Error al consultar NHTSA: '+e.message,'err');
+  }
+}
+
+function renderVin(d,ms){
+  const codes=String(d.ErrorCode||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const limpio=codes.length===0||(codes.length===1&&codes[0]==='0');
+  const core=d.Make&&d.ModelYear;
+
+  if(limpio&&core){
+    vinStatus('✓ VIN válido · '+[d.ModelYear,d.Make,d.Model,d.Trim].filter(Boolean).join(' ')+' · '+ms+' ms','ok');
+  }else if(core){
+    vinStatus('⚠ Decodificado con advertencias (código '+codes.join(', ')+'): '+String(d.ErrorText||'—').split(';')[0]+' · '+ms+' ms','warn');
+  }else{
+    vinStatus('✕ VIN no reconocido por NHTSA: '+String(d.ErrorText||'sin datos').split(';')[0],'err');
+    document.getElementById('vin-results').style.display='none';
+    return;
+  }
+
+  // --- Detección automática ---
+  const body=(d.BodyClass||'').toLowerCase();
+  const vtype=(d.VehicleType||'').toLowerCase();
+  const esMoto=/motorcycle|moped|scooter/.test(body)||/motorcycle/.test(vtype);
+  const esElec=/electric/i.test(d.FuelTypePrimary||'');
+  const esHib=/electric/i.test(d.FuelTypeSecondary||'')||/hybrid/i.test(d.ElectrificationLevel||'');
+  const esDies=/diesel/i.test((d.FuelTypePrimary||'')+' '+(d.FuelTypeSecondary||''));
+  const esPesado=parseFloat(d.GVWR)>10000;
+
+  const flags=[
+    ['🏍 Motocicleta',esMoto],
+    ['⚡ Eléctrico',esElec],
+    ['🔋 Híbrido',esHib],
+    ['⛽ Diésel',esDies],
+    ['🚛 Pesado',esPesado]
+  ];
+  document.getElementById('vin-flags').innerHTML=flags.map(([l,on])=>
+    `<span class="toggle-btn ${on?'active':''}" style="cursor:default">${on?'✓':'○'} ${l}</span>`).join('');
+
+  // --- Vehículo ---
+  document.getElementById('vin-basic').innerHTML=
+    vinCell('Año',d.ModelYear)+
+    vinCell('Marca',d.Make)+
+    vinCell('Modelo',d.Model)+
+    vinCell('Trim',d.Trim||d.Series)+
+    vinCell('Carrocería',d.BodyClass)+
+    vinCell('Fabricante',d.Manufacturer);
+
+  // --- Ficha técnica ---
+  document.getElementById('vin-tech').innerHTML=
+    vinCell('Motor',d.DisplacementL?(+d.DisplacementL).toFixed(1)+'L':'')+
+    vinCell('Cilindros',d.EngineCylinders)+
+    vinCell('HP',d.EngineHP)+
+    vinCell('Combustible',d.FuelTypePrimary)+
+    vinCell('Tracción',d.DriveType)+
+    vinCell('Transmisión',[d.TransmissionStyle,d.TransmissionSpeeds?d.TransmissionSpeeds+' vel':''].filter(Boolean).join(' · '))+
+    vinCell('Puertas',d.Doors)+
+    vinCell('Asientos',d.Seats)+
+    vinCell('Planta',[d.PlantCity,d.PlantCountry].filter(Boolean).join(', '));
+
+  // --- Airbags ---
+  document.getElementById('vin-bags').innerHTML=
+    vinCell('Frontales',d.AirBagLocFront)+
+    vinCell('Laterales',d.AirBagLocSide)+
+    vinCell('Cortina',d.AirBagLocCurtain)+
+    vinCell('Rodilla',d.AirBagLocKnee)+
+    vinCell('Asiento',d.AirBagLocSeatCushion)+
+    vinCell('Cinturones',d.SeatBeltsAll);
+
+  // --- Contexto para la IA ---
+  const L=[];
+  const push=(k,v)=>{ if(v&&v!=='Not Applicable') L.push('- '+k+': '+v); };
+  push('Vehículo',[d.ModelYear,d.Make,d.Model,d.Trim].filter(Boolean).join(' '));
+  push('Carrocería',d.BodyClass);
+  push('Motor',[
+    d.DisplacementL?(+d.DisplacementL).toFixed(1)+'L':'',
+    d.EngineCylinders?d.EngineCylinders+' cilindros':'',
+    d.EngineHP?d.EngineHP+' hp':''
+  ].filter(Boolean).join(' '));
+  push('Combustible',d.FuelTypePrimary);
+  push('Tracción',d.DriveType);
+  push('Transmisión',d.TransmissionStyle);
+  push('Fabricado en',[d.PlantCity,d.PlantCountry].filter(Boolean).join(', '));
+  push('Airbags de fábrica',[d.AirBagLocFront,d.AirBagLocSide,d.AirBagLocCurtain]
+    .filter(x=>x&&x!=='Not Applicable').join(' / '));
+
+  const ctx=L.length
+    ? 'DATOS OFICIALES NHTSA DEL VIN (verificados — no contradecir ni inventar):\n'+L.join('\n')
+    : '';
+  document.getElementById('vin-ctx').textContent=ctx||'(sin datos suficientes — no se enviará contexto)';
+  window._vinCtxPending=ctx;
+
+  // --- Crudo ---
+  const noVacios={};
+  Object.keys(d).forEach(k=>{
+    const v=d[k];
+    if(v!==''&&v!==null&&v!=='Not Applicable') noVacios[k]=v;
+  });
+  document.getElementById('vin-raw').textContent=JSON.stringify(noVacios,null,2);
+
+  document.getElementById('vin-results').style.display='block';
+}
+
+function applyVinToForm(){
+  const d=vinData;
+  if(!d){ showToast('Decodifica un VIN primero'); return; }
+
+  // VIN al campo del formulario
+  document.getElementById('vin').value=document.getElementById('vin-input').value;
+
+  // Campos ocultos
+  if(d.ModelYear) document.getElementById('year-hidden').value=d.ModelYear;
+  if(d.Make) document.getElementById('make-hidden').value=String(d.Make).toUpperCase();
+  if(d.Model) document.getElementById('model-hidden').value=[d.Model,d.Trim].filter(Boolean).join(' ').toUpperCase();
+
+  // Reconstruir el campo visible "Lote y vehículo" conservando el lote si ya existía
+  const lot=document.getElementById('lot-hidden').value;
+  const desc=[
+    d.ModelYear,
+    d.Make?String(d.Make).toUpperCase():'',
+    d.Model?String(d.Model).toUpperCase():'',
+    d.Trim?String(d.Trim).toUpperCase():''
+  ].filter(Boolean).join(' ');
+  document.getElementById('quick-paste').value=lot?(lot+' - '+desc):desc;
+
+  // Toggle de motocicleta según carrocería
+  const body=(d.BodyClass||'').toLowerCase();
+  const vtype=(d.VehicleType||'').toLowerCase();
+  const esMoto=/motorcycle|moped|scooter/.test(body)||/motorcycle/.test(vtype);
+  const btnMoto=document.getElementById('btn-moto');
+  const motoActivo=btnMoto.classList.contains('active');
+  if(esMoto!==motoActivo) toggleMoto();
+
+  // Guardar contexto para la IA
+  vinContext=window._vinCtxPending||'';
+  const badge=document.getElementById('vin-context-badge');
+  if(vinContext){
+    document.getElementById('vin-context-text').textContent='✓ Datos NHTSA cargados: '+desc;
+    badge.style.display='flex';
+  }else{
+    badge.style.display='none';
+  }
+
+  // Volver a la pestaña Analizar
+  document.querySelector('.tab').click();
+  showToast('Datos aplicados'+(esMoto?' · moto detectada 🏍':'')+' ✓');
+}
+// =============================================
 
 // ---- CARFAX ----
 let carfaxText='';
@@ -875,7 +1186,8 @@ async function generateAnalysis(){
         tituloAusente:document.getElementById('btn-tituloausente').classList.contains('active'),
         fechaFuturo:document.getElementById('btn-fechafuturo').classList.contains('active'),
         excelente:document.getElementById('btn-excelente').classList.contains('active'),
-        esMoto:document.getElementById('btn-moto').classList.contains('active')
+        esMoto:document.getElementById('btn-moto').classList.contains('active'),
+        vinContext:vinContext||''
       }})
     });
     const data=await res.json();
@@ -1149,10 +1461,13 @@ function resetAll(){
   document.getElementById('lights-custom-row').style.display='none';
   document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
   document.getElementById('mechanical-status').value='';
-  document.querySelectorAll('.toggle-btn').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('#tab-analyzer .toggle-btn').forEach(x=>x.classList.remove('active'));
   // Restaurar visibilidad de la luz de airbag (por si estaba en modo moto)
   const airbagEl=document.querySelector('.light[data-value="airbag"]');
   if(airbagEl) airbagEl.style.display='';
+  // Limpiar contexto NHTSA
+  vinContext='';
+  document.getElementById('vin-context-badge').style.display='none';
   currentOutput='';
   const body=document.getElementById('output-body');
   body.innerHTML='<div class="output-empty">El análisis aparecerá aquí una vez que generes uno →</div>';
@@ -1220,6 +1535,7 @@ async function renderPresence(){
 
 // Al cargar: si no hay usuario registrado, pedirlo
 window.addEventListener('DOMContentLoaded',()=>{
+  initVinSamples();
   if(!currentUser){ showIdentityModal(); }
   else { heartbeat(); renderPresence(); }
 });
