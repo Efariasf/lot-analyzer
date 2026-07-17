@@ -413,7 +413,10 @@ textarea{resize:none;height:52px}
         </div>
 
         <div class="card">
-          <div class="section-label">Vehículo</div>
+          <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
+            <span>Vehículo</span>
+            <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 8px" onclick="copiarFicha()">⧉ Copiar ficha</button>
+          </div>
           <div class="damage-grid" id="vin-basic"></div>
           <div class="section-label">Ficha técnica</div>
           <div class="damage-grid" id="vin-tech"></div>
@@ -838,6 +841,8 @@ function showTab(t,el){
     const vinField=document.getElementById('vin-input');
     if(vinForm && !vinField.value) vinField.value=vinForm;
     vinField.focus();
+    // Los daños pudieron marcarse después de decodificar: re-ordenar las quejas
+    if(nhtsaExtras&&nhtsaExtras.complaints) renderComplaints(nhtsaExtras.complaints);
   } else if(t==='carfax'){
     document.getElementById('tab-carfax').style.display='flex';
   } else if(t==='guia'){
@@ -1130,6 +1135,100 @@ function renderRecalls(list){
   }).join('');
 }
 
+// Arma la ficha en texto plano para pegar en WhatsApp, sin generar el punto de vista completo
+function copiarFicha(){
+  const d=vinData;
+  if(!d){ showToast('Decodifica un VIN primero'); return; }
+  const ok=v=>v&&v!=='Not Applicable'&&String(v).trim()!=='';
+  const L=[];
+
+  const titulo=[d.ModelYear,d.Make,d.Model,d.Trim].filter(ok).join(' ');
+  if(titulo) L.push(titulo.toUpperCase());
+  L.push('VIN: '+document.getElementById('vin-input').value);
+  L.push('');
+
+  const fila=(k,v)=>{ if(ok(v)) L.push(k+': '+v); };
+  fila('Carrocería',d.BodyClass);
+  fila('Motor',[
+    ok(d.DisplacementL)?(+d.DisplacementL).toFixed(1)+'L':'',
+    ok(d.EngineCylinders)?d.EngineCylinders+' cilindros':'',
+    ok(d.EngineHP)?d.EngineHP+' hp':''
+  ].filter(Boolean).join(' '));
+  fila('Combustible',d.FuelTypePrimary);
+  fila('Tracción',d.DriveType);
+  fila('Transmisión',d.TransmissionStyle);
+  fila('Puertas',d.Doors);
+  fila('Asientos',d.Seats);
+  fila('Fabricado en',[d.PlantCity,d.PlantCountry].filter(ok).join(', '));
+
+  const bags=[d.AirBagLocFront,d.AirBagLocSide,d.AirBagLocCurtain].filter(ok).join(' / ');
+  if(bags){ L.push(''); L.push('Airbags de fábrica: '+bags); }
+
+  const rec=(nhtsaExtras&&nhtsaExtras.recalls)||[];
+  if(rec.length){
+    L.push('');
+    L.push(`Recalls de seguridad NHTSA: ${rec.length}`);
+    if(rec.some(r=>r.parkIt)) L.push('IMPORTANTE: NHTSA recomienda no conducirlo hasta repararlo.');
+  }
+
+  const rate=(nhtsaExtras&&nhtsaExtras.ratings)||[];
+  const gen=rate.find(r=>parseInt(r.overall,10)>0);
+  if(gen) L.push('Crash test NCAP: '+gen.overall+' de 5 estrellas');
+
+  L.push('');
+  L.push('Datos oficiales de NHTSA decodificados del VIN.');
+
+  const txt=L.join('\n');
+  navigator.clipboard.writeText(txt)
+    .then(()=>showToast('Ficha copiada ✓'))
+    .catch(()=>{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('Ficha copiada ✓')});
+}
+
+// Traduce los daños y luces marcados en Analizar a componentes de NHTSA,
+// para subir al tope las quejas que de verdad importan en este lote.
+const DANO_A_COMPONENTE={
+  'Mecánico':['ENGINE','POWER TRAIN','TRANSMISSION','VEHICLE SPEED CONTROL','FUEL SYSTEM'],
+  'Daño frontal':['STRUCTURE','AIR BAGS','ENGINE','EXTERIOR LIGHTING'],
+  'Daño trasero':['STRUCTURE','EXTERIOR LIGHTING','FUEL SYSTEM'],
+  'Daño lateral':['AIR BAGS','STRUCTURE','SEAT BELTS'],
+  'Volcado':['AIR BAGS','STRUCTURE','SEAT BELTS','STEERING'],
+  'Inundación/Agua':['ELECTRICAL SYSTEM','ENGINE','POWER TRAIN'],
+  'Fuego':['ELECTRICAL SYSTEM','ENGINE','FUEL SYSTEM'],
+  'Vandalismo':['ELECTRICAL SYSTEM','EXTERIOR LIGHTING','STRUCTURE'],
+  'Undercarriage':['SUSPENSION','STEERING','POWER TRAIN','FUEL SYSTEM'],
+  'Granizo':['STRUCTURE','VISIBILITY'],
+  'All Over':['STRUCTURE']
+};
+const LUZ_A_COMPONENTE={
+  'check-engine':['ENGINE','VEHICLE SPEED CONTROL','FUEL SYSTEM'],
+  'airbag':['AIR BAGS','SEAT BELTS'],
+  'abs':['SERVICE BRAKES','BRAKES'],
+  'transmission':['POWER TRAIN','TRANSMISSION'],
+  'battery':['ELECTRICAL SYSTEM'],
+  'oil':['ENGINE'],
+  'temperature':['ENGINE AND ENGINE COOLING','ENGINE'],
+  'multiple':['ELECTRICAL SYSTEM']
+};
+
+// Devuelve {comps:Set, motivos:[]} según lo que esté marcado ahora mismo en Analizar
+function prioridadQuejas(){
+  const comps=new Set(), motivos=[];
+  getSelectedDamages().forEach(d=>{
+    const list=DANO_A_COMPONENTE[d];
+    if(list){ list.forEach(c=>comps.add(c)); motivos.push(d.toLowerCase()); }
+  });
+  document.querySelectorAll('.light.selected').forEach(el=>{
+    const list=LUZ_A_COMPONENTE[el.dataset.value];
+    if(list){ list.forEach(c=>comps.add(c)); motivos.push('luz '+el.querySelector('span').textContent.toLowerCase()); }
+  });
+  return {comps,motivos:[...new Set(motivos)]};
+}
+const esRelevante=(txt,comps)=>{
+  const t=(txt||'').toUpperCase();
+  for(const c of comps) if(t.includes(c)) return true;
+  return false;
+};
+
 function renderComplaints(c){
   const body=document.getElementById('complaints-body');
   const cnt=document.getElementById('complaints-count');
@@ -1139,6 +1238,13 @@ function renderComplaints(c){
     return;
   }
   cnt.textContent=c.total+' queja'+(c.total===1?'':'s');
+
+  const {comps,motivos}=prioridadQuejas();
+  const hayPrioridad=comps.size>0;
+
+  const aviso=hayPrioridad
+    ? `<div style="background:rgba(232,255,77,.08);border:1px solid rgba(232,255,77,.3);border-radius:var(--rs);padding:5px 8px;font-size:10.5px;color:var(--accent);margin-bottom:6px">↑ Priorizando lo relacionado con: ${escapeHtml(motivos.join(', '))}</div>`
+    : '';
 
   const alertas=[];
   if(c.deaths)   alertas.push(['💀 '+c.deaths+' muerte'+(c.deaths===1?'':'s'),'var(--danger)']);
@@ -1151,19 +1257,35 @@ function renderComplaints(c){
         `<span class="toggle-btn" style="cursor:default;border-color:${col};color:${col}">${t}</span>`).join('')}</div>`
     : '';
 
-  const comps=(c.topComponents||[]).map(([name,n])=>
-    `<span class="toggle-btn" style="cursor:default">${escapeHtml(name)} <span style="color:var(--accent)">${n}</span></span>`).join('');
+  // Componentes: los relacionados con el daño marcado van primero y resaltados
+  const compsOrden=[...(c.topComponents||[])].sort((a,b)=>{
+    const ra=esRelevante(a[0],comps), rb=esRelevante(b[0],comps);
+    if(ra!==rb) return ra?-1:1;
+    return b[1]-a[1];
+  });
+  const compsHtml=compsOrden.map(([name,n])=>{
+    const rel=esRelevante(name,comps);
+    return `<span class="toggle-btn ${rel?'active':''}" style="cursor:default">${rel?'↑ ':''}${escapeHtml(name)} <span style="color:${rel?'var(--accent)':'var(--muted)'}">${n}</span></span>`;
+  }).join('');
 
-  const items=(c.items||[]).map(x=>{
+  // Quejas: las relacionadas primero, el resto conserva su orden por fecha
+  const itemsOrden=[...(c.items||[])].sort((a,b)=>{
+    const ra=esRelevante(a.components,comps), rb=esRelevante(b.components,comps);
+    return ra===rb?0:(ra?-1:1);
+  });
+  const nRel=itemsOrden.filter(x=>esRelevante(x.components,comps)).length;
+
+  const items=itemsOrden.map(x=>{
+    const rel=esRelevante(x.components,comps);
     const marks=[];
     if(x.fire) marks.push('🔥');
     if(x.crash) marks.push('💥');
     if(x.deaths) marks.push('💀'+x.deaths);
     if(x.injuries) marks.push('🚑'+x.injuries);
-    return `<details class="guia-item" style="margin-bottom:4px">
+    return `<details class="guia-item" style="margin-bottom:4px${rel?';border-color:var(--accent)':''}">
       <summary style="padding:6px 10px;font-size:11.5px">
-        <span style="flex:1;text-align:left">
-          ${escapeHtml(x.components)} ${marks.join(' ')}
+        <span style="flex:1;text-align:left${rel?';color:var(--accent)':''}">
+          ${rel?'↑ ':''}${escapeHtml(x.components)} ${marks.join(' ')}
           <span style="color:var(--muted);font-weight:400"> · ${escapeHtml(x.date)}</span>
         </span>
       </summary>
@@ -1171,11 +1293,11 @@ function renderComplaints(c){
     </details>`;
   }).join('');
 
-  body.innerHTML=alertasHtml
+  body.innerHTML=aviso+alertasHtml
     +`<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Componentes más reportados</div>`
-    +`<div class="toggle-row">${comps}</div>`
-    +`<details class="guia-item" style="margin-top:4px">
-        <summary style="font-size:12px">Ver las quejas una por una (${(c.items||[]).length})</summary>
+    +`<div class="toggle-row">${compsHtml}</div>`
+    +`<details class="guia-item" style="margin-top:4px"${nRel?' open':''}>
+        <summary style="font-size:12px">Ver las quejas una por una (${itemsOrden.length})${nRel?` <span style="color:var(--accent);font-weight:400">· ${nRel} relacionada${nRel===1?'':'s'}</span>`:''}</summary>
         <div style="padding:0 8px 8px">${items}</div>
       </details>`;
 }
