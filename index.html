@@ -406,6 +406,9 @@ textarea{resize:none;height:52px}
         <div class="card">
           <div class="section-label">Detección automática</div>
           <div class="toggle-row" id="vin-flags"></div>
+          <div class="toggle-row" style="margin-bottom:8px">
+            <button id="btn-incluir-recalls" class="toggle-btn" onclick="this.classList.toggle('active')" title="Agrega un párrafo sobre los recalls abiertos al punto de vista">⚠ Incluir recalls en el punto de vista</button>
+          </div>
           <button class="btn btn-accent" onclick="applyVinToForm()">↓ Aplicar al formulario de Analizar</button>
         </div>
 
@@ -416,6 +419,27 @@ textarea{resize:none;height:52px}
           <div class="damage-grid" id="vin-tech"></div>
           <div class="section-label">Airbags de fábrica</div>
           <div class="damage-grid" id="vin-bags"></div>
+        </div>
+
+        <div class="card" id="card-recalls">
+          <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
+            <span>Recalls de seguridad — NHTSA</span>
+            <span id="recalls-count" style="font-size:10px;color:var(--muted);font-weight:600"></span>
+          </div>
+          <div id="recalls-body"></div>
+        </div>
+
+        <div class="card" id="card-complaints">
+          <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
+            <span>Quejas de consumidores — NHTSA</span>
+            <span id="complaints-count" style="font-size:10px;color:var(--muted);font-weight:600"></span>
+          </div>
+          <div id="complaints-body"></div>
+        </div>
+
+        <div class="card" id="card-ratings">
+          <div class="section-label">Crash test NCAP — estrellas</div>
+          <div id="ratings-body"></div>
         </div>
 
         <div class="card">
@@ -822,6 +846,7 @@ function hideError(id){document.getElementById(id).style.display='none'}
 // API vPIC de NHTSA: gratuita, oficial, sin API key, permite CORS.
 let vinData=null;
 let vinContext='';
+let recallsText='';
 
 const VIN_SAMPLES=[
   ['JTDKN3DU0C1234567','Prius 2012'],
@@ -872,11 +897,13 @@ function clearVin(){
   document.getElementById('vin-status').style.display='none';
   hideError('vin-error');
   vinData=null;
+  nhtsaExtras=null;
   document.getElementById('vin-input').focus();
 }
 
 function clearVinContext(){
   vinContext='';
+  recallsText='';
   document.getElementById('vin-context-badge').style.display='none';
   showToast('Contexto NHTSA quitado');
 }
@@ -1011,6 +1038,197 @@ function renderVin(d,ms){
   document.getElementById('vin-raw').textContent=JSON.stringify(noVacios,null,2);
 
   document.getElementById('vin-results').style.display='block';
+
+  // --- Recalls, quejas y ratings (segunda ronda, vía servidor) ---
+  loadNhtsaExtras(d.Make,d.Model,d.ModelYear);
+}
+
+// ---- RECALLS / QUEJAS / RATINGS ----
+// Van por /api/analyze (mode:'nhtsa') porque api.nhtsa.gov no garantiza CORS.
+let nhtsaExtras=null;
+
+const spinner='<div class="loading" style="padding:4px 0;font-size:12px"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Consultando NHTSA...</span></div>';
+const vacio=m=>`<div style="font-size:12px;color:var(--muted);padding:2px 0">${m}</div>`;
+
+async function loadNhtsaExtras(make,model,year){
+  nhtsaExtras=null;
+  document.getElementById('btn-incluir-recalls').classList.remove('active');
+  ['recalls','complaints','ratings'].forEach(k=>{
+    document.getElementById(k+'-body').innerHTML=spinner;
+  });
+  document.getElementById('recalls-count').textContent='';
+  document.getElementById('complaints-count').textContent='';
+
+  if(!make||!model||!year){
+    ['recalls','complaints','ratings'].forEach(k=>{
+      document.getElementById(k+'-body').innerHTML=vacio('Sin marca/modelo/año para consultar');
+    });
+    return;
+  }
+
+  try{
+    const res=await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mode:'nhtsa',make,model,year})
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Error desconocido');
+    nhtsaExtras=data;
+    renderRecalls(data.recalls||[]);
+    renderComplaints(data.complaints||{});
+    renderRatings(data.ratings||[]);
+  }catch(e){
+    ['recalls','complaints','ratings'].forEach(k=>{
+      document.getElementById(k+'-body').innerHTML=vacio('No se pudo consultar: '+escapeHtml(e.message));
+    });
+  }
+}
+
+function renderRecalls(list){
+  const body=document.getElementById('recalls-body');
+  const cnt=document.getElementById('recalls-count');
+  if(!list.length){
+    cnt.textContent='';
+    body.innerHTML='<div style="font-size:12px;color:#4ade80;padding:2px 0">✓ Sin recalls registrados para este año/marca/modelo</div>';
+    return;
+  }
+  const urgentes=list.filter(r=>r.parkIt||r.parkOutside).length;
+  cnt.innerHTML=`<span style="color:var(--danger)">${list.length} recall${list.length===1?'':'s'}</span>`
+    +(urgentes?` <span style="color:var(--danger)">· ${urgentes} urgente${urgentes===1?'':'s'}</span>`:'');
+
+  // Activar el toggle solo, ya que hay algo que reportar
+  document.getElementById('btn-incluir-recalls').classList.add('active');
+
+  body.innerHTML=list.map((r,i)=>{
+    const badges=[];
+    if(r.parkIt) badges.push('<span style="background:var(--danger);color:#000;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">NO CONDUCIR</span>');
+    if(r.parkOutside) badges.push('<span style="background:#ff9500;color:#000;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">NO ESTACIONAR BAJO TECHO</span>');
+    return `<details class="guia-item" style="margin-bottom:4px">
+      <summary style="padding:7px 10px;font-size:12px;gap:8px">
+        <span style="flex:1;text-align:left">
+          <span style="color:var(--danger);font-weight:700">${escapeHtml(r.component)}</span>
+          ${badges.length?'<br>'+badges.join(' '):''}
+          <br><span style="color:var(--muted);font-weight:400;font-size:10.5px">Campaña ${escapeHtml(r.campaign)}${r.date?' · '+escapeHtml(r.date):''}</span>
+        </span>
+      </summary>
+      <p style="font-size:11.5px;padding:0 10px 9px">
+        <b style="color:var(--text)">Problema:</b> ${escapeHtml(r.summary)}<br><br>
+        <b style="color:var(--text)">Consecuencia:</b> ${escapeHtml(r.consequence)}<br><br>
+        <b style="color:var(--text)">Remedio:</b> ${escapeHtml(r.remedy)}
+      </p>
+    </details>`;
+  }).join('');
+}
+
+function renderComplaints(c){
+  const body=document.getElementById('complaints-body');
+  const cnt=document.getElementById('complaints-count');
+  if(!c.total){
+    cnt.textContent='';
+    body.innerHTML=vacio('Sin quejas registradas');
+    return;
+  }
+  cnt.textContent=c.total+' queja'+(c.total===1?'':'s');
+
+  const alertas=[];
+  if(c.deaths)   alertas.push(['💀 '+c.deaths+' muerte'+(c.deaths===1?'':'s'),'var(--danger)']);
+  if(c.injuries) alertas.push(['🚑 '+c.injuries+' lesionado'+(c.injuries===1?'':'s'),'var(--danger)']);
+  if(c.fires)    alertas.push(['🔥 '+c.fires+' incendio'+(c.fires===1?'':'s'),'#ff9500']);
+  if(c.crashes)  alertas.push(['💥 '+c.crashes+' choque'+(c.crashes===1?'':'s'),'#ff9500']);
+
+  const alertasHtml=alertas.length
+    ? `<div class="toggle-row" style="margin-bottom:6px">${alertas.map(([t,col])=>
+        `<span class="toggle-btn" style="cursor:default;border-color:${col};color:${col}">${t}</span>`).join('')}</div>`
+    : '';
+
+  const comps=(c.topComponents||[]).map(([name,n])=>
+    `<span class="toggle-btn" style="cursor:default">${escapeHtml(name)} <span style="color:var(--accent)">${n}</span></span>`).join('');
+
+  const items=(c.items||[]).map(x=>{
+    const marks=[];
+    if(x.fire) marks.push('🔥');
+    if(x.crash) marks.push('💥');
+    if(x.deaths) marks.push('💀'+x.deaths);
+    if(x.injuries) marks.push('🚑'+x.injuries);
+    return `<details class="guia-item" style="margin-bottom:4px">
+      <summary style="padding:6px 10px;font-size:11.5px">
+        <span style="flex:1;text-align:left">
+          ${escapeHtml(x.components)} ${marks.join(' ')}
+          <span style="color:var(--muted);font-weight:400"> · ${escapeHtml(x.date)}</span>
+        </span>
+      </summary>
+      <p style="font-size:11px;padding:0 10px 8px">${escapeHtml(x.summary)}</p>
+    </details>`;
+  }).join('');
+
+  body.innerHTML=alertasHtml
+    +`<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Componentes más reportados</div>`
+    +`<div class="toggle-row">${comps}</div>`
+    +`<details class="guia-item" style="margin-top:4px">
+        <summary style="font-size:12px">Ver las quejas una por una (${(c.items||[]).length})</summary>
+        <div style="padding:0 8px 8px">${items}</div>
+      </details>`;
+}
+
+function renderRatings(list){
+  const body=document.getElementById('ratings-body');
+  if(!list.length){
+    body.innerHTML=vacio('NHTSA no tiene crash test para este modelo');
+    return;
+  }
+  const stars=v=>{
+    const n=parseInt(v,10);
+    if(isNaN(n)) return '<span style="color:#4a4a52">Sin dato</span>';
+    return `<span style="color:var(--accent);letter-spacing:1px">${'★'.repeat(n)}<span style="color:#3a3a40">${'★'.repeat(5-n)}</span></span>`;
+  };
+  body.innerHTML=list.map(r=>`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:8px;margin-bottom:4px">
+      <div style="font-size:11.5px;font-weight:600;margin-bottom:5px">${escapeHtml(r.description)}</div>
+      <div class="damage-grid">
+        <div class="vin-cell"><span class="k">General</span><span class="v">${stars(r.overall)}</span></div>
+        <div class="vin-cell"><span class="k">Frontal</span><span class="v">${stars(r.front)}</span></div>
+        <div class="vin-cell"><span class="k">Lateral</span><span class="v">${stars(r.side)}</span></div>
+        <div class="vin-cell"><span class="k">Volcadura</span><span class="v">${stars(r.rollover)}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+// Arma el párrafo de recalls que se agrega al punto de vista
+function buildRecallsText(){
+  if(!document.getElementById('btn-incluir-recalls').classList.contains('active')) return '';
+  const list=(nhtsaExtras&&nhtsaExtras.recalls)||[];
+  if(!list.length) return '';
+
+  const comps=[...new Set(list.map(r=>{
+    const c=(r.component||'').toLowerCase();
+    if(c.includes('air bag')||c.includes('airbag')) return 'airbags';
+    if(c.includes('brake')) return 'frenos';
+    if(c.includes('steering')) return 'dirección';
+    if(c.includes('fuel')) return 'sistema de combustible';
+    if(c.includes('engine')) return 'motor';
+    if(c.includes('electrical')) return 'sistema eléctrico';
+    if(c.includes('seat belt')) return 'cinturones de seguridad';
+    if(c.includes('suspension')) return 'suspensión';
+    if(c.includes('power train')||c.includes('powertrain')) return 'tren motriz';
+    if(c.includes('exterior lighting')) return 'luces exteriores';
+    if(c.includes('tire')) return 'llantas';
+    if(c.includes('structure')) return 'estructura';
+    return (r.component||'').split(':')[0].toLowerCase();
+  }).filter(Boolean))];
+
+  const n=list.length;
+  const urgente=list.some(r=>r.parkIt);
+  const afuera=list.some(r=>r.parkOutside);
+
+  let t=`NHTSA registra ${n} recall${n===1?'':'s'} de seguridad para este año, marca y modelo`
+    + (comps.length?`, relacionado${n===1?'':'s'} con ${comps.slice(0,4).join(', ')}`:'')
+    + '. Los recalls aplican al modelo en general y el fabricante los repara sin costo, pero no podemos confirmar si este vehículo en particular ya recibió la reparación. Recomendamos verificar el estado del recall con el VIN en nhtsa.gov/recalls o en un concesionario de la marca.';
+
+  if(urgente) t+=' Importante: al menos uno de estos recalls está clasificado por NHTSA como "Park It", lo que significa que recomienda no conducir el vehículo hasta que sea reparado.';
+  else if(afuera) t+=' Tenga en cuenta que al menos uno de estos recalls está clasificado como "Park Outside" por riesgo de incendio: NHTSA recomienda no estacionarlo bajo techo hasta repararlo.';
+
+  return t;
 }
 
 function applyVinToForm(){
@@ -1043,11 +1261,15 @@ function applyVinToForm(){
   const motoActivo=btnMoto.classList.contains('active');
   if(esMoto!==motoActivo) toggleMoto();
 
-  // Guardar contexto para la IA
+  // Guardar contexto y recalls para la IA
   vinContext=window._vinCtxPending||'';
+  recallsText=buildRecallsText();
+
   const badge=document.getElementById('vin-context-badge');
-  if(vinContext){
-    document.getElementById('vin-context-text').textContent='✓ Datos NHTSA cargados: '+desc;
+  if(vinContext||recallsText){
+    const nRec=(nhtsaExtras&&nhtsaExtras.recalls||[]).length;
+    document.getElementById('vin-context-text').textContent=
+      '✓ Datos NHTSA: '+desc+(recallsText?` · ${nRec} recall${nRec===1?'':'s'} incluido${nRec===1?'':'s'}`:'');
     badge.style.display='flex';
   }else{
     badge.style.display='none';
@@ -1187,7 +1409,8 @@ async function generateAnalysis(){
         fechaFuturo:document.getElementById('btn-fechafuturo').classList.contains('active'),
         excelente:document.getElementById('btn-excelente').classList.contains('active'),
         esMoto:document.getElementById('btn-moto').classList.contains('active'),
-        vinContext:vinContext||''
+        vinContext:vinContext||'',
+        recallsText:recallsText||''
       }})
     });
     const data=await res.json();
@@ -1467,6 +1690,7 @@ function resetAll(){
   if(airbagEl) airbagEl.style.display='';
   // Limpiar contexto NHTSA
   vinContext='';
+  recallsText='';
   document.getElementById('vin-context-badge').style.display='none';
   currentOutput='';
   const body=document.getElementById('output-body');
