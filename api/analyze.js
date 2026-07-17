@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const carfaxText = req.body.carfaxText || '';
     if (!carfaxText.trim()) return res.status(400).json({ error: 'Sin texto del Carfax' });
     try {
-      const carfaxPrompt = `Eres un experto en análisis de reportes Carfax de vehículos de subasta. A continuación tienes el texto extraído de un reporte Carfax. Analízalo a fondo y genera un resumen profesional y COMPLETO en español para enviar por WhatsApp a un cliente. Texto plano, sin markdown, sin asteriscos, sin emojis.
+      const carfaxPrompt = `Eres un experto en análisis de reportes Carfax de vehículos de subasta. A continuación tienes el texto extraído de un reporte Carfax. Analízalo a fondo y genera un resumen profesional y COMPLETO en español para enviarle a un cliente. Texto plano, sin markdown, sin asteriscos, sin emojis.
 
 Incluye SOLO lo que realmente aparezca en el reporte, en este orden:
 
@@ -118,7 +118,9 @@ ${carfaxText.substring(0, 14000)}`;
       'oil': 'Presenta la luz de aceite encendida, lo que podría indicar baja presión de aceite o falla en el sistema de lubricación.',
       'temperature': 'Presenta la luz de temperatura encendida, lo que podría indicar sobrecalentamiento del motor.',
       'multiple': 'Presenta múltiples luces del tablero encendidas, lo que podría indicar algún tipo de daño eléctrico o falla mecánica en el vehículo.',
-      'custom': dashCustom ? `Presenta ${dashCustom} encendido, lo que podría indicar algún tipo de falla mecánica o electrónica.` : ''
+      'custom': dashCustom && dashCustom.trim()
+        ? `Presenta ${dashCustom.trim()} encendido, lo que podría indicar algún tipo de falla mecánica o electrónica.`
+        : 'Presenta otras luces de advertencia encendidas en el tablero, lo que podría indicar algún tipo de falla mecánica o electrónica.'
     };
     let lightsArray = Array.isArray(dashLights) ? dashLights : (dashLights && dashLights !== 'none' ? [dashLights] : []);
     // Las motocicletas no tienen airbag: filtrar por seguridad
@@ -201,22 +203,19 @@ ${carfaxText.substring(0, 14000)}`;
       const num = parseFloat(String(n).replace(/,/g, ''));
       return isNaN(num) ? n : num.toLocaleString('en-US');
     };
-    const offerVariants = [
+    const offerVariants = (offerMin && offerMax) ? [
       `Ofertaría entre $${fmt(offerMin)} a $${fmt(offerMax)}`,
       `Podríamos ofertar entre $${fmt(offerMin)} a $${fmt(offerMax)}`,
       `Mi recomendación sería ofertar entre $${fmt(offerMin)} a $${fmt(offerMax)}`,
       `Sugiero pujar entre $${fmt(offerMin)} a $${fmt(offerMax)}`,
       `Podríamos pujar entre $${fmt(offerMin)} a $${fmt(offerMax)}`,
       `Recomendaría ofertar en un rango de $${fmt(offerMin)} a $${fmt(offerMax)}`
-    ];
-    const offerText = (offerMin && offerMax) ? offerVariants[Math.floor(Math.random() * offerVariants.length)] : '';
+    ] : [];
+    const offerText = offerVariants.length ? offerVariants[Math.floor(Math.random() * offerVariants.length)] : '';
     const buyNowText = buyNow ? `El vehículo tiene un precio de compra inmediata (Buy Now) de $${fmt(buyNow)}, ese es el precio mínimo que acepta el vendedor para cerrar la venta de inmediato.` : '';
     const reserveText = reservePrice ? `Tiene un precio de reserva de $${fmt(reservePrice)}.` : '';
 
     // Solo la primera línea la genera la IA para dar variedad; el resto es fijo y controlado.
-    const milesInline = miles ? `, con ${miles} millas ${milesStatus.toLowerCase()}` : '';
-    const damageInline = damageClean ? ` Presenta daño por ${damageClean}.` : '';
-
     const titleExplain = {
       'Clean': 'no fue declarado pérdida total por la aseguradora',
       'Salvage': 'el daño fue lo suficientemente severo para que la aseguradora lo declarara pérdida total',
@@ -233,7 +232,7 @@ IMPORTANTE: Varía SIEMPRE la estructura y el vocabulario. Cada vez que generes 
 Datos:
 - Título: ${titleType} (significa: ${titleExplain[titleType] || ''})
 - Daños: ${damageClean || 'ninguno especificado'}
-${miles ? `- Millas: ${miles} ${milesStatus.toLowerCase()}` : '- Millas: no especificadas (NO las menciones)'}
+${miles ? `- Millas: ${miles} ${(milesStatus||'').toLowerCase()}` : '- Millas: no especificadas (NO las menciones)'}
 
 Reglas:
 - Empieza indicando el título sin afirmarlo con certeza absoluta, atribuyéndolo a la subasta. VARÍA la forma de decirlo cada vez, usa diferentes opciones como: "La subasta indica título ${titleType}", "El lote figura con título ${titleType}", "De acuerdo a la subasta, el título es ${titleType}", "${auction} reporta título ${titleType}", "El vehículo aparece listado con título ${titleType}", "Registrado en la subasta como título ${titleType}". NUNCA uses siempre la misma frase, NUNCA digas "El título de ${titleType}".
