@@ -271,6 +271,12 @@ ${carfaxText.substring(0, 14000)}`;
     const tituloAusenteText = tituloAusente
       ? `En cuanto al título: ${auction} no posee el título actualmente. Le da al vendedor 30 días hábiles para que sea enviado a la yarda y luego ellos deben enviárnoslo a FL.`
       : '';
+    // Bill of Sale: texto exacto aprobado por el equipo. Determinista para garantizar
+    // que el trámite legal salga siempre igual y no lo reescriba el modelo.
+    const esBillOfSale = titleType === 'Bill of Sale';
+    const billOfSaleText = esBillOfSale
+      ? 'La subasta no posee el título del vehículo y entrega un Bill of Sale. Con ese documento el cliente deberá tramitar un título nuevo en el DMV de su estado, generalmente por la vía del bonded title (título con fianza). El proceso requiere el VIN, el bill of sale y la razón de la ausencia de título, y no procede si el vehículo tiene un gravamen (lien) pendiente.'
+      : '';
     const copartGoText = copartGo
       ? 'Este vehículo está listado como CopartGO, lo que significa que fue publicado directamente por el vendedor usando la app móvil de Copart. El informe de condición lo completó el propio vendedor con respuestas de Sí/No y no representa la opinión de Copart, quien no inspeccionó el vehículo ni se hace responsable de la exactitud del informe.'
       : '';
@@ -320,7 +326,7 @@ ${carfaxText.substring(0, 14000)}`;
       'Clean': 'no fue declarado pérdida total por la aseguradora',
       'Salvage': 'el daño fue lo suficientemente severo para que la aseguradora lo declarara pérdida total',
       'Rebuilt': 'fue reconstruido tras haber tenido un título salvage y aprobó la inspección estatal',
-      'Bill of Sale': 'el vehículo se transfiere solo con comprobante de venta, sin certificado de título; su registro requiere trámites adicionales según el estado',
+      'Bill of Sale': 'la subasta no posee el título y entrega un Bill of Sale; el cliente debe tramitar un título nuevo en el DMV, usualmente por la vía del bonded title',
       'Parts Only': 'solo puede usarse para piezas, no puede registrarse para circular',
       'Certificate of Destruction / Junk': 'no puede circular legalmente, solo sirve para chatarra o piezas'
     };
@@ -331,7 +337,7 @@ ${esMoto ? '\nIMPORTANTE: Este lote es una MOTOCICLETA. Refiérete a ella como m
 IMPORTANTE: Varía SIEMPRE la estructura y el vocabulario. Cada vez que generes este párrafo debe sonar diferente al anterior — cambia el orden de las ideas, usa sinónimos, varía cómo introduces el título y los daños. Nunca repitas la misma redacción.
 
 Datos:
-- Título: ${titleType} (significa: ${titleExplain[titleType] || ''})
+- Título: ${titleType}${esBillOfSale ? '' : ` (significa: ${titleExplain[titleType] || ''})`}
 - Daños: ${damageClean || 'ninguno especificado'}
 ${miles ? `- Millas: ${miles} ${(milesStatus||'').toLowerCase()}` : '- Millas: no especificadas (NO las menciones)'}
 ${vinContext && vinContext.trim() ? `
@@ -341,11 +347,11 @@ ${vinContext.trim()}
 CÓMO USAR LA FICHA TÉCNICA: es solo una REFERENCIA DE EXACTITUD, no contenido para agregar. NO la enumeres, NO listes el motor, la tracción, la transmisión ni la planta de fabricación, y NO alargues el párrafo por ella. Su única función es que, si mencionas algo del vehículo de forma natural, no lo contradigas ni lo inventes. Si la ficha dice que es una motocicleta, trátalo como motocicleta. El párrafo debe quedar igual de corto que sin esta ficha.
 ` : ''}
 Reglas:
-- Empieza indicando el título sin afirmarlo con certeza absoluta, atribuyéndolo a la subasta. VARÍA la forma de decirlo cada vez, usa diferentes opciones como: "La subasta indica título ${titleType}", "El lote figura con título ${titleType}", "De acuerdo a la subasta, el título es ${titleType}", "${auction} reporta título ${titleType}", "El vehículo aparece listado con título ${titleType}", "Registrado en la subasta como título ${titleType}". NUNCA uses siempre la misma frase, NUNCA digas "El título de ${titleType}".
+${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO uses la palabra "Bill of Sale" y NO expliques ningún trámite. La explicación del Bill of Sale se agrega automáticamente por separado. Escribe SOLO los daños${miles ? ' y las millas' : ''} en una frase natural. Si no hay daños${miles ? '' : ' ni millas'} que mencionar, responde con una cadena vacía.` : `- Empieza indicando el título sin afirmarlo con certeza absoluta, atribuyéndolo a la subasta. VARÍA la forma de decirlo cada vez, usa diferentes opciones como: "La subasta indica título ${titleType}", "El lote figura con título ${titleType}", "De acuerdo a la subasta, el título es ${titleType}", "${auction} reporta título ${titleType}", "El vehículo aparece listado con título ${titleType}", "Registrado en la subasta como título ${titleType}". NUNCA uses siempre la misma frase, NUNCA digas "El título de ${titleType}".
 - Al explicar el significado del título usa el verbo REFERIR: "refiere que...". PROHIBIDO usar "indica que", "significa que" o "quiere decir que" para explicar el significado del título.
 - PROHIBIDO escribir "este título". Es la fórmula que más se repite y suena robótica. Para retomar el título antes del verbo, VARÍA en cada generación entre estas opciones: "dicho título", "esta clasificación", "dicha clasificación", "esta condición", "dicha categoría", o simplemente NO retomarlo y encadenar directo ("lo que según la subasta refiere que..."). Elige una distinta cada vez.
 - Sí puedes atribuir a la subasta al explicar el significado, esa parte nos gusta: "lo que según la subasta, dicha clasificación refiere que...", "lo que de acuerdo a ${auction}, dicho título refiere que...". Para Salvage el sentido es: el vehículo habría sufrido un daño suficientemente severo para ser declarado pérdida total.
-- Nunca afirmes el significado del título como un hecho propio: solo repetimos la información de la subasta, no la verificamos nosotros.
+- Nunca afirmes el significado del título como un hecho propio: solo repetimos la información de la subasta, no la verificamos nosotros.`}
 - Afirma los daños con seguridad, nunca digas "sugiere" o "podría tener daños".
 - Menciona los daños tal como están escritos, de forma natural: si dice "daño trasero" escribe "daño trasero" (NO "daño en el trasero"), si dice "granizo" escribe "daño por granizo". Para varios: "daño frontal y lateral".
 - NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar", "ofrece un atractivo precio de compra", "sin otros daños reportados", "su historial no presenta registros" o "puede necesitar reparaciones". NUNCA hables de historial ni reportes previos, no tenemos esa información.
@@ -457,6 +463,7 @@ REGLAS ESTRICTAS:
     const header = [lot, vehParts].filter(Boolean).join(' - ') || (lotRaw || '').trim();
 
     const blocks = [
+      billOfSaleText,
       firstParagraph,
       damageHistoryText,
       tituloAusenteText,
