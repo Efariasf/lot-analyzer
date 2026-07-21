@@ -320,6 +320,7 @@ ${carfaxText.substring(0, 14000)}`;
       'Clean': 'no fue declarado pérdida total por la aseguradora',
       'Salvage': 'el daño fue lo suficientemente severo para que la aseguradora lo declarara pérdida total',
       'Rebuilt': 'fue reconstruido tras haber tenido un título salvage y aprobó la inspección estatal',
+      'Bill of Sale': 'el vehículo se transfiere solo con comprobante de venta, sin certificado de título; su registro requiere trámites adicionales según el estado',
       'Parts Only': 'solo puede usarse para piezas, no puede registrarse para circular',
       'Certificate of Destruction / Junk': 'no puede circular legalmente, solo sirve para chatarra o piezas'
     };
