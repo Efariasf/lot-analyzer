@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -103,6 +105,26 @@ export default async function handler(req, res) {
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
+  }
+
+  // ---- MODO AUTENTICACIÓN DE ADMINISTRADOR ----
+  // El PIN vive en una variable de entorno de Vercel, NUNCA en el código del
+  // navegador. Así un compañero no puede leerlo viendo el código fuente.
+  if (mode === 'admin-auth') {
+    const ADMIN_PIN = process.env.ADMIN_PIN;
+    if (!ADMIN_PIN) return res.status(500).json({ ok: false, error: 'PIN de administrador no configurado en el servidor' });
+    const pin = String(req.body?.pin || '');
+    // Comparación de tiempo constante (evita adivinar el PIN midiendo demoras)
+    const a = crypto.createHash('sha256').update(pin).digest();
+    const b = crypto.createHash('sha256').update(String(ADMIN_PIN)).digest();
+    const ok = crypto.timingSafeEqual(a, b);
+    if (!ok) {
+      // Pequeña demora para frenar intentos automáticos
+      await new Promise(r => setTimeout(r, 700));
+      return res.status(401).json({ ok: false, error: 'PIN incorrecto' });
+    }
+    const token = crypto.createHash('sha256').update('mapa-admin:' + ADMIN_PIN).digest('hex').slice(0, 32);
+    return res.status(200).json({ ok: true, token });
   }
 
   const GROQ_KEY = process.env.GROQ_API_KEY;
