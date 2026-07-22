@@ -194,7 +194,7 @@ ${carfaxText.substring(0, 14000)}`;
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
-            offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente, esMoto,
+            offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente, impecable, esMoto,
             vinContext, recallsText, lotRaw } = fields;
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
@@ -359,6 +359,21 @@ ${carfaxText.substring(0, 14000)}`;
     const excelentePool = damageList.length > 0 ? excelenteVariantsConDanos : excelenteVariantsSinDanos;
     const excelenteText = excelente
       ? excelentePool[Math.floor(Math.random() * excelentePool.length)]
+      : '';
+
+    // "Impecable estado": enfoque en que en las fotos no se aprecian daños estéticos
+    const impecableVariantsSinDanos = [
+      'El vehículo en las fotos se ve impecablemente bien, no se aprecian daños estéticos. Excelente opción de compra.',
+      'En las fotos el vehículo luce impecable, sin daños estéticos visibles. Una muy buena opción de compra.',
+      'Por las fotos, el vehículo se observa impecable y sin daños estéticos apreciables. Excelente oportunidad de compra.'
+    ];
+    const impecableVariantsConDanos = [
+      'Fuera del daño indicado, en las fotos el vehículo se ve impecablemente bien, sin otros daños estéticos apreciables. Excelente opción de compra.',
+      'Más allá del daño mencionado, por las fotos el vehículo luce impecable, sin otros daños estéticos visibles. Muy buena opción de compra.'
+    ];
+    const impecablePool = damageList.length > 0 ? impecableVariantsConDanos : impecableVariantsSinDanos;
+    const impecableText = impecable
+      ? impecablePool[Math.floor(Math.random() * impecablePool.length)]
       : '';
 
     // ---- OFERTA (números con formato de miles) ----
@@ -559,6 +574,7 @@ REGLAS ESTRICTAS:
       externalLotText,
       fechaFuturoText,
       excelenteText,
+      impecableText,
       lightsBlock,
       mechText,
       obsText,
