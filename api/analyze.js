@@ -275,7 +275,7 @@ ${carfaxText.substring(0, 14000)}`;
     // que el trámite legal salga siempre igual y no lo reescriba el modelo.
     const esBillOfSale = titleType === 'Bill of Sale';
     const billOfSaleText = esBillOfSale
-      ? 'La subasta no posee el título del vehículo y entrega un Bill of Sale. Con ese documento el cliente deberá tramitar un título nuevo en el DMV de su estado, generalmente por la vía del bonded title (título con fianza). El proceso requiere el VIN, el bill of sale y la razón de la ausencia de título, y no procede si el vehículo tiene un gravamen (lien) pendiente.'
+      ? 'La subasta no posee el título del vehículo y entrega un Bill of Sale. Con ese documento el cliente deberá tramitar un título nuevo en el DMV de su estado.'
       : '';
     const copartGoText = copartGo
       ? 'Este vehículo está listado como CopartGO, lo que significa que fue publicado directamente por el vendedor usando la app móvil de Copart. El informe de condición lo completó el propio vendedor con respuestas de Sí/No y no representa la opinión de Copart, quien no inspeccionó el vehículo ni se hace responsable de la exactitud del informe.'
@@ -376,7 +376,7 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
           body: JSON.stringify({
             model: 'llama-3.3-70b-versatile',
-            messages: [{ role: 'user', content: `Mejora solo la redacción de esta observación de un broker de autos, en español, sin agregar nada nuevo, en una oración profesional. Devuelve solo la oración mejorada: "${observations}"` }],
+            messages: [{ role: 'user', content: `Reescribe esta observación de un broker de autos en español, en una sola oración profesional, sin agregar información nueva. Si el texto es muy corto, un número o una sola palabra, devuélvelo tal cual. NUNCA expliques lo que hiciste, NUNCA comentes sobre el texto y NUNCA digas cosas como "no hay nada que mejorar" o "solo un número": devuelve ÚNICAMENTE la observación final, nada más. Observación: "${observations}"` }],
             max_tokens: 150,
             temperature: 0.5
           })
@@ -435,7 +435,14 @@ REGLAS ESTRICTAS:
     let obsText = '';
     if (obsRes) {
       const obsData = await obsRes.json();
-      if (obsRes.ok) obsText = (obsData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
+      if (obsRes.ok) {
+        obsText = (obsData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
+        // Red de seguridad: a veces el modelo comenta en vez de mejorar
+        // (ej. "No hay texto que mejorar, solo un número '23'"). Si detectamos
+        // meta-comentario o queda vacío, usamos la observación original tal cual.
+        const metaObs = /(no hay (texto|nada)|nada que mejorar|no requiere|no se puede mejorar|no es necesario|solo un n[uú]mero|no aplica)/i.test(obsText);
+        if (!obsText || metaObs) obsText = (observations || '').trim();
+      }
     }
 
     let offerNotesText = '';
@@ -482,7 +489,9 @@ REGLAS ESTRICTAS:
 
     const offerBlock = [offerText, buyNowText, reserveText, offerNotesText].filter(Boolean).join('\n');
 
-    const footer = `VIN: ${vin}
+    const footer = esMoto
+      ? `VIN: ${vin}`
+      : `VIN: ${vin}
 Solicite su REPORTE aquí:
 ${REPORT_LINK}
 
