@@ -239,6 +239,7 @@ textarea{resize:none;height:52px}
           <button id="btn-tituloausente" class="toggle-btn" onclick="toggleFlag('tituloausente')">Título Ausente</button>
           <button id="btn-fechafuturo" class="toggle-btn" onclick="toggleFlag('fechafuturo')">Fecha Futuro</button>
           <button id="btn-excelente" class="toggle-btn" onclick="toggleFlag('excelente')">Excelente Estado</button>
+          <button id="btn-impecable" class="toggle-btn" onclick="toggleFlag('impecable')">Impecable Estado</button>
         </div>
 
         <div id="vin-context-badge" style="display:none;background:rgba(232,255,77,.08);border:1px solid rgba(232,255,77,.3);border-radius:var(--rs);padding:5px 8px;font-size:10.5px;color:var(--accent);margin-bottom:6px;align-items:center;justify-content:space-between;gap:6px">
@@ -749,7 +750,14 @@ function renderTemplates(){
 }
 
 function toggleFlag(flag){
-  document.getElementById('btn-'+flag).classList.toggle('active');
+  const btn=document.getElementById('btn-'+flag);
+  btn.classList.toggle('active');
+  // "Excelente Estado" e "Impecable Estado" dicen casi lo mismo: si se activa uno,
+  // se apaga el otro para no repetir la idea dos veces en el punto de vista.
+  const opuestos={excelente:'impecable',impecable:'excelente'};
+  if(opuestos[flag] && btn.classList.contains('active')){
+    document.getElementById('btn-'+opuestos[flag])?.classList.remove('active');
+  }
 }
 
 // Motocicleta: las motos no tienen airbag
@@ -1553,6 +1561,7 @@ async function generateAnalysis(){
         tituloAusente:document.getElementById('btn-tituloausente').classList.contains('active'),
         fechaFuturo:document.getElementById('btn-fechafuturo').classList.contains('active'),
         excelente:document.getElementById('btn-excelente').classList.contains('active'),
+        impecable:document.getElementById('btn-impecable').classList.contains('active'),
         esMoto:document.getElementById('btn-moto').classList.contains('active'),
         vinContext:vinContext||'',
         recallsText:recallsText||''
