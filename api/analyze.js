@@ -239,6 +239,41 @@ ${carfaxText.substring(0, 14000)}`;
     };
     const milesWarning = milesMap[milesStatus] || '';
 
+    // ---- EVALUACIÓN DEL MILLAJE ----
+    // Determinista (aritmética): compara las millas contra el promedio anual
+    // esperado según el año del vehículo. Solo aplica si las millas son ACTUALES;
+    // con TMU o Exentas el número no es confiable y ya se advierte aparte.
+    const fmtNum = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    let milesEvalText = '';
+    const milesNum = parseInt(String(miles || '').replace(/[^\d]/g, ''), 10);
+    const yearNum = parseInt(String(year || '').replace(/[^\d]/g, ''), 10);
+    const currentYear = new Date().getFullYear();
+    if (milesStatus === 'Actuales' && milesNum > 0 && yearNum >= 1980 && yearNum <= currentYear + 1) {
+      // Promedio anual de referencia en EE.UU.: autos ~13,500 mi; motos mucho menos
+      const promedioAnual = esMoto ? 3000 : 13500;
+      // Un modelo del año actual o del siguiente cuenta como 1 año de uso
+      const edad = Math.max(1, currentYear - yearNum);
+      const esperado = promedioAnual * edad;
+      const ratio = milesNum / esperado;
+      const millasFmt = fmtNum(milesNum);
+      const esperadoFmt = fmtNum(esperado);
+      const unidadDe = esMoto ? 'de la motocicleta' : 'del vehículo';
+      const unidadArt = esMoto ? 'una motocicleta' : 'un vehículo';
+      const causaUso = esMoto
+        ? 'Un uso tan intensivo suele venir de recorridos largos o trabajo de mensajería, e implica mayor desgaste en motor, transmisión y suspensión.'
+        : 'Un uso tan intensivo suele provenir de flotas, transporte o recorridos largos, e implica mayor desgaste en motor, transmisión y suspensión.';
+
+      if (ratio >= 1.8) {
+        milesEvalText = `Sobre el millaje: ${millasFmt} millas es una cifra muy elevada para ${unidadArt} ${yearNum}, ya que el promedio esperado para su año rondaría las ${esperadoFmt} millas. ${causaUso} Tómelo en cuenta al evaluar la unidad.`;
+      } else if (ratio >= 1.3) {
+        milesEvalText = `Sobre el millaje: ${millasFmt} millas está por encima del promedio para ${unidadArt} ${yearNum}, cuyo estimado habitual sería de unas ${esperadoFmt} millas. No es alarmante, pero conviene considerar el desgaste adicional acumulado.`;
+      } else if (ratio <= 0.6) {
+        milesEvalText = `Sobre el millaje: ${millasFmt} millas está por debajo del promedio para ${unidadArt} ${yearNum} (lo esperado rondaría las ${esperadoFmt} millas), lo cual es un punto a favor ${unidadDe}.`;
+      } else {
+        milesEvalText = `Sobre el millaje: ${millasFmt} millas es una cifra acorde para ${unidadArt} ${yearNum}, en línea con el promedio esperado para su año.`;
+      }
+    }
+
     // ---- SALVAGE WARNING (solo Clean) ----
     const isTitleClean = titleType === 'Clean';
     const hasHail = damageList.includes('Granizo');
@@ -355,6 +390,7 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
 - Afirma los daños con seguridad, nunca digas "sugiere" o "podría tener daños".
 - Menciona los daños tal como están escritos, de forma natural: si dice "daño trasero" escribe "daño trasero" (NO "daño en el trasero"), si dice "granizo" escribe "daño por granizo". Para varios: "daño frontal y lateral".
 - NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar", "ofrece un atractivo precio de compra", "sin otros daños reportados", "su historial no presenta registros" o "puede necesitar reparaciones". NUNCA hables de historial ni reportes previos, no tenemos esa información.
+- Menciona las millas SOLO como dato numérico. NO opines si son altas, bajas, elevadas o acordes, NO las compares con el promedio ni con el año del vehículo: esa evaluación se agrega automáticamente por separado.
 - NO menciones fecha de subasta, luces, ni nada que no esté en los datos.
 - Devuelve SOLO ese párrafo, nada más.`;
 
@@ -493,6 +529,7 @@ REGLAS ESTRICTAS:
       damageHistoryText,
       tituloAusenteText,
       milesWarning,
+      milesEvalText,
       salvageWarning,
       destructionWarning,
       (recallsText && recallsText.trim() ? recallsText.trim() : ''),
