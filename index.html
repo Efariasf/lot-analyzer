@@ -595,6 +595,8 @@ textarea{resize:none;height:52px}
       <div id="stats-content" style="font-size:12.5px;color:var(--muted)">Cargando...</div>
     </div>
     <input id="history-search" placeholder="Buscar por cliente, lote, marca o modelo..." style="margin-bottom:10px" oninput="renderHistory(true)">
+    <!-- Barra de selección múltiple (solo administrador) -->
+    <div id="bulk-bar" style="display:none;margin-bottom:10px"></div>
     <div id="history-list"></div>
   </div>
 
@@ -1675,6 +1677,12 @@ function toLocalDateStr(d){
 }
 let expandedId=null;      // reporte abierto en el historial
 let authorFilter='';      // autor seleccionado
+// ---- MODO SELECCIÓN MÚLTIPLE (solo administrador) ----
+const ADMIN='Eduardo';
+const esAdmin=()=>currentUser===ADMIN;
+let selectMode=false;              // true = modo selección activo
+let selectedIds=new Set();         // ids marcados
+let lastVisibleItems=[];           // items visibles tras filtros (para "marcar todos")
 let filterAllDates=false; // true = ver todos sus reportes, no solo del día
 
 function filterByAuthor(autor){
@@ -1770,12 +1778,20 @@ async function renderHistory(skipFetch){
     (h.source||'').toLowerCase().includes(search)||
     (h.author||'').toLowerCase().includes(search)
   );
+  lastVisibleItems=items;
+  renderBulkBar(items);
   if(!items.length){c.innerHTML=`<div class="empty">${search||authorFilter?'No se encontraron resultados':'No hay análisis guardados aún'}</div>`;return}
   c.innerHTML=items.map(h=>{
     const fecha=h.created_at?new Date(h.created_at).toLocaleDateString('es-PA')+' · '+new Date(h.created_at).toLocaleTimeString('es-PA',{hour:'2-digit',minute:'2-digit'}):'';
-    const canDelete=h.author===currentUser;
+    const canDelete=h.author===currentUser||esAdmin();
     const abierto=expandedId===h.id;
-    return `<div class="history-item">
+    const marcado=selectedIds.has(h.id);
+    const selUI=(selectMode&&esAdmin());
+    return `<div class="history-item"${selUI&&marcado?' style="border-color:var(--accent)"':''}>
+      ${selUI?`<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;font-size:12px;color:var(--muted)">
+        <input type="checkbox" ${marcado?'checked':''} onchange="toggleSelectOne(${h.id})" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin:0">
+        <span>Seleccionar</span>
+      </label>`:''}
       <div onclick="toggleExpand(${h.id})" style="cursor:pointer">
         <div class="history-header"><span class="history-title">${escapeHtml(h.lot_title||'Sin lote')}</span><span class="history-date">${fecha}</span></div>
         <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">
@@ -1801,10 +1817,64 @@ function toggleExpand(id){
   renderHistory(true);
 }
 function copyHistoryItem(id){const item=cloudHistory.find(h=>h.id===id);if(item)navigator.clipboard.writeText(item.analysis).then(()=>showToast('Copiado ✓'))}
+// ---- SELECCIÓN MÚLTIPLE (solo administrador) ----
+function renderBulkBar(visibles){
+  const bar=document.getElementById('bulk-bar');
+  if(!bar) return;
+  if(!esAdmin()){ bar.style.display='none'; bar.innerHTML=''; return; }
+  bar.style.display='block';
+  if(!selectMode){
+    bar.innerHTML=`<button class="btn btn-outline btn-sm" onclick="toggleSelectMode()">☑ Seleccionar varios</button>`;
+    return;
+  }
+  const total=visibles.length;
+  const n=selectedIds.size;
+  const todosMarcados=total>0 && visibles.every(h=>selectedIds.has(h.id));
+  bar.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:8px">
+    <span style="font-size:12.5px;font-weight:600;color:var(--text)">${n} seleccionado${n===1?'':'s'}</span>
+    <button class="btn btn-outline btn-sm" onclick="toggleSelectAll()">${todosMarcados?'Desmarcar todos':`Marcar todos (${total})`}</button>
+    <button class="btn btn-outline btn-sm" style="color:var(--danger)" ${n?'':'disabled'} onclick="deleteSelected()">Eliminar seleccionados</button>
+    <button class="btn btn-outline btn-sm" onclick="toggleSelectMode()">Cancelar</button>
+  </div>`;
+}
+function toggleSelectMode(){
+  if(!esAdmin()) return;
+  selectMode=!selectMode;
+  selectedIds.clear();
+  renderHistory(true);
+}
+function toggleSelectOne(id){
+  if(!esAdmin()) return;
+  if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+  renderHistory(true);
+}
+function toggleSelectAll(){
+  if(!esAdmin()) return;
+  const visibles=lastVisibleItems;
+  const todos=visibles.length>0 && visibles.every(h=>selectedIds.has(h.id));
+  if(todos) visibles.forEach(h=>selectedIds.delete(h.id));
+  else visibles.forEach(h=>selectedIds.add(h.id));
+  renderHistory(true);
+}
+async function deleteSelected(){
+  if(!esAdmin()){ showToast('Solo el administrador puede hacer esto'); return; }
+  const ids=[...selectedIds];
+  if(!ids.length){ showToast('No hay nada seleccionado'); return; }
+  if(!confirm(`¿Eliminar ${ids.length} análisis seleccionado${ids.length===1?'':'s'}? Esta acción no se puede deshacer.`)) return;
+  try{
+    const {error}=await supa.from('lot_history').delete().in('id',ids);
+    if(error) throw error;
+    cloudHistory=cloudHistory.filter(h=>!selectedIds.has(h.id));
+    selectedIds.clear();
+    selectMode=false;
+    renderHistory();
+    showToast(`${ids.length} eliminado${ids.length===1?'':'s'} ✓`);
+  }catch(e){ console.error('bulk delete',e); showToast('No se pudieron eliminar'); }
+}
 async function deleteHistoryItem(id){
   const item=cloudHistory.find(h=>h.id===id);
   if(!item)return;
-  if(item.author!==currentUser){ showToast('Solo el autor puede borrar'); return; }
+  if(item.author!==currentUser && !esAdmin()){ showToast('Solo el autor puede borrar'); return; }
   if(!confirm('¿Eliminar este análisis?'))return;
   try{
     const {error}=await supa.from('lot_history').delete().eq('id',id);
