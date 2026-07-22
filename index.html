@@ -1679,7 +1679,14 @@ let expandedId=null;      // reporte abierto en el historial
 let authorFilter='';      // autor seleccionado
 // ---- MODO SELECCIÓN MÚLTIPLE (solo administrador) ----
 const ADMIN='Eduardo';
-const esAdmin=()=>currentUser===ADMIN;
+// Compara nombres ignorando mayúsculas y acentos, para que nadie tome el nombre
+// del administrador escribiéndolo distinto ("eduardo", "Eduardó", etc.)
+const normNombre=s=>String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const esNombreAdmin=n=>normNombre(n)===normNombre(ADMIN);
+// Ser administrador exige DOS cosas: llamarse Eduardo y haber desbloqueado con PIN.
+// Solo el nombre no basta: si llega alguien nuevo y elige "Eduardo", no obtiene permisos.
+const adminUnlocked=()=>!!localStorage.getItem('lot-admin-token');
+const esAdmin=()=>esNombreAdmin(currentUser)&&adminUnlocked();
 let selectMode=false;              // true = modo selección activo
 let selectedIds=new Set();         // ids marcados
 let lastVisibleItems=[];           // items visibles tras filtros (para "marcar todos")
@@ -1783,7 +1790,10 @@ async function renderHistory(skipFetch){
   if(!items.length){c.innerHTML=`<div class="empty">${search||authorFilter?'No se encontraron resultados':'No hay análisis guardados aún'}</div>`;return}
   c.innerHTML=items.map(h=>{
     const fecha=h.created_at?new Date(h.created_at).toLocaleDateString('es-PA')+' · '+new Date(h.created_at).toLocaleTimeString('es-PA',{hour:'2-digit',minute:'2-digit'}):'';
-    const canDelete=h.author===currentUser||esAdmin();
+    // Quien use el nombre del administrador sin haber verificado el PIN no puede
+    // actuar como él (ej. alguien que ya lo tenía guardado desde antes).
+    const identidadValida=!esNombreAdmin(currentUser)||adminUnlocked();
+    const canDelete=(h.author===currentUser&&identidadValida)||esAdmin();
     const abierto=expandedId===h.id;
     const marcado=selectedIds.has(h.id);
     const selUI=(selectMode&&esAdmin());
@@ -1821,10 +1831,19 @@ function copyHistoryItem(id){const item=cloudHistory.find(h=>h.id===id);if(item)
 function renderBulkBar(visibles){
   const bar=document.getElementById('bulk-bar');
   if(!bar) return;
+  // Si se llama Eduardo pero aún no verificó el PIN (ej. dispositivo nuevo)
+  if(esNombreAdmin(currentUser) && !adminUnlocked()){
+    bar.style.display='block';
+    bar.innerHTML=`<button class="btn btn-outline btn-sm" onclick="unlockAdmin()">🔒 Desbloquear administrador</button>`;
+    return;
+  }
   if(!esAdmin()){ bar.style.display='none'; bar.innerHTML=''; return; }
   bar.style.display='block';
   if(!selectMode){
-    bar.innerHTML=`<button class="btn btn-outline btn-sm" onclick="toggleSelectMode()">☑ Seleccionar varios</button>`;
+    bar.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-outline btn-sm" onclick="toggleSelectMode()">☑ Seleccionar varios</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--muted)" onclick="lockAdmin()" title="Bloquear el modo administrador en este dispositivo">🔓 Bloquear</button>
+    </div>`;
     return;
   }
   const total=visibles.length;
@@ -1874,7 +1893,8 @@ async function deleteSelected(){
 async function deleteHistoryItem(id){
   const item=cloudHistory.find(h=>h.id===id);
   if(!item)return;
-  if(item.author!==currentUser && !esAdmin()){ showToast('Solo el autor puede borrar'); return; }
+  const identidadValida=!esNombreAdmin(currentUser)||adminUnlocked();
+  if(!((item.author===currentUser&&identidadValida)||esAdmin())){ showToast('Solo el autor puede borrar'); return; }
   if(!confirm('¿Eliminar este análisis?'))return;
   try{
     const {error}=await supa.from('lot_history').delete().eq('id',id);
@@ -1925,13 +1945,48 @@ function resetAll(){
 }
 
 // ---- IDENTIDAD DEL USUARIO ----
+// Verifica el PIN contra el servidor (nunca está en este archivo).
+// Devuelve true si quedó desbloqueado.
+async function verificarPinAdmin(){
+  const pin=prompt('Este nombre está protegido.\nIngresa el PIN de administrador:');
+  if(pin===null) return false;               // canceló
+  if(!pin.trim()){ showToast('Debes escribir el PIN'); return false; }
+  try{
+    const res=await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mode:'admin-auth',pin:pin.trim()})
+    });
+    const data=await res.json();
+    if(!res.ok||!data.ok){ showToast(data.error||'PIN incorrecto'); return false; }
+    localStorage.setItem('lot-admin-token',data.token);
+    showToast('Administrador verificado ✓');
+    return true;
+  }catch(e){ console.error('admin-auth',e); showToast('No se pudo verificar el PIN'); return false; }
+}
+// Desbloquear desde la pestaña Historial (para Eduardo en un dispositivo nuevo)
+async function unlockAdmin(){
+  if(await verificarPinAdmin()) renderHistory(true);
+}
+function lockAdmin(){
+  localStorage.removeItem('lot-admin-token');
+  selectMode=false; selectedIds.clear();
+  showToast('Modo administrador bloqueado');
+  renderHistory(true);
+}
 function showIdentityModal(){
   const cont=document.getElementById('identity-buttons');
   cont.innerHTML=TEAM.map(n=>`<button class="btn btn-outline" style="width:100%;justify-content:center" onclick="setIdentity('${n}')">${n}</button>`).join('')
     +`<button class="btn btn-outline" style="width:100%;justify-content:center;border-style:dashed" onclick="showCustomIdentity()">Otro (nuevo integrante)</button>`;
   document.getElementById('identity-modal').style.display='flex';
 }
-function setIdentity(name){
+async function setIdentity(name){
+  // Si alguien intenta tomar el nombre del administrador, debe probar el PIN.
+  // Esto impide tanto los permisos como que firme puntos de vista como Eduardo.
+  if(esNombreAdmin(name) && !adminUnlocked()){
+    const ok=await verificarPinAdmin();
+    if(!ok) return;                          // sin PIN no puede usar ese nombre
+  }
   currentUser=name;
   localStorage.setItem('lot-user',name);
   document.getElementById('identity-modal').style.display='none';
