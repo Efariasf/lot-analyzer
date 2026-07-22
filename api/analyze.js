@@ -370,15 +370,29 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
       })
     });
 
-    const obsPromise = (observations && observations.trim())
+    // La observación se mejora con IA. La detección de texto trivial (un número,
+    // símbolos, sin palabras reales) se hace AQUÍ en código, no en el prompt:
+    // pedírselo al modelo lo volvía conservador y devolvía el texto casi literal.
+    const obsRaw = (observations || '').trim();
+    // Trivial = no contiene ninguna palabra de 3+ letras (ej. "23", "-", "??")
+    const obsEsTrivial = !/[a-záéíóúüñ]{3,}/i.test(obsRaw);
+    const obsPromise = (obsRaw && !obsEsTrivial)
       ? fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
           body: JSON.stringify({
             model: 'llama-3.3-70b-versatile',
-            messages: [{ role: 'user', content: `Reescribe esta observación de un broker de autos en español, en una sola oración profesional, sin agregar información nueva. Si el texto es muy corto, un número o una sola palabra, devuélvelo tal cual. NUNCA expliques lo que hiciste, NUNCA comentes sobre el texto y NUNCA digas cosas como "no hay nada que mejorar" o "solo un número": devuelve ÚNICAMENTE la observación final, nada más. Observación: "${observations}"` }],
+            messages: [{ role: 'user', content: `Eres un broker profesional de subastas de vehículos. Reescribe la siguiente observación en español con redacción profesional y fluida, corrigiendo ortografía y acentos, manteniendo exactamente el mismo significado y sin inventar información nueva.
+
+OBSERVACIÓN: "${obsRaw}"
+
+Reglas:
+- Devuelve SOLO la observación reescrita, sin comillas, sin preámbulo y sin explicar lo que hiciste.
+- Debe sonar mejor redactada que el original, no una copia literal.
+- Una o dos oraciones como máximo.
+- Si el original expresa una posibilidad o sospecha, consérvala como tal (no la afirmes como un hecho).` }],
             max_tokens: 150,
-            temperature: 0.5
+            temperature: 0.6
           })
         })
       : Promise.resolve(null);
@@ -433,15 +447,19 @@ REGLAS ESTRICTAS:
       .trim();
 
     let obsText = '';
-    if (obsRes) {
+    if (obsEsTrivial) {
+      // Texto trivial (un número, símbolos): se muestra tal cual, sin pasar por IA.
+      obsText = obsRaw;
+    } else if (obsRes) {
       const obsData = await obsRes.json();
       if (obsRes.ok) {
         obsText = (obsData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
-        // Red de seguridad: a veces el modelo comenta en vez de mejorar
-        // (ej. "No hay texto que mejorar, solo un número '23'"). Si detectamos
-        // meta-comentario o queda vacío, usamos la observación original tal cual.
-        const metaObs = /(no hay (texto|nada)|nada que mejorar|no requiere|no se puede mejorar|no es necesario|solo un n[uú]mero|no aplica)/i.test(obsText);
-        if (!obsText || metaObs) obsText = (observations || '').trim();
+        // Red de seguridad: si el modelo comenta en vez de reescribir, o falla,
+        // usamos la observación original tal cual para no perder el dato.
+        const metaObs = /(no hay (texto|nada)|nada que mejorar|no requiere|no se puede mejorar|no es necesario|solo un n[uú]mero|no aplica|aqu[ií] (est[aá]|tienes))/i.test(obsText);
+        if (!obsText || metaObs) obsText = obsRaw;
+      } else {
+        obsText = obsRaw;
       }
     }
 
