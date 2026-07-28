@@ -1,5 +1,3 @@
-import crypto from 'node:crypto';
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -8,125 +6,6 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { mode, fields } = req.body;
-
-  // ---- MODO NHTSA (recalls, quejas y ratings) ----
-  // Se hace del lado del servidor porque api.nhtsa.gov no garantiza CORS.
-  // Todos los endpoints son gratuitos y no requieren API key.
-  if (mode === 'nhtsa') {
-    const { make, model, year } = req.body;
-    if (!make || !model || !year) {
-      return res.status(400).json({ error: 'Faltan make, model o year' });
-    }
-    const q = `make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&modelYear=${encodeURIComponent(year)}`;
-
-    // Timeout defensivo: NHTSA a veces tarda
-    const grab = async (url, ms = 9000) => {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), ms);
-      try {
-        const r = await fetch(url, { signal: ctrl.signal });
-        if (!r.ok) return null;
-        return await r.json();
-      } catch { return null; }
-      finally { clearTimeout(t); }
-    };
-
-    try {
-      const [recallsJson, complaintsJson, variantsJson] = await Promise.all([
-        grab(`https://api.nhtsa.gov/recalls/recallsByVehicle?${q}`),
-        grab(`https://api.nhtsa.gov/complaints/complaintsByVehicle?${q}`),
-        grab(`https://api.nhtsa.gov/SafetyRatings/modelyear/${encodeURIComponent(year)}/make/${encodeURIComponent(make)}/model/${encodeURIComponent(model)}`)
-      ]);
-
-      // --- RECALLS ---
-      const recalls = (recallsJson?.results || []).map(r => ({
-        campaign: r.NHTSACampaignNumber || '',
-        component: r.Component || '',
-        summary: r.Summary || '',
-        consequence: r.Consequence || '',
-        remedy: r.Remedy || '',
-        manufacturer: r.Manufacturer || '',
-        date: r.ReportReceivedDate || '',
-        parkIt: !!r.parkIt,
-        parkOutside: !!r.parkOutSide
-      }));
-
-      // --- QUEJAS ---
-      const rawComplaints = complaintsJson?.results || [];
-      const byComponent = {};
-      let crashes = 0, fires = 0, injuries = 0, deaths = 0;
-      rawComplaints.forEach(c => {
-        String(c.components || 'OTROS').split(',').forEach(comp => {
-          const k = comp.trim();
-          if (k) byComponent[k] = (byComponent[k] || 0) + 1;
-        });
-        if (c.crash) crashes++;
-        if (c.fire) fires++;
-        injuries += Number(c.numberOfInjuries) || 0;
-        deaths += Number(c.numberOfDeaths) || 0;
-      });
-      const complaints = {
-        total: rawComplaints.length,
-        crashes, fires, injuries, deaths,
-        topComponents: Object.entries(byComponent).sort((a, b) => b[1] - a[1]).slice(0, 8),
-        items: rawComplaints.slice(0, 25).map(c => ({
-          odi: c.odiNumber,
-          components: c.components || '',
-          summary: (c.summary || '').substring(0, 700),
-          date: c.dateOfIncident || c.dateComplaintFiled || '',
-          crash: !!c.crash,
-          fire: !!c.fire,
-          injuries: Number(c.numberOfInjuries) || 0,
-          deaths: Number(c.numberOfDeaths) || 0
-        }))
-      };
-
-      // --- RATINGS NCAP (dos pasos) ---
-      let ratings = [];
-      const variants = (variantsJson?.Results || []).slice(0, 4);
-      if (variants.length) {
-        const detail = await Promise.all(
-          variants.map(v => grab(`https://api.nhtsa.gov/SafetyRatings/VehicleId/${v.VehicleId}`))
-        );
-        ratings = detail.map((d, i) => {
-          const r = d?.Results?.[0];
-          if (!r) return null;
-          return {
-            description: r.VehicleDescription || variants[i].VehicleDescription || '',
-            overall: r.OverallRating || '',
-            front: r.OverallFrontCrashRating || '',
-            side: r.OverallSideCrashRating || '',
-            rollover: r.RolloverRating || ''
-          };
-        }).filter(Boolean);
-      }
-
-      return res.status(200).json({ recalls, complaints, ratings });
-    } catch (err) {
-      return res.status(500).json({ error: err.message });
-    }
-  }
-
-  // ---- MODO AUTENTICACIÓN DE ADMINISTRADOR ----
-  // El PIN vive en una variable de entorno de Vercel, NUNCA en el código del
-  // navegador. Así un compañero no puede leerlo viendo el código fuente.
-  if (mode === 'admin-auth') {
-    const ADMIN_PIN = process.env.ADMIN_PIN;
-    if (!ADMIN_PIN) return res.status(500).json({ ok: false, error: 'PIN de administrador no configurado en el servidor' });
-    const pin = String(req.body?.pin || '');
-    // Comparación de tiempo constante (evita adivinar el PIN midiendo demoras)
-    const a = crypto.createHash('sha256').update(pin).digest();
-    const b = crypto.createHash('sha256').update(String(ADMIN_PIN)).digest();
-    const ok = crypto.timingSafeEqual(a, b);
-    if (!ok) {
-      // Pequeña demora para frenar intentos automáticos
-      await new Promise(r => setTimeout(r, 700));
-      return res.status(401).json({ ok: false, error: 'PIN incorrecto' });
-    }
-    const token = crypto.createHash('sha256').update('mapa-admin:' + ADMIN_PIN).digest('hex').slice(0, 32);
-    return res.status(200).json({ ok: true, token });
-  }
-
   const GROQ_KEY = process.env.GROQ_API_KEY;
   if (!GROQ_KEY) return res.status(500).json({ error: 'API key no configurada' });
 
@@ -194,8 +73,7 @@ ${carfaxText.substring(0, 14000)}`;
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
-            offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente, impecable, esMoto,
-            vinContext, recallsText, lotRaw } = fields;
+            offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente, esMoto } = fields;
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
 
@@ -204,6 +82,9 @@ ${carfaxText.substring(0, 14000)}`;
     // "Damage History" no es un daño actual, es un antecedente: se maneja aparte
     const hasDamageHistory = damageListRaw.includes('Damage History');
     const damageList = damageListRaw.filter(d => d !== 'Damage History');
+    // El daño "Mecánico" se maneja aparte como bloque garantizado (la IA a veces lo omitía)
+    const hasMechDamage = damageList.includes('Mecánico');
+    const damageListForAI = damageList.filter(d => d !== 'Mecánico');
     // Traducción a lenguaje natural para el análisis
     const damageDisplay = {
       'All Over': 'daños generalizados en varias áreas del vehículo',
@@ -211,7 +92,15 @@ ${carfaxText.substring(0, 14000)}`;
       'Normal Wear': 'desgaste normal por uso',
       'Undercarriage': 'daño en los bajos (undercarriage)'
     };
-    const damageClean = damageList.map(d => damageDisplay[d] || d.toLowerCase()).join(', ');
+    const damageClean = damageListForAI.map(d => damageDisplay[d] || d.toLowerCase()).join(', ');
+    const mechDamageVariants = [
+      'La subasta reporta daño mecánico en el vehículo, lo que podría implicar fallas en el motor, la transmisión u otros componentes internos. Recomendamos considerarlo al momento de evaluar la unidad.',
+      'El lote figura con daño mecánico, lo que puede indicar problemas en el motor, la transmisión u otros sistemas del vehículo. Es un factor importante a tener en cuenta.',
+      'Se reporta daño mecánico en la unidad, que podría involucrar el motor, la transmisión u otros componentes. Sugerimos tomarlo en cuenta al evaluar el vehículo.'
+    ];
+    const mechDamageText = hasMechDamage
+      ? mechDamageVariants[Math.floor(Math.random() * mechDamageVariants.length)]
+      : '';
     const damageHistoryVariants = [
       'La subasta indica Damage History, lo que significa que el vehículo tiene un historial de daños o reclamaciones anteriores registrado en bases de datos. No corresponde al daño actual, sino a un antecedente del vehículo.',
       'El lote figura con Damage History: existe un historial de daños o reclamaciones previas registrado en bases de datos. Esto no se refiere al daño actual del vehículo, sino a un antecedente suyo.',
@@ -261,41 +150,6 @@ ${carfaxText.substring(0, 14000)}`;
     };
     const milesWarning = milesMap[milesStatus] || '';
 
-    // ---- EVALUACIÓN DEL MILLAJE ----
-    // Determinista (aritmética): compara las millas contra el promedio anual
-    // esperado según el año del vehículo. Solo aplica si las millas son ACTUALES;
-    // con TMU o Exentas el número no es confiable y ya se advierte aparte.
-    const fmtNum = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    let milesEvalText = '';
-    const milesNum = parseInt(String(miles || '').replace(/[^\d]/g, ''), 10);
-    const yearNum = parseInt(String(year || '').replace(/[^\d]/g, ''), 10);
-    const currentYear = new Date().getFullYear();
-    if (milesStatus === 'Actuales' && milesNum > 0 && yearNum >= 1980 && yearNum <= currentYear + 1) {
-      // Promedio anual de referencia en EE.UU.: autos ~13,500 mi; motos mucho menos
-      const promedioAnual = esMoto ? 3000 : 13500;
-      // Un modelo del año actual o del siguiente cuenta como 1 año de uso
-      const edad = Math.max(1, currentYear - yearNum);
-      const esperado = promedioAnual * edad;
-      const ratio = milesNum / esperado;
-      const millasFmt = fmtNum(milesNum);
-      const esperadoFmt = fmtNum(esperado);
-      const unidadDe = esMoto ? 'de la motocicleta' : 'del vehículo';
-      const unidadArt = esMoto ? 'una motocicleta' : 'un vehículo';
-      const causaUso = esMoto
-        ? 'Un uso tan intensivo suele venir de recorridos largos o trabajo de mensajería, e implica mayor desgaste en motor, transmisión y suspensión.'
-        : 'Un uso tan intensivo suele provenir de flotas, transporte o recorridos largos, e implica mayor desgaste en motor, transmisión y suspensión.';
-
-      if (ratio >= 1.8) {
-        milesEvalText = `Sobre el millaje: ${millasFmt} millas es una cifra muy elevada para ${unidadArt} ${yearNum}, ya que el promedio esperado para su año rondaría las ${esperadoFmt} millas. ${causaUso} Tómelo en cuenta al evaluar la unidad.`;
-      } else if (ratio >= 1.3) {
-        milesEvalText = `Sobre el millaje: ${millasFmt} millas está por encima del promedio para ${unidadArt} ${yearNum}, cuyo estimado habitual sería de unas ${esperadoFmt} millas. No es alarmante, pero conviene considerar el desgaste adicional acumulado.`;
-      } else if (ratio <= 0.6) {
-        milesEvalText = `Sobre el millaje: ${millasFmt} millas está por debajo del promedio para ${unidadArt} ${yearNum} (lo esperado rondaría las ${esperadoFmt} millas), lo cual es un punto a favor ${unidadDe}.`;
-      } else {
-        milesEvalText = `Sobre el millaje: ${millasFmt} millas es una cifra acorde para ${unidadArt} ${yearNum}, en línea con el promedio esperado para su año.`;
-      }
-    }
-
     // ---- SALVAGE WARNING (solo Clean) ----
     const isTitleClean = titleType === 'Clean';
     const hasHail = damageList.includes('Granizo');
@@ -328,12 +182,6 @@ ${carfaxText.substring(0, 14000)}`;
     const tituloAusenteText = tituloAusente
       ? `En cuanto al título: ${auction} no posee el título actualmente. Le da al vendedor 30 días hábiles para que sea enviado a la yarda y luego ellos deben enviárnoslo a FL.`
       : '';
-    // Bill of Sale: texto exacto aprobado por el equipo. Determinista para garantizar
-    // que el trámite legal salga siempre igual y no lo reescriba el modelo.
-    const esBillOfSale = titleType === 'Bill of Sale';
-    const billOfSaleText = esBillOfSale
-      ? 'La subasta no posee el título del vehículo y entrega un Bill of Sale. Con ese documento el cliente deberá tramitar un título nuevo en el DMV de su estado.'
-      : '';
     const copartGoText = copartGo
       ? 'Este vehículo está listado como CopartGO, lo que significa que fue publicado directamente por el vendedor usando la app móvil de Copart. El informe de condición lo completó el propio vendedor con respuestas de Sí/No y no representa la opinión de Copart, quien no inspeccionó el vehículo ni se hace responsable de la exactitud del informe.'
       : '';
@@ -356,24 +204,9 @@ ${carfaxText.substring(0, 14000)}`;
       'Fuera del daño indicado, el vehículo luce en condiciones excepcionales, bien mantenido y con una apariencia sobresaliente.',
       'Aparte del daño señalado, se aprecia una unidad en muy buen estado, limpia y bien conservada.'
     ];
-    const excelentePool = damageList.length > 0 ? excelenteVariantsConDanos : excelenteVariantsSinDanos;
+    const excelentePool = (damageList.length > 0 || hasMechDamage) ? excelenteVariantsConDanos : excelenteVariantsSinDanos;
     const excelenteText = excelente
       ? excelentePool[Math.floor(Math.random() * excelentePool.length)]
-      : '';
-
-    // "Impecable estado": enfoque en que en las fotos no se aprecian daños estéticos
-    const impecableVariantsSinDanos = [
-      'El vehículo en las fotos se ve impecablemente bien, no se aprecian daños estéticos. Excelente opción de compra.',
-      'En las fotos el vehículo luce impecable, sin daños estéticos visibles. Una muy buena opción de compra.',
-      'Por las fotos, el vehículo se observa impecable y sin daños estéticos apreciables. Excelente oportunidad de compra.'
-    ];
-    const impecableVariantsConDanos = [
-      'Fuera del daño indicado, en las fotos el vehículo se ve impecablemente bien, sin otros daños estéticos apreciables. Excelente opción de compra.',
-      'Más allá del daño mencionado, por las fotos el vehículo luce impecable, sin otros daños estéticos visibles. Muy buena opción de compra.'
-    ];
-    const impecablePool = damageList.length > 0 ? impecableVariantsConDanos : impecableVariantsSinDanos;
-    const impecableText = impecable
-      ? impecablePool[Math.floor(Math.random() * impecablePool.length)]
       : '';
 
     // ---- OFERTA (números con formato de miles) ----
@@ -398,7 +231,6 @@ ${carfaxText.substring(0, 14000)}`;
       'Clean': 'no fue declarado pérdida total por la aseguradora',
       'Salvage': 'el daño fue lo suficientemente severo para que la aseguradora lo declarara pérdida total',
       'Rebuilt': 'fue reconstruido tras haber tenido un título salvage y aprobó la inspección estatal',
-      'Bill of Sale': 'la subasta no posee el título y entrega un Bill of Sale; el cliente debe tramitar un título nuevo en el DMV, usualmente por la vía del bonded title',
       'Parts Only': 'solo puede usarse para piezas, no puede registrarse para circular',
       'Certificate of Destruction / Junk': 'no puede circular legalmente, solo sirve para chatarra o piezas'
     };
@@ -409,25 +241,16 @@ ${esMoto ? '\nIMPORTANTE: Este lote es una MOTOCICLETA. Refiérete a ella como m
 IMPORTANTE: Varía SIEMPRE la estructura y el vocabulario. Cada vez que generes este párrafo debe sonar diferente al anterior — cambia el orden de las ideas, usa sinónimos, varía cómo introduces el título y los daños. Nunca repitas la misma redacción.
 
 Datos:
-- Título: ${titleType}${esBillOfSale ? '' : ` (significa: ${titleExplain[titleType] || ''})`}
+- Título: ${titleType} (significa: ${titleExplain[titleType] || ''})
 - Daños: ${damageClean || 'ninguno especificado'}
 ${miles ? `- Millas: ${miles} ${(milesStatus||'').toLowerCase()}` : '- Millas: no especificadas (NO las menciones)'}
-${vinContext && vinContext.trim() ? `
-FICHA TÉCNICA OFICIAL (decodificada del VIN en la base de datos de NHTSA):
-${vinContext.trim()}
 
-CÓMO USAR LA FICHA TÉCNICA: es solo una REFERENCIA DE EXACTITUD, no contenido para agregar. NO la enumeres, NO listes el motor, la tracción, la transmisión ni la planta de fabricación, y NO alargues el párrafo por ella. Su única función es que, si mencionas algo del vehículo de forma natural, no lo contradigas ni lo inventes. Si la ficha dice que es una motocicleta, trátalo como motocicleta. El párrafo debe quedar igual de corto que sin esta ficha.
-` : ''}
 Reglas:
-${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO uses la palabra "Bill of Sale" y NO expliques ningún trámite. La explicación del Bill of Sale se agrega automáticamente por separado. Escribe SOLO los daños${miles ? ' y las millas' : ''} en una frase natural. Si no hay daños${miles ? '' : ' ni millas'} que mencionar, responde con una cadena vacía.` : `- Empieza indicando el título sin afirmarlo con certeza absoluta, atribuyéndolo a la subasta. VARÍA la forma de decirlo cada vez, usa diferentes opciones como: "La subasta indica título ${titleType}", "El lote figura con título ${titleType}", "De acuerdo a la subasta, el título es ${titleType}", "${auction} reporta título ${titleType}", "El vehículo aparece listado con título ${titleType}", "Registrado en la subasta como título ${titleType}". NUNCA uses siempre la misma frase, NUNCA digas "El título de ${titleType}".
-- Al explicar el significado del título usa el verbo REFERIR: "refiere que...". PROHIBIDO usar "indica que", "significa que" o "quiere decir que" para explicar el significado del título.
-- PROHIBIDO escribir "este título". Es la fórmula que más se repite y suena robótica. Para retomar el título antes del verbo, VARÍA en cada generación entre estas opciones: "dicho título", "esta clasificación", "dicha clasificación", "esta condición", "dicha categoría", o simplemente NO retomarlo y encadenar directo ("lo que según la subasta refiere que..."). Elige una distinta cada vez.
-- Sí puedes atribuir a la subasta al explicar el significado, esa parte nos gusta: "lo que según la subasta, dicha clasificación refiere que...", "lo que de acuerdo a ${auction}, dicho título refiere que...". Para Salvage el sentido es: el vehículo habría sufrido un daño suficientemente severo para ser declarado pérdida total.
-- Nunca afirmes el significado del título como un hecho propio: solo repetimos la información de la subasta, no la verificamos nosotros.`}
+- Empieza indicando el título sin afirmarlo con certeza absoluta, atribuyéndolo a la subasta. VARÍA la forma de decirlo cada vez, usa diferentes opciones como: "La subasta indica título ${titleType}", "El lote figura con título ${titleType}", "De acuerdo a la subasta, el título es ${titleType}", "${auction} reporta título ${titleType}", "El vehículo aparece listado con título ${titleType}", "Registrado en la subasta como título ${titleType}". NUNCA uses siempre la misma frase, NUNCA digas "El título de ${titleType}".
+- Al explicar el significado del título, SIEMPRE atribúyelo a la subasta, nunca lo afirmes como un hecho propio. Usa fórmulas como "según ${auction}, este título indica que...", "de acuerdo a la información de la subasta, esto significa que...". Para Salvage: "según la subasta, este título indica que el vehículo habría sufrido un daño suficientemente severo para ser declarado pérdida total". Siempre dejamos claro que solo repetimos la información de la subasta, no la verificamos nosotros.
 - Afirma los daños con seguridad, nunca digas "sugiere" o "podría tener daños".
 - Menciona los daños tal como están escritos, de forma natural: si dice "daño trasero" escribe "daño trasero" (NO "daño en el trasero"), si dice "granizo" escribe "daño por granizo". Para varios: "daño frontal y lateral".
 - NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar", "ofrece un atractivo precio de compra", "sin otros daños reportados", "su historial no presenta registros" o "puede necesitar reparaciones". NUNCA hables de historial ni reportes previos, no tenemos esa información.
-- Menciona las millas SOLO como dato numérico. NO opines si son altas, bajas, elevadas o acordes, NO las compares con el promedio ni con el año del vehículo: esa evaluación se agrega automáticamente por separado.
 - NO menciones fecha de subasta, luces, ni nada que no esté en los datos.
 - Devuelve SOLO ese párrafo, nada más.`;
 
@@ -443,29 +266,15 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
       })
     });
 
-    // La observación se mejora con IA. La detección de texto trivial (un número,
-    // símbolos, sin palabras reales) se hace AQUÍ en código, no en el prompt:
-    // pedírselo al modelo lo volvía conservador y devolvía el texto casi literal.
-    const obsRaw = (observations || '').trim();
-    // Trivial = no contiene ninguna palabra de 3+ letras (ej. "23", "-", "??")
-    const obsEsTrivial = !/[a-záéíóúüñ]{3,}/i.test(obsRaw);
-    const obsPromise = (obsRaw && !obsEsTrivial)
+    const obsPromise = (observations && observations.trim())
       ? fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
           body: JSON.stringify({
             model: 'llama-3.3-70b-versatile',
-            messages: [{ role: 'user', content: `Eres un broker profesional de subastas de vehículos. Reescribe la siguiente observación en español con redacción profesional y fluida, corrigiendo ortografía y acentos, manteniendo exactamente el mismo significado y sin inventar información nueva.
-
-OBSERVACIÓN: "${obsRaw}"
-
-Reglas:
-- Devuelve SOLO la observación reescrita, sin comillas, sin preámbulo y sin explicar lo que hiciste.
-- Debe sonar mejor redactada que el original, no una copia literal.
-- Una o dos oraciones como máximo.
-- Si el original expresa una posibilidad o sospecha, consérvala como tal (no la afirmes como un hecho).` }],
+            messages: [{ role: 'user', content: `Mejora solo la redacción de esta observación de un broker de autos, en español, sin agregar nada nuevo, en una oración profesional. Devuelve solo la oración mejorada: "${observations}"` }],
             max_tokens: 150,
-            temperature: 0.6
+            temperature: 0.5
           })
         })
       : Promise.resolve(null);
@@ -504,36 +313,10 @@ REGLAS ESTRICTAS:
     // Limpiar guiones, viñetas o caracteres sueltos al inicio
     firstParagraph = firstParagraph.replace(/^[\s\-–—•*>]+/, '').trim();
 
-    // ---- RED DE SEGURIDAD DEL TÍTULO ----
-    // A temperatura 1.0 el modelo recae en "este título indica que" aunque el prompt lo prohíba.
-    // Se corrige aquí de forma determinista, SIN tocar la atribución a la subasta (esa nos gusta).
-    const tituloRefVariants = ['dicho título', 'esta clasificación', 'dicha clasificación', 'esta condición', 'dicha categoría'];
-    firstParagraph = firstParagraph
-      // Verbo: "indica/significa/quiere decir que" -> "refiere que"
-      .replace(/\b(?:indica|significa|quiere\s+decir)\s+que\b/gi, 'refiere que')
-      // "este título" -> una variante distinta en cada llamada
-      .replace(/\beste\s+t[ií]tulo\b/gi, () => tituloRefVariants[Math.floor(Math.random() * tituloRefVariants.length)])
-      // Limpieza de espacios o comas que puedan quedar sueltos
-      .replace(/\s{2,}/g, ' ')
-      .replace(/\s+,/g, ',')
-      .replace(/,\s*,/g, ',')
-      .trim();
-
     let obsText = '';
-    if (obsEsTrivial) {
-      // Texto trivial (un número, símbolos): se muestra tal cual, sin pasar por IA.
-      obsText = obsRaw;
-    } else if (obsRes) {
+    if (obsRes) {
       const obsData = await obsRes.json();
-      if (obsRes.ok) {
-        obsText = (obsData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
-        // Red de seguridad: si el modelo comenta en vez de reescribir, o falla,
-        // usamos la observación original tal cual para no perder el dato.
-        const metaObs = /(no hay (texto|nada)|nada que mejorar|no requiere|no se puede mejorar|no es necesario|solo un n[uú]mero|no aplica|aqu[ií] (est[aá]|tienes))/i.test(obsText);
-        if (!obsText || metaObs) obsText = obsRaw;
-      } else {
-        obsText = obsRaw;
-      }
+      if (obsRes.ok) obsText = (obsData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
     }
 
     let offerNotesText = '';
@@ -556,25 +339,20 @@ REGLAS ESTRICTAS:
 
     // ---- ENSAMBLAR EL TEXTO FINAL (controlado) ----
     const vehParts = [year, (make||'').toUpperCase(), (model||'').toUpperCase()].filter(Boolean).join(' ');
-    // Encabezado: si el campo no traía el formato "lote - año marca modelo"
-    // (el broker escribió un punto o texto libre), se respeta tal cual lo escribió.
-    const header = [lot, vehParts].filter(Boolean).join(' - ') || (lotRaw || '').trim();
+    const header = vehParts ? `${lot} - ${vehParts}` : `${lot}`;
 
     const blocks = [
-      billOfSaleText,
       firstParagraph,
+      mechDamageText,
       damageHistoryText,
       tituloAusenteText,
       milesWarning,
-      milesEvalText,
       salvageWarning,
       destructionWarning,
-      (recallsText && recallsText.trim() ? recallsText.trim() : ''),
       copartGoText,
       externalLotText,
       fechaFuturoText,
       excelenteText,
-      impecableText,
       lightsBlock,
       mechText,
       obsText,
@@ -582,9 +360,7 @@ REGLAS ESTRICTAS:
 
     const offerBlock = [offerText, buyNowText, reserveText, offerNotesText].filter(Boolean).join('\n');
 
-    const footer = esMoto
-      ? `VIN: ${vin}`
-      : `VIN: ${vin}
+    const footer = `VIN: ${vin}
 Solicite su REPORTE aquí:
 ${REPORT_LINK}
 
