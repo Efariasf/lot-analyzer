@@ -133,16 +133,6 @@ textarea{resize:none;height:52px}
 .guia-item[open] summary::after{content:'−'}
 .guia-item p{padding:0 12px 10px;font-size:12.5px;line-height:1.6;color:#c9c9c9}
 
-/* VIN TAB */
-#tab-vin{flex:1;display:none;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
-#tab-vin::-webkit-scrollbar{width:4px}
-#tab-vin::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.vin-cell{display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:5px 7px}
-.vin-cell .k{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.vin-cell .v{font-size:11.5px;color:var(--text);line-height:1.3;word-break:break-word}
-.vin-cell .v.empty{color:#4a4a52}
-#vin-input{text-transform:uppercase;letter-spacing:.1em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--text);color:var(--bg);padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;z-index:99;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -158,8 +148,6 @@ textarea{resize:none;height:52px}
   #tab-carfax{flex-direction:column !important;overflow:visible !important}
   #tab-carfax .left-panel{width:100% !important}
   #tab-carfax .right-panel{min-height:300px}
-  #tab-vin{overflow:visible}
-  .tab{font-size:11px;padding:6px 2px}
 }
 </style>
 </head>
@@ -180,7 +168,6 @@ textarea{resize:none;height:52px}
 
 <div class="tabs">
   <button class="tab active" onclick="showTab('analyzer',this)">Analizar</button>
-  <button class="tab" onclick="showTab('vin',this)">VIN</button>
   <button class="tab" onclick="showTab('carfax',this)">Carfax</button>
   <button class="tab" onclick="showTab('guia',this)">Guía</button>
   <button class="tab" onclick="showTab('history',this)">Historial</button>
@@ -217,7 +204,7 @@ textarea{resize:none;height:52px}
           <select id="title-type">
             <option value="">Tipo de título...</option>
             <option>Clean</option><option>Salvage</option><option>Rebuilt</option>
-            <option>Bill of Sale</option><option>Parts Only</option><option>Certificate of Destruction / Junk</option>
+            <option>Parts Only</option><option>Certificate of Destruction / Junk</option>
           </select>
           <select id="auction">
             <option value="">Subasta...</option>
@@ -239,13 +226,8 @@ textarea{resize:none;height:52px}
           <button id="btn-tituloausente" class="toggle-btn" onclick="toggleFlag('tituloausente')">Título Ausente</button>
           <button id="btn-fechafuturo" class="toggle-btn" onclick="toggleFlag('fechafuturo')">Fecha Futuro</button>
           <button id="btn-excelente" class="toggle-btn" onclick="toggleFlag('excelente')">Excelente Estado</button>
-          <button id="btn-impecable" class="toggle-btn" onclick="toggleFlag('impecable')">Impecable Estado</button>
         </div>
 
-        <div id="vin-context-badge" style="display:none;background:rgba(232,255,77,.08);border:1px solid rgba(232,255,77,.3);border-radius:var(--rs);padding:5px 8px;font-size:10.5px;color:var(--accent);margin-bottom:6px;align-items:center;justify-content:space-between;gap:6px">
-          <span id="vin-context-text">✓ Datos NHTSA cargados</span>
-          <span style="cursor:pointer;color:var(--muted);font-weight:700" onclick="clearVinContext()" title="Quitar contexto NHTSA">✕</span>
-        </div>
 
         <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
           <span>Tipo de daño</span>
@@ -384,82 +366,6 @@ textarea{resize:none;height:52px}
     </div>
   </div>
 
-  <!-- VIN / NHTSA -->
-  <div id="tab-vin" style="display:none">
-    <div style="max-width:900px;margin:0 auto">
-
-      <div class="card">
-        <div class="section-label">Decodificar VIN — NHTSA vPIC · gratis, oficial, sin límite</div>
-        <div class="paste-wrap">
-          <input id="vin-input" maxlength="17" placeholder="1FTFW1ET5DFC10312" onkeydown="if(event.key==='Enter')decodeVin()">
-          <button class="btn btn-accent" style="width:auto;padding:5px 14px;font-size:12px" onclick="decodeVin()">Decodificar</button>
-          <button class="btn btn-outline btn-sm" onclick="clearVin()">✕</button>
-        </div>
-        <p class="paste-hint">Valida el dígito verificador y trae año, marca, modelo, motor y airbags de fábrica</p>
-        <div class="toggle-row" id="vin-samples"></div>
-        <div class="error" id="vin-error"></div>
-      </div>
-
-      <div id="vin-status" style="display:none;border-radius:var(--rs);padding:8px 11px;font-size:12.5px;margin-bottom:6px;line-height:1.5"></div>
-
-      <div id="vin-results" style="display:none">
-
-        <div class="card">
-          <div class="section-label">Detección automática</div>
-          <div class="toggle-row" id="vin-flags"></div>
-          <div class="toggle-row" style="margin-bottom:8px">
-            <button id="btn-incluir-recalls" class="toggle-btn" onclick="this.classList.toggle('active')" title="Agrega un párrafo sobre los recalls abiertos al punto de vista">⚠ Incluir recalls en el punto de vista</button>
-          </div>
-          <button class="btn btn-accent" onclick="applyVinToForm()">↓ Aplicar al formulario de Analizar</button>
-        </div>
-
-        <div class="card">
-          <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
-            <span>Vehículo</span>
-            <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 8px" onclick="copiarFicha()">⧉ Copiar ficha</button>
-          </div>
-          <div class="damage-grid" id="vin-basic"></div>
-          <div class="section-label">Ficha técnica</div>
-          <div class="damage-grid" id="vin-tech"></div>
-          <div class="section-label">Airbags de fábrica</div>
-          <div class="damage-grid" id="vin-bags"></div>
-        </div>
-
-        <div class="card" id="card-recalls">
-          <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
-            <span>Recalls de seguridad — NHTSA</span>
-            <span id="recalls-count" style="font-size:10px;color:var(--muted);font-weight:600"></span>
-          </div>
-          <div id="recalls-body"></div>
-        </div>
-
-        <div class="card" id="card-complaints">
-          <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
-            <span>Quejas de consumidores — NHTSA</span>
-            <span id="complaints-count" style="font-size:10px;color:var(--muted);font-weight:600"></span>
-          </div>
-          <div id="complaints-body"></div>
-        </div>
-
-        <div class="card" id="card-ratings">
-          <div class="section-label">Crash test NCAP — estrellas</div>
-          <div id="ratings-body"></div>
-        </div>
-
-        <div class="card">
-          <div class="section-label">Contexto que se enviará a la IA</div>
-          <div id="vin-ctx" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;font-size:12px;line-height:1.6;white-space:pre-wrap;color:#c9c9c9"></div>
-        </div>
-
-        <details class="guia-item" style="margin-bottom:20px">
-          <summary>Respuesta cruda de NHTSA</summary>
-          <p id="vin-raw" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;white-space:pre-wrap;max-height:320px;overflow:auto;color:#9a9aa4"></p>
-        </details>
-
-      </div>
-    </div>
-  </div>
-
   <!-- CARFAX -->
   <div id="tab-carfax" style="display:none;flex:1;overflow:hidden;flex-direction:row">
     <div class="left-panel" style="width:420px">
@@ -516,11 +422,7 @@ textarea{resize:none;height:52px}
           <p>Vehículo que fue salvage, se reparó y pasó la inspección estatal. Puede circular legalmente. La marca "Rebuilt" es permanente y acompaña al vehículo en cada venta futura. El seguro suele ser más limitado y el valor de reventa es típicamente 20-40% menor que un clean equivalente.</p>
         </details>
         <details class="guia-item">
-          <summary>Bill of Sale</summary>
-          <p>La subasta no posee el título del vehículo y entrega un Bill of Sale. Con ese documento el cliente deberá tramitar un título nuevo en el DMV de su estado.</p>
-        </details>
-        <details class="guia-item">
-          <summary>Parts Only</summary>
+          <summary>Parts Only / Bill of Sale</summary>
           <p>No otorga propiedad para circular: el vehículo jamás podrá registrarse. Solo sirve para piezas, uso fuera de carretera o exportación (verificar reglas del estado emisor).</p>
         </details>
         <details class="guia-item">
@@ -596,8 +498,6 @@ textarea{resize:none;height:52px}
       <div id="stats-content" style="font-size:12.5px;color:var(--muted)">Cargando...</div>
     </div>
     <input id="history-search" placeholder="Buscar por cliente, lote, marca o modelo..." style="margin-bottom:10px" oninput="renderHistory(true)">
-    <!-- Barra de selección múltiple (solo administrador) -->
-    <div id="bulk-bar" style="display:none;margin-bottom:10px"></div>
     <div id="history-list"></div>
   </div>
 
@@ -650,10 +550,7 @@ document.addEventListener('keydown',function(e){
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
     const analyzerVisible=document.getElementById('tab-analyzer').style.display!=='none';
     const carfaxVisible=document.getElementById('tab-carfax')&&document.getElementById('tab-carfax').style.display!=='none';
-    const vinVisible=document.getElementById('tab-vin')&&document.getElementById('tab-vin').style.display!=='none';
-    if(vinVisible){
-      decodeVin();
-    } else if(analyzerVisible&&!document.getElementById('gen-btn').disabled){
+    if(analyzerVisible&&!document.getElementById('gen-btn').disabled){
       generateAnalysis();
     } else if(carfaxVisible&&document.getElementById('carfax-btn').style.display!=='none'&&!document.getElementById('carfax-btn').disabled){
       analyzeCarfax();
@@ -750,14 +647,7 @@ function renderTemplates(){
 }
 
 function toggleFlag(flag){
-  const btn=document.getElementById('btn-'+flag);
-  btn.classList.toggle('active');
-  // "Excelente Estado" e "Impecable Estado" dicen casi lo mismo: si se activa uno,
-  // se apaga el otro para no repetir la idea dos veces en el punto de vista.
-  const opuestos={excelente:'impecable',impecable:'excelente'};
-  if(opuestos[flag] && btn.classList.contains('active')){
-    document.getElementById('btn-'+opuestos[flag])?.classList.remove('active');
-  }
+  document.getElementById('btn-'+flag).classList.toggle('active');
 }
 
 // Motocicleta: las motos no tienen airbag
@@ -782,25 +672,16 @@ function toggleMoto(){
 }
 
 function parsePaste(text){
-  const t=text.trim();
-  const setParsed=(lot,year,rest)=>{
-    const p=rest.trim().split(/\s+/);
-    document.getElementById('lot-hidden').value=lot;
-    document.getElementById('year-hidden').value=year;
-    document.getElementById('make-hidden').value=p[0]||'';
+  const m=text.trim().match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
+  if(m){
+    const p=m[3].trim().split(/\s+/);
+    document.getElementById('lot-hidden').value=m[1];
+    document.getElementById('year-hidden').value=m[2];
+    document.getElementById('make-hidden').value=p[0];
     document.getElementById('model-hidden').value=p.slice(1).join(' ');
-  };
-  // Formato completo: "49180866 - 2012 TOYOTA PRIUS FOUR"
-  let m=t.match(/^(\d{7,9})\s*[-–]\s*((?:19|20)\d{2})\s+(.+)$/);
-  if(m){ setParsed(m[1],m[2],m[3]); return; }
-  // Sin lote: "2012 TOYOTA PRIUS FOUR" (queda así al aplicar el VIN antes de pegar el lote)
-  m=t.match(/^((?:19|20)\d{2})\s+(.+)$/);
-  if(m){ setParsed('',m[1],m[2]); return; }
-  // Solo el lote: "49180866"
-  m=t.match(/^(\d{7,9})$/);
-  if(m){ setParsed(m[1],'',''); return; }
-  // Cualquier otra cosa (un punto, texto libre): se respeta tal cual en el encabezado
-  clearParsed();
+  }else{
+    clearParsed();
+  }
 }
 function clearParsed(){['lot-hidden','year-hidden','make-hidden','model-hidden'].forEach(id=>document.getElementById(id).value='')}
 
@@ -841,597 +722,31 @@ function selectLight(el){
 function showTab(t,el){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
-  const panels=['tab-analyzer','tab-vin','tab-history','tab-carfax','tab-guia'];
-  panels.forEach(id=>{const n=document.getElementById(id);if(n)n.style.display='none'});
+  const analyzer=document.getElementById('tab-analyzer');
+  const history=document.getElementById('tab-history');
+  const carfax=document.getElementById('tab-carfax');
+  const guia=document.getElementById('tab-guia');
   const right=document.getElementById('right-panel');
+  analyzer.style.display='none';
+  history.style.display='none';
+  carfax.style.display='none';
+  guia.style.display='none';
   right.style.display='none';
   if(t==='analyzer'){
-    document.getElementById('tab-analyzer').style.display='flex';
+    analyzer.style.display='flex';
     right.style.display='flex';
-  } else if(t==='vin'){
-    document.getElementById('tab-vin').style.display='block';
-    // Si el formulario ya tiene un VIN escrito, precargarlo
-    const vinForm=document.getElementById('vin').value.trim().toUpperCase();
-    const vinField=document.getElementById('vin-input');
-    if(vinForm && !vinField.value) vinField.value=vinForm;
-    vinField.focus();
-    // Los daños pudieron marcarse después de decodificar: re-ordenar las quejas
-    if(nhtsaExtras&&nhtsaExtras.complaints) renderComplaints(nhtsaExtras.complaints);
   } else if(t==='carfax'){
-    document.getElementById('tab-carfax').style.display='flex';
+    carfax.style.display='flex';
   } else if(t==='guia'){
-    document.getElementById('tab-guia').style.display='block';
+    guia.style.display='block';
   } else {
-    document.getElementById('tab-history').style.display='block';
+    history.style.display='block';
     renderHistory();
   }
 }
 
 function showError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block'}
 function hideError(id){document.getElementById(id).style.display='none'}
-
-// ================= VIN / NHTSA =================
-// API vPIC de NHTSA: gratuita, oficial, sin API key, permite CORS.
-let vinData=null;
-let vinContext='';
-let recallsText='';
-
-const VIN_SAMPLES=[
-  ['JTDKN3DU0C1234567','Prius 2012'],
-  ['1FTFW1ET5DFC10312','F-150 2013'],
-  ['5YJ3E1EA7KF317726','Tesla M3 2019'],
-  ['JH2SC5905XM100001','Moto Honda'],
-  ['1HGCM82633A004352','Accord 2003'],
-  ['1HGCM82633A004353','VIN inválido']
-];
-
-function initVinSamples(){
-  const c=document.getElementById('vin-samples');
-  if(!c)return;
-  c.innerHTML=VIN_SAMPLES.map(([v,l])=>
-    `<button class="toggle-btn" onclick="loadSampleVin('${v}')">${l}</button>`).join('');
-}
-function loadSampleVin(v){
-  document.getElementById('vin-input').value=v;
-  decodeVin();
-}
-
-function vinStatus(msg,kind){
-  const s=document.getElementById('vin-status');
-  const c={
-    ok:['rgba(74,222,128,.1)','rgba(74,222,128,.35)','#4ade80'],
-    warn:['rgba(232,255,77,.1)','rgba(232,255,77,.35)','#e8ff4d'],
-    err:['rgba(255,92,92,.1)','rgba(255,92,92,.3)','#ff5c5c'],
-    info:['#242424','#2e2e2e','#666']
-  }[kind];
-  s.style.display='block';
-  s.style.background=c[0];
-  s.style.border='1px solid '+c[1];
-  s.style.color=c[2];
-  s.textContent=msg;
-}
-
-function vinCell(k,v){
-  const empty=!v||v===''||v==='Not Applicable';
-  return `<div class="vin-cell">
-    <span class="k">${k}</span>
-    <span class="v ${empty?'empty':''}">${empty?'—':escapeHtml(v)}</span>
-  </div>`;
-}
-
-function clearVin(){
-  document.getElementById('vin-input').value='';
-  document.getElementById('vin-results').style.display='none';
-  document.getElementById('vin-status').style.display='none';
-  hideError('vin-error');
-  vinData=null;
-  nhtsaExtras=null;
-  document.getElementById('vin-input').focus();
-}
-
-function clearVinContext(){
-  vinContext='';
-  recallsText='';
-  document.getElementById('vin-context-badge').style.display='none';
-  showToast('Contexto NHTSA quitado');
-}
-
-async function decodeVin(){
-  const inp=document.getElementById('vin-input');
-  const vin=inp.value.trim().toUpperCase();
-  inp.value=vin;
-  hideError('vin-error');
-  document.getElementById('vin-results').style.display='none';
-
-  if(vin.length!==17){
-    showError('vin-error','El VIN debe tener exactamente 17 caracteres (tiene '+vin.length+').');
-    document.getElementById('vin-status').style.display='none';
-    return;
-  }
-  if(/[IOQ]/.test(vin)){
-    showError('vin-error','Un VIN nunca contiene las letras I, O ni Q. Revisa si en realidad son 1 y 0.');
-    document.getElementById('vin-status').style.display='none';
-    return;
-  }
-
-  vinStatus('Consultando NHTSA...','info');
-  const t0=performance.now();
-  try{
-    const url='https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/'+encodeURIComponent(vin)+'?format=json';
-    const res=await fetch(url);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const json=await res.json();
-    const d=json.Results&&json.Results[0];
-    if(!d) throw new Error('Respuesta vacía de la API');
-    vinData=d;
-    renderVin(d,Math.round(performance.now()-t0));
-  }catch(e){
-    vinStatus('Error al consultar NHTSA: '+e.message,'err');
-  }
-}
-
-function renderVin(d,ms){
-  const codes=String(d.ErrorCode||'').split(',').map(s=>s.trim()).filter(Boolean);
-  const limpio=codes.length===0||(codes.length===1&&codes[0]==='0');
-  const core=d.Make&&d.ModelYear;
-
-  if(limpio&&core){
-    vinStatus('✓ VIN válido · '+[d.ModelYear,d.Make,d.Model,d.Trim].filter(Boolean).join(' ')+' · '+ms+' ms','ok');
-  }else if(core){
-    vinStatus('⚠ Decodificado con advertencias (código '+codes.join(', ')+'): '+String(d.ErrorText||'—').split(';')[0]+' · '+ms+' ms','warn');
-  }else{
-    vinStatus('✕ VIN no reconocido por NHTSA: '+String(d.ErrorText||'sin datos').split(';')[0],'err');
-    document.getElementById('vin-results').style.display='none';
-    return;
-  }
-
-  // --- Detección automática ---
-  const body=(d.BodyClass||'').toLowerCase();
-  const vtype=(d.VehicleType||'').toLowerCase();
-  const esMoto=/motorcycle|moped|scooter/.test(body)||/motorcycle/.test(vtype);
-  const esElec=/electric/i.test(d.FuelTypePrimary||'');
-  const esHib=/electric/i.test(d.FuelTypeSecondary||'')||/hybrid/i.test(d.ElectrificationLevel||'');
-  const esDies=/diesel/i.test((d.FuelTypePrimary||'')+' '+(d.FuelTypeSecondary||''));
-  const esPesado=parseFloat(d.GVWR)>10000;
-
-  const flags=[
-    ['🏍 Motocicleta',esMoto],
-    ['⚡ Eléctrico',esElec],
-    ['🔋 Híbrido',esHib],
-    ['⛽ Diésel',esDies],
-    ['🚛 Pesado',esPesado]
-  ];
-  document.getElementById('vin-flags').innerHTML=flags.map(([l,on])=>
-    `<span class="toggle-btn ${on?'active':''}" style="cursor:default">${on?'✓':'○'} ${l}</span>`).join('');
-
-  // --- Vehículo ---
-  document.getElementById('vin-basic').innerHTML=
-    vinCell('Año',d.ModelYear)+
-    vinCell('Marca',d.Make)+
-    vinCell('Modelo',d.Model)+
-    vinCell('Trim',d.Trim||d.Series)+
-    vinCell('Carrocería',d.BodyClass)+
-    vinCell('Fabricante',d.Manufacturer);
-
-  // --- Ficha técnica ---
-  document.getElementById('vin-tech').innerHTML=
-    vinCell('Motor',d.DisplacementL?(+d.DisplacementL).toFixed(1)+'L':'')+
-    vinCell('Cilindros',d.EngineCylinders)+
-    vinCell('HP',d.EngineHP)+
-    vinCell('Combustible',d.FuelTypePrimary)+
-    vinCell('Tracción',d.DriveType)+
-    vinCell('Transmisión',[d.TransmissionStyle,d.TransmissionSpeeds?d.TransmissionSpeeds+' vel':''].filter(Boolean).join(' · '))+
-    vinCell('Puertas',d.Doors)+
-    vinCell('Asientos',d.Seats)+
-    vinCell('Planta',[d.PlantCity,d.PlantCountry].filter(Boolean).join(', '));
-
-  // --- Airbags ---
-  document.getElementById('vin-bags').innerHTML=
-    vinCell('Frontales',d.AirBagLocFront)+
-    vinCell('Laterales',d.AirBagLocSide)+
-    vinCell('Cortina',d.AirBagLocCurtain)+
-    vinCell('Rodilla',d.AirBagLocKnee)+
-    vinCell('Asiento',d.AirBagLocSeatCushion)+
-    vinCell('Cinturones',d.SeatBeltsAll);
-
-  // --- Contexto para la IA ---
-  const L=[];
-  const push=(k,v)=>{ if(v&&v!=='Not Applicable') L.push('- '+k+': '+v); };
-  push('Vehículo',[d.ModelYear,d.Make,d.Model,d.Trim].filter(Boolean).join(' '));
-  push('Carrocería',d.BodyClass);
-  push('Motor',[
-    d.DisplacementL?(+d.DisplacementL).toFixed(1)+'L':'',
-    d.EngineCylinders?d.EngineCylinders+' cilindros':'',
-    d.EngineHP?d.EngineHP+' hp':''
-  ].filter(Boolean).join(' '));
-  push('Combustible',d.FuelTypePrimary);
-  push('Tracción',d.DriveType);
-  push('Transmisión',d.TransmissionStyle);
-  push('Fabricado en',[d.PlantCity,d.PlantCountry].filter(Boolean).join(', '));
-  push('Airbags de fábrica',[d.AirBagLocFront,d.AirBagLocSide,d.AirBagLocCurtain]
-    .filter(x=>x&&x!=='Not Applicable').join(' / '));
-
-  const ctx=L.length
-    ? 'DATOS OFICIALES NHTSA DEL VIN (verificados — no contradecir ni inventar):\n'+L.join('\n')
-    : '';
-  document.getElementById('vin-ctx').textContent=ctx||'(sin datos suficientes — no se enviará contexto)';
-  window._vinCtxPending=ctx;
-
-  // --- Crudo ---
-  const noVacios={};
-  Object.keys(d).forEach(k=>{
-    const v=d[k];
-    if(v!==''&&v!==null&&v!=='Not Applicable') noVacios[k]=v;
-  });
-  document.getElementById('vin-raw').textContent=JSON.stringify(noVacios,null,2);
-
-  document.getElementById('vin-results').style.display='block';
-
-  // --- Recalls, quejas y ratings (segunda ronda, vía servidor) ---
-  loadNhtsaExtras(d.Make,d.Model,d.ModelYear);
-}
-
-// ---- RECALLS / QUEJAS / RATINGS ----
-// Van por /api/analyze (mode:'nhtsa') porque api.nhtsa.gov no garantiza CORS.
-let nhtsaExtras=null;
-
-const spinner='<div class="loading" style="padding:4px 0;font-size:12px"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Consultando NHTSA...</span></div>';
-const vacio=m=>`<div style="font-size:12px;color:var(--muted);padding:2px 0">${m}</div>`;
-
-async function loadNhtsaExtras(make,model,year){
-  nhtsaExtras=null;
-  document.getElementById('btn-incluir-recalls').classList.remove('active');
-  ['recalls','complaints','ratings'].forEach(k=>{
-    document.getElementById(k+'-body').innerHTML=spinner;
-  });
-  document.getElementById('recalls-count').textContent='';
-  document.getElementById('complaints-count').textContent='';
-
-  if(!make||!model||!year){
-    ['recalls','complaints','ratings'].forEach(k=>{
-      document.getElementById(k+'-body').innerHTML=vacio('Sin marca/modelo/año para consultar');
-    });
-    return;
-  }
-
-  try{
-    const res=await fetch('/api/analyze',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({mode:'nhtsa',make,model,year})
-    });
-    const data=await res.json();
-    if(!res.ok) throw new Error(data.error||'Error desconocido');
-    nhtsaExtras=data;
-    renderRecalls(data.recalls||[]);
-    renderComplaints(data.complaints||{});
-    renderRatings(data.ratings||[]);
-  }catch(e){
-    ['recalls','complaints','ratings'].forEach(k=>{
-      document.getElementById(k+'-body').innerHTML=vacio('No se pudo consultar: '+escapeHtml(e.message));
-    });
-  }
-}
-
-function renderRecalls(list){
-  const body=document.getElementById('recalls-body');
-  const cnt=document.getElementById('recalls-count');
-  if(!list.length){
-    cnt.textContent='';
-    body.innerHTML='<div style="font-size:12px;color:#4ade80;padding:2px 0">✓ Sin recalls registrados para este año/marca/modelo</div>';
-    return;
-  }
-  const urgentes=list.filter(r=>r.parkIt||r.parkOutside).length;
-  cnt.innerHTML=`<span style="color:var(--danger)">${list.length} recall${list.length===1?'':'s'}</span>`
-    +(urgentes?` <span style="color:var(--danger)">· ${urgentes} urgente${urgentes===1?'':'s'}</span>`:'');
-
-  // Activar el toggle solo, ya que hay algo que reportar
-  document.getElementById('btn-incluir-recalls').classList.add('active');
-
-  body.innerHTML=list.map((r,i)=>{
-    const badges=[];
-    if(r.parkIt) badges.push('<span style="background:var(--danger);color:#000;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">NO CONDUCIR</span>');
-    if(r.parkOutside) badges.push('<span style="background:#ff9500;color:#000;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">NO ESTACIONAR BAJO TECHO</span>');
-    return `<details class="guia-item" style="margin-bottom:4px">
-      <summary style="padding:7px 10px;font-size:12px;gap:8px">
-        <span style="flex:1;text-align:left">
-          <span style="color:var(--danger);font-weight:700">${escapeHtml(r.component)}</span>
-          ${badges.length?'<br>'+badges.join(' '):''}
-          <br><span style="color:var(--muted);font-weight:400;font-size:10.5px">Campaña ${escapeHtml(r.campaign)}${r.date?' · '+escapeHtml(r.date):''}</span>
-        </span>
-      </summary>
-      <p style="font-size:11.5px;padding:0 10px 9px">
-        <b style="color:var(--text)">Problema:</b> ${escapeHtml(r.summary)}<br><br>
-        <b style="color:var(--text)">Consecuencia:</b> ${escapeHtml(r.consequence)}<br><br>
-        <b style="color:var(--text)">Remedio:</b> ${escapeHtml(r.remedy)}
-      </p>
-    </details>`;
-  }).join('');
-}
-
-// Arma la ficha en texto plano para pegar en WhatsApp, sin generar el punto de vista completo
-function copiarFicha(){
-  const d=vinData;
-  if(!d){ showToast('Decodifica un VIN primero'); return; }
-  const ok=v=>v&&v!=='Not Applicable'&&String(v).trim()!=='';
-  const L=[];
-
-  const titulo=[d.ModelYear,d.Make,d.Model,d.Trim].filter(ok).join(' ');
-  if(titulo) L.push(titulo.toUpperCase());
-  L.push('VIN: '+document.getElementById('vin-input').value);
-  L.push('');
-
-  const fila=(k,v)=>{ if(ok(v)) L.push(k+': '+v); };
-  fila('Carrocería',d.BodyClass);
-  fila('Motor',[
-    ok(d.DisplacementL)?(+d.DisplacementL).toFixed(1)+'L':'',
-    ok(d.EngineCylinders)?d.EngineCylinders+' cilindros':'',
-    ok(d.EngineHP)?d.EngineHP+' hp':''
-  ].filter(Boolean).join(' '));
-  fila('Combustible',d.FuelTypePrimary);
-  fila('Tracción',d.DriveType);
-  fila('Transmisión',d.TransmissionStyle);
-  fila('Puertas',d.Doors);
-  fila('Asientos',d.Seats);
-  fila('Fabricado en',[d.PlantCity,d.PlantCountry].filter(ok).join(', '));
-
-  const bags=[d.AirBagLocFront,d.AirBagLocSide,d.AirBagLocCurtain].filter(ok).join(' / ');
-  if(bags){ L.push(''); L.push('Airbags de fábrica: '+bags); }
-
-  const rec=(nhtsaExtras&&nhtsaExtras.recalls)||[];
-  if(rec.length){
-    L.push('');
-    L.push(`Recalls de seguridad NHTSA: ${rec.length}`);
-    if(rec.some(r=>r.parkIt)) L.push('IMPORTANTE: NHTSA recomienda no conducirlo hasta repararlo.');
-  }
-
-  const rate=(nhtsaExtras&&nhtsaExtras.ratings)||[];
-  const gen=rate.find(r=>parseInt(r.overall,10)>0);
-  if(gen) L.push('Crash test NCAP: '+gen.overall+' de 5 estrellas');
-
-  L.push('');
-  L.push('Datos oficiales de NHTSA decodificados del VIN.');
-
-  const txt=L.join('\n');
-  navigator.clipboard.writeText(txt)
-    .then(()=>showToast('Ficha copiada ✓'))
-    .catch(()=>{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('Ficha copiada ✓')});
-}
-
-// Traduce los daños y luces marcados en Analizar a componentes de NHTSA,
-// para subir al tope las quejas que de verdad importan en este lote.
-const DANO_A_COMPONENTE={
-  'Mecánico':['ENGINE','POWER TRAIN','TRANSMISSION','VEHICLE SPEED CONTROL','FUEL SYSTEM'],
-  'Daño frontal':['STRUCTURE','AIR BAGS','ENGINE','EXTERIOR LIGHTING'],
-  'Daño trasero':['STRUCTURE','EXTERIOR LIGHTING','FUEL SYSTEM'],
-  'Daño lateral':['AIR BAGS','STRUCTURE','SEAT BELTS'],
-  'Volcado':['AIR BAGS','STRUCTURE','SEAT BELTS','STEERING'],
-  'Inundación/Agua':['ELECTRICAL SYSTEM','ENGINE','POWER TRAIN'],
-  'Fuego':['ELECTRICAL SYSTEM','ENGINE','FUEL SYSTEM'],
-  'Vandalismo':['ELECTRICAL SYSTEM','EXTERIOR LIGHTING','STRUCTURE'],
-  'Undercarriage':['SUSPENSION','STEERING','POWER TRAIN','FUEL SYSTEM'],
-  'Granizo':['STRUCTURE','VISIBILITY'],
-  'All Over':['STRUCTURE']
-};
-const LUZ_A_COMPONENTE={
-  'check-engine':['ENGINE','VEHICLE SPEED CONTROL','FUEL SYSTEM'],
-  'airbag':['AIR BAGS','SEAT BELTS'],
-  'abs':['SERVICE BRAKES','BRAKES'],
-  'transmission':['POWER TRAIN','TRANSMISSION'],
-  'battery':['ELECTRICAL SYSTEM'],
-  'oil':['ENGINE'],
-  'temperature':['ENGINE AND ENGINE COOLING','ENGINE'],
-  'multiple':['ELECTRICAL SYSTEM']
-};
-
-// Devuelve {comps:Set, motivos:[]} según lo que esté marcado ahora mismo en Analizar
-function prioridadQuejas(){
-  const comps=new Set(), motivos=[];
-  getSelectedDamages().forEach(d=>{
-    const list=DANO_A_COMPONENTE[d];
-    if(list){ list.forEach(c=>comps.add(c)); motivos.push(d.toLowerCase()); }
-  });
-  document.querySelectorAll('.light.selected').forEach(el=>{
-    const list=LUZ_A_COMPONENTE[el.dataset.value];
-    if(list){ list.forEach(c=>comps.add(c)); motivos.push('luz '+el.querySelector('span').textContent.toLowerCase()); }
-  });
-  return {comps,motivos:[...new Set(motivos)]};
-}
-const esRelevante=(txt,comps)=>{
-  const t=(txt||'').toUpperCase();
-  for(const c of comps) if(t.includes(c)) return true;
-  return false;
-};
-
-function renderComplaints(c){
-  const body=document.getElementById('complaints-body');
-  const cnt=document.getElementById('complaints-count');
-  if(!c.total){
-    cnt.textContent='';
-    body.innerHTML=vacio('Sin quejas registradas');
-    return;
-  }
-  cnt.textContent=c.total+' queja'+(c.total===1?'':'s');
-
-  const {comps,motivos}=prioridadQuejas();
-  const hayPrioridad=comps.size>0;
-
-  const aviso=hayPrioridad
-    ? `<div style="background:rgba(232,255,77,.08);border:1px solid rgba(232,255,77,.3);border-radius:var(--rs);padding:5px 8px;font-size:10.5px;color:var(--accent);margin-bottom:6px">↑ Priorizando lo relacionado con: ${escapeHtml(motivos.join(', '))}</div>`
-    : '';
-
-  const alertas=[];
-  if(c.deaths)   alertas.push(['💀 '+c.deaths+' muerte'+(c.deaths===1?'':'s'),'var(--danger)']);
-  if(c.injuries) alertas.push(['🚑 '+c.injuries+' lesionado'+(c.injuries===1?'':'s'),'var(--danger)']);
-  if(c.fires)    alertas.push(['🔥 '+c.fires+' incendio'+(c.fires===1?'':'s'),'#ff9500']);
-  if(c.crashes)  alertas.push(['💥 '+c.crashes+' choque'+(c.crashes===1?'':'s'),'#ff9500']);
-
-  const alertasHtml=alertas.length
-    ? `<div class="toggle-row" style="margin-bottom:6px">${alertas.map(([t,col])=>
-        `<span class="toggle-btn" style="cursor:default;border-color:${col};color:${col}">${t}</span>`).join('')}</div>`
-    : '';
-
-  // Componentes: los relacionados con el daño marcado van primero y resaltados
-  const compsOrden=[...(c.topComponents||[])].sort((a,b)=>{
-    const ra=esRelevante(a[0],comps), rb=esRelevante(b[0],comps);
-    if(ra!==rb) return ra?-1:1;
-    return b[1]-a[1];
-  });
-  const compsHtml=compsOrden.map(([name,n])=>{
-    const rel=esRelevante(name,comps);
-    return `<span class="toggle-btn ${rel?'active':''}" style="cursor:default">${rel?'↑ ':''}${escapeHtml(name)} <span style="color:${rel?'var(--accent)':'var(--muted)'}">${n}</span></span>`;
-  }).join('');
-
-  // Quejas: las relacionadas primero, el resto conserva su orden por fecha
-  const itemsOrden=[...(c.items||[])].sort((a,b)=>{
-    const ra=esRelevante(a.components,comps), rb=esRelevante(b.components,comps);
-    return ra===rb?0:(ra?-1:1);
-  });
-  const nRel=itemsOrden.filter(x=>esRelevante(x.components,comps)).length;
-
-  const items=itemsOrden.map(x=>{
-    const rel=esRelevante(x.components,comps);
-    const marks=[];
-    if(x.fire) marks.push('🔥');
-    if(x.crash) marks.push('💥');
-    if(x.deaths) marks.push('💀'+x.deaths);
-    if(x.injuries) marks.push('🚑'+x.injuries);
-    return `<details class="guia-item" style="margin-bottom:4px${rel?';border-color:var(--accent)':''}">
-      <summary style="padding:6px 10px;font-size:11.5px">
-        <span style="flex:1;text-align:left${rel?';color:var(--accent)':''}">
-          ${rel?'↑ ':''}${escapeHtml(x.components)} ${marks.join(' ')}
-          <span style="color:var(--muted);font-weight:400"> · ${escapeHtml(x.date)}</span>
-        </span>
-      </summary>
-      <p style="font-size:11px;padding:0 10px 8px">${escapeHtml(x.summary)}</p>
-    </details>`;
-  }).join('');
-
-  body.innerHTML=aviso+alertasHtml
-    +`<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Componentes más reportados</div>`
-    +`<div class="toggle-row">${compsHtml}</div>`
-    +`<details class="guia-item" style="margin-top:4px"${nRel?' open':''}>
-        <summary style="font-size:12px">Ver las quejas una por una (${itemsOrden.length})${nRel?` <span style="color:var(--accent);font-weight:400">· ${nRel} relacionada${nRel===1?'':'s'}</span>`:''}</summary>
-        <div style="padding:0 8px 8px">${items}</div>
-      </details>`;
-}
-
-function renderRatings(list){
-  const body=document.getElementById('ratings-body');
-  if(!list.length){
-    body.innerHTML=vacio('NHTSA no tiene crash test para este modelo');
-    return;
-  }
-  const stars=v=>{
-    const n=parseInt(v,10);
-    if(isNaN(n)) return '<span style="color:#4a4a52">Sin dato</span>';
-    return `<span style="color:var(--accent);letter-spacing:1px">${'★'.repeat(n)}<span style="color:#3a3a40">${'★'.repeat(5-n)}</span></span>`;
-  };
-  body.innerHTML=list.map(r=>`
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:8px;margin-bottom:4px">
-      <div style="font-size:11.5px;font-weight:600;margin-bottom:5px">${escapeHtml(r.description)}</div>
-      <div class="damage-grid">
-        <div class="vin-cell"><span class="k">General</span><span class="v">${stars(r.overall)}</span></div>
-        <div class="vin-cell"><span class="k">Frontal</span><span class="v">${stars(r.front)}</span></div>
-        <div class="vin-cell"><span class="k">Lateral</span><span class="v">${stars(r.side)}</span></div>
-        <div class="vin-cell"><span class="k">Volcadura</span><span class="v">${stars(r.rollover)}</span></div>
-      </div>
-    </div>`).join('');
-}
-
-// Arma el párrafo de recalls que se agrega al punto de vista
-function buildRecallsText(){
-  if(!document.getElementById('btn-incluir-recalls').classList.contains('active')) return '';
-  const list=(nhtsaExtras&&nhtsaExtras.recalls)||[];
-  if(!list.length) return '';
-
-  const comps=[...new Set(list.map(r=>{
-    const c=(r.component||'').toLowerCase();
-    if(c.includes('air bag')||c.includes('airbag')) return 'airbags';
-    if(c.includes('brake')) return 'frenos';
-    if(c.includes('steering')) return 'dirección';
-    if(c.includes('fuel')) return 'sistema de combustible';
-    if(c.includes('engine')) return 'motor';
-    if(c.includes('electrical')) return 'sistema eléctrico';
-    if(c.includes('seat belt')) return 'cinturones de seguridad';
-    if(c.includes('suspension')) return 'suspensión';
-    if(c.includes('power train')||c.includes('powertrain')) return 'tren motriz';
-    if(c.includes('exterior lighting')) return 'luces exteriores';
-    if(c.includes('tire')) return 'llantas';
-    if(c.includes('structure')) return 'estructura';
-    return (r.component||'').split(':')[0].toLowerCase();
-  }).filter(Boolean))];
-
-  const n=list.length;
-  const urgente=list.some(r=>r.parkIt);
-  const afuera=list.some(r=>r.parkOutside);
-
-  let t=`NHTSA registra ${n} recall${n===1?'':'s'} de seguridad para este año, marca y modelo`
-    + (comps.length?`, relacionado${n===1?'':'s'} con ${comps.slice(0,4).join(', ')}`:'')
-    + '. Los recalls aplican al modelo en general y el fabricante los repara sin costo, pero no podemos confirmar si este vehículo en particular ya recibió la reparación. Recomendamos verificar el estado del recall con el VIN en nhtsa.gov/recalls o en un concesionario de la marca.';
-
-  if(urgente) t+=' Importante: al menos uno de estos recalls está clasificado por NHTSA como "Park It", lo que significa que recomienda no conducir el vehículo hasta que sea reparado.';
-  else if(afuera) t+=' Tenga en cuenta que al menos uno de estos recalls está clasificado como "Park Outside" por riesgo de incendio: NHTSA recomienda no estacionarlo bajo techo hasta repararlo.';
-
-  return t;
-}
-
-function applyVinToForm(){
-  const d=vinData;
-  if(!d){ showToast('Decodifica un VIN primero'); return; }
-
-  // VIN al campo del formulario
-  document.getElementById('vin').value=document.getElementById('vin-input').value;
-
-  // Campos ocultos
-  if(d.ModelYear) document.getElementById('year-hidden').value=d.ModelYear;
-  if(d.Make) document.getElementById('make-hidden').value=String(d.Make).toUpperCase();
-  if(d.Model) document.getElementById('model-hidden').value=[d.Model,d.Trim].filter(Boolean).join(' ').toUpperCase();
-
-  // Reconstruir el campo visible "Lote y vehículo" conservando el lote si ya existía
-  const lot=document.getElementById('lot-hidden').value;
-  const desc=[
-    d.ModelYear,
-    d.Make?String(d.Make).toUpperCase():'',
-    d.Model?String(d.Model).toUpperCase():'',
-    d.Trim?String(d.Trim).toUpperCase():''
-  ].filter(Boolean).join(' ');
-  document.getElementById('quick-paste').value=lot?(lot+' - '+desc):desc;
-
-  // Toggle de motocicleta según carrocería
-  const body=(d.BodyClass||'').toLowerCase();
-  const vtype=(d.VehicleType||'').toLowerCase();
-  const esMoto=/motorcycle|moped|scooter/.test(body)||/motorcycle/.test(vtype);
-  const btnMoto=document.getElementById('btn-moto');
-  const motoActivo=btnMoto.classList.contains('active');
-  if(esMoto!==motoActivo) toggleMoto();
-
-  // Guardar contexto y recalls para la IA
-  vinContext=window._vinCtxPending||'';
-  recallsText=buildRecallsText();
-
-  const badge=document.getElementById('vin-context-badge');
-  if(vinContext||recallsText){
-    const nRec=(nhtsaExtras&&nhtsaExtras.recalls||[]).length;
-    document.getElementById('vin-context-text').textContent=
-      '✓ Datos NHTSA: '+desc+(recallsText?` · ${nRec} recall${nRec===1?'':'s'} incluido${nRec===1?'':'s'}`:'');
-    badge.style.display='flex';
-  }else{
-    badge.style.display='none';
-  }
-
-  // Volver a la pestaña Analizar
-  document.querySelector('.tab').click();
-  if(!lot){
-    // NHTSA no conoce el número de lote: si lo quieren, lo escriben al inicio
-    const qp=document.getElementById('quick-paste');
-    qp.focus(); qp.setSelectionRange(0,0);
-    showToast('Datos aplicados ✓ — el lote va al inicio, si lo tienes');
-  }else{
-    showToast('Datos aplicados'+(esMoto?' · moto detectada 🏍':'')+' ✓');
-  }
-}
-// =============================================
 
 // ---- CARFAX ----
 let carfaxText='';
@@ -1511,7 +826,7 @@ async function generateAnalysis(){
     el.focus(); el.style.borderColor='var(--danger)';
   };
   // Limpiar marcas de error previas
-  ['quick-paste','client-name','client-source','vin','title-type','auction','miles-status'].forEach(id=>{
+  ['client-name','client-source','vin','title-type','auction','miles-status'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.borderColor='';
   });
   // Validaciones obligatorias
@@ -1546,7 +861,6 @@ async function generateAnalysis(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({mode:'generate',fields:{
         lot:get('lot-hidden'),year:get('year-hidden'),make:get('make-hidden'),model:get('model-hidden'),
-        lotRaw:get('quick-paste').trim(),
         vin:get('vin'),titleType:get('title-type'),auction:get('auction'),
         miles:get('miles'),milesStatus:get('miles-status'),
         damages:getSelectedDamages(),
@@ -1561,10 +875,7 @@ async function generateAnalysis(){
         tituloAusente:document.getElementById('btn-tituloausente').classList.contains('active'),
         fechaFuturo:document.getElementById('btn-fechafuturo').classList.contains('active'),
         excelente:document.getElementById('btn-excelente').classList.contains('active'),
-        impecable:document.getElementById('btn-impecable').classList.contains('active'),
-        esMoto:document.getElementById('btn-moto').classList.contains('active'),
-        vinContext:vinContext||'',
-        recallsText:recallsText||''
+        esMoto:document.getElementById('btn-moto').classList.contains('active')
       }})
     });
     const data=await res.json();
@@ -1639,20 +950,12 @@ async function updateAnalysisInCloud(){
 let cloudHistory=[];
 let currentRecordId=null;
 
-// Arma el título del historial. Si el campo no tiene el formato esperado
-// (ej. solo un punto), se respeta el texto tal cual lo escribió el broker.
-function buildLotTitle(){
-  const g=id=>(document.getElementById(id).value||'').trim();
-  const veh=[g('year-hidden'),g('make-hidden'),g('model-hidden')].filter(Boolean).join(' ');
-  return [g('lot-hidden'),veh].filter(Boolean).join(' · ') || g('quick-paste') || 'Sin lote';
-}
-
 async function autoSaveToCloud(clientName){
   const g=id=>document.getElementById(id).value;
   const recId=Date.now();
   const entry={
     id:recId,
-    lot_title:buildLotTitle(),
+    lot_title:`${g('lot-hidden')} · ${g('year-hidden')} ${g('make-hidden')} ${g('model-hidden')}`.trim(),
     client:clientName,
     source:g('client-source')||null,
     author:currentUser||'Desconocido',
@@ -1686,19 +989,6 @@ function toLocalDateStr(d){
 }
 let expandedId=null;      // reporte abierto en el historial
 let authorFilter='';      // autor seleccionado
-// ---- MODO SELECCIÓN MÚLTIPLE (solo administrador) ----
-const ADMIN='Eduardo';
-// Compara nombres ignorando mayúsculas y acentos, para que nadie tome el nombre
-// del administrador escribiéndolo distinto ("eduardo", "Eduardó", etc.)
-const normNombre=s=>String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-const esNombreAdmin=n=>normNombre(n)===normNombre(ADMIN);
-// Ser administrador exige DOS cosas: llamarse Eduardo y haber desbloqueado con PIN.
-// Solo el nombre no basta: si llega alguien nuevo y elige "Eduardo", no obtiene permisos.
-const adminUnlocked=()=>!!localStorage.getItem('lot-admin-token');
-const esAdmin=()=>esNombreAdmin(currentUser)&&adminUnlocked();
-let selectMode=false;              // true = modo selección activo
-let selectedIds=new Set();         // ids marcados
-let lastVisibleItems=[];           // items visibles tras filtros (para "marcar todos")
 let filterAllDates=false; // true = ver todos sus reportes, no solo del día
 
 function filterByAuthor(autor){
@@ -1767,9 +1057,21 @@ async function renderHistory(skipFetch){
     c.innerHTML='<div class="loading" style="padding:20px"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Cargando historial del equipo...</span></div>';
     if(!supa){ c.innerHTML='<div class="empty">Sin conexión a la nube</div>'; return; }
     try{
-      const {data,error}=await supa.from('lot_history').select('*').order('created_at',{ascending:false}).limit(500);
-      if(error) throw error;
-      cloudHistory=data||[];
+      // Cargar TODO el historial paginando (Supabase limita a 1000 por consulta)
+      cloudHistory=[];
+      let desde=0;
+      const paso=1000;
+      while(true){
+        const {data,error}=await supa.from('lot_history')
+          .select('*')
+          .order('created_at',{ascending:false})
+          .range(desde, desde+paso-1);
+        if(error) throw error;
+        if(!data || data.length===0) break;
+        cloudHistory=cloudHistory.concat(data);
+        if(data.length<paso) break; // última página
+        desde+=paso;
+      }
       renderStats();
     }catch(e){
       console.error('load history',e);
@@ -1794,23 +1096,12 @@ async function renderHistory(skipFetch){
     (h.source||'').toLowerCase().includes(search)||
     (h.author||'').toLowerCase().includes(search)
   );
-  lastVisibleItems=items;
-  renderBulkBar(items);
   if(!items.length){c.innerHTML=`<div class="empty">${search||authorFilter?'No se encontraron resultados':'No hay análisis guardados aún'}</div>`;return}
   c.innerHTML=items.map(h=>{
     const fecha=h.created_at?new Date(h.created_at).toLocaleDateString('es-PA')+' · '+new Date(h.created_at).toLocaleTimeString('es-PA',{hour:'2-digit',minute:'2-digit'}):'';
-    // Quien use el nombre del administrador sin haber verificado el PIN no puede
-    // actuar como él (ej. alguien que ya lo tenía guardado desde antes).
-    const identidadValida=!esNombreAdmin(currentUser)||adminUnlocked();
-    const canDelete=(h.author===currentUser&&identidadValida)||esAdmin();
+    const canDelete=h.author===currentUser;
     const abierto=expandedId===h.id;
-    const marcado=selectedIds.has(h.id);
-    const selUI=(selectMode&&esAdmin());
-    return `<div class="history-item"${selUI&&marcado?' style="border-color:var(--accent)"':''}>
-      ${selUI?`<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;font-size:12px;color:var(--muted)">
-        <input type="checkbox" ${marcado?'checked':''} onchange="toggleSelectOne(${h.id})" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin:0">
-        <span>Seleccionar</span>
-      </label>`:''}
+    return `<div class="history-item">
       <div onclick="toggleExpand(${h.id})" style="cursor:pointer">
         <div class="history-header"><span class="history-title">${escapeHtml(h.lot_title||'Sin lote')}</span><span class="history-date">${fecha}</span></div>
         <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">
@@ -1836,74 +1127,10 @@ function toggleExpand(id){
   renderHistory(true);
 }
 function copyHistoryItem(id){const item=cloudHistory.find(h=>h.id===id);if(item)navigator.clipboard.writeText(item.analysis).then(()=>showToast('Copiado ✓'))}
-// ---- SELECCIÓN MÚLTIPLE (solo administrador) ----
-function renderBulkBar(visibles){
-  const bar=document.getElementById('bulk-bar');
-  if(!bar) return;
-  // Si se llama Eduardo pero aún no verificó el PIN (ej. dispositivo nuevo)
-  if(esNombreAdmin(currentUser) && !adminUnlocked()){
-    bar.style.display='block';
-    bar.innerHTML=`<button class="btn btn-outline btn-sm" onclick="unlockAdmin()">🔒 Desbloquear administrador</button>`;
-    return;
-  }
-  if(!esAdmin()){ bar.style.display='none'; bar.innerHTML=''; return; }
-  bar.style.display='block';
-  if(!selectMode){
-    bar.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-outline btn-sm" onclick="toggleSelectMode()">☑ Seleccionar varios</button>
-      <button class="btn btn-outline btn-sm" style="color:var(--muted)" onclick="lockAdmin()" title="Bloquear el modo administrador en este dispositivo">🔓 Bloquear</button>
-    </div>`;
-    return;
-  }
-  const total=visibles.length;
-  const n=selectedIds.size;
-  const todosMarcados=total>0 && visibles.every(h=>selectedIds.has(h.id));
-  bar.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:8px">
-    <span style="font-size:12.5px;font-weight:600;color:var(--text)">${n} seleccionado${n===1?'':'s'}</span>
-    <button class="btn btn-outline btn-sm" onclick="toggleSelectAll()">${todosMarcados?'Desmarcar todos':`Marcar todos (${total})`}</button>
-    <button class="btn btn-outline btn-sm" style="color:var(--danger)" ${n?'':'disabled'} onclick="deleteSelected()">Eliminar seleccionados</button>
-    <button class="btn btn-outline btn-sm" onclick="toggleSelectMode()">Cancelar</button>
-  </div>`;
-}
-function toggleSelectMode(){
-  if(!esAdmin()) return;
-  selectMode=!selectMode;
-  selectedIds.clear();
-  renderHistory(true);
-}
-function toggleSelectOne(id){
-  if(!esAdmin()) return;
-  if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
-  renderHistory(true);
-}
-function toggleSelectAll(){
-  if(!esAdmin()) return;
-  const visibles=lastVisibleItems;
-  const todos=visibles.length>0 && visibles.every(h=>selectedIds.has(h.id));
-  if(todos) visibles.forEach(h=>selectedIds.delete(h.id));
-  else visibles.forEach(h=>selectedIds.add(h.id));
-  renderHistory(true);
-}
-async function deleteSelected(){
-  if(!esAdmin()){ showToast('Solo el administrador puede hacer esto'); return; }
-  const ids=[...selectedIds];
-  if(!ids.length){ showToast('No hay nada seleccionado'); return; }
-  if(!confirm(`¿Eliminar ${ids.length} análisis seleccionado${ids.length===1?'':'s'}? Esta acción no se puede deshacer.`)) return;
-  try{
-    const {error}=await supa.from('lot_history').delete().in('id',ids);
-    if(error) throw error;
-    cloudHistory=cloudHistory.filter(h=>!selectedIds.has(h.id));
-    selectedIds.clear();
-    selectMode=false;
-    renderHistory();
-    showToast(`${ids.length} eliminado${ids.length===1?'':'s'} ✓`);
-  }catch(e){ console.error('bulk delete',e); showToast('No se pudieron eliminar'); }
-}
 async function deleteHistoryItem(id){
   const item=cloudHistory.find(h=>h.id===id);
   if(!item)return;
-  const identidadValida=!esNombreAdmin(currentUser)||adminUnlocked();
-  if(!((item.author===currentUser&&identidadValida)||esAdmin())){ showToast('Solo el autor puede borrar'); return; }
+  if(item.author!==currentUser){ showToast('Solo el autor puede borrar'); return; }
   if(!confirm('¿Eliminar este análisis?'))return;
   try{
     const {error}=await supa.from('lot_history').delete().eq('id',id);
@@ -1923,7 +1150,7 @@ function resetAll(){
   document.getElementById('miles-status').selectedIndex=0;
   document.getElementById('client-source').selectedIndex=0;
   // Limpiar marcas rojas de error
-  ['quick-paste','client-name','client-source','vin','title-type','auction','miles-status','offer-min','offer-max'].forEach(id=>{
+  ['client-name','client-source','vin','title-type','auction','miles-status','offer-min','offer-max'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.borderColor='';
   });
   hideError('error-gen');
@@ -1934,14 +1161,10 @@ function resetAll(){
   document.getElementById('lights-custom-row').style.display='none';
   document.querySelectorAll('.mech').forEach(x=>x.classList.remove('selected'));
   document.getElementById('mechanical-status').value='';
-  document.querySelectorAll('#tab-analyzer .toggle-btn').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.toggle-btn').forEach(x=>x.classList.remove('active'));
   // Restaurar visibilidad de la luz de airbag (por si estaba en modo moto)
   const airbagEl=document.querySelector('.light[data-value="airbag"]');
   if(airbagEl) airbagEl.style.display='';
-  // Limpiar contexto NHTSA
-  vinContext='';
-  recallsText='';
-  document.getElementById('vin-context-badge').style.display='none';
   currentOutput='';
   const body=document.getElementById('output-body');
   body.innerHTML='<div class="output-empty">El análisis aparecerá aquí una vez que generes uno →</div>';
@@ -1954,48 +1177,13 @@ function resetAll(){
 }
 
 // ---- IDENTIDAD DEL USUARIO ----
-// Verifica el PIN contra el servidor (nunca está en este archivo).
-// Devuelve true si quedó desbloqueado.
-async function verificarPinAdmin(){
-  const pin=prompt('Este nombre está protegido.\nIngresa el PIN de administrador:');
-  if(pin===null) return false;               // canceló
-  if(!pin.trim()){ showToast('Debes escribir el PIN'); return false; }
-  try{
-    const res=await fetch('/api/analyze',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({mode:'admin-auth',pin:pin.trim()})
-    });
-    const data=await res.json();
-    if(!res.ok||!data.ok){ showToast(data.error||'PIN incorrecto'); return false; }
-    localStorage.setItem('lot-admin-token',data.token);
-    showToast('Administrador verificado ✓');
-    return true;
-  }catch(e){ console.error('admin-auth',e); showToast('No se pudo verificar el PIN'); return false; }
-}
-// Desbloquear desde la pestaña Historial (para Eduardo en un dispositivo nuevo)
-async function unlockAdmin(){
-  if(await verificarPinAdmin()) renderHistory(true);
-}
-function lockAdmin(){
-  localStorage.removeItem('lot-admin-token');
-  selectMode=false; selectedIds.clear();
-  showToast('Modo administrador bloqueado');
-  renderHistory(true);
-}
 function showIdentityModal(){
   const cont=document.getElementById('identity-buttons');
   cont.innerHTML=TEAM.map(n=>`<button class="btn btn-outline" style="width:100%;justify-content:center" onclick="setIdentity('${n}')">${n}</button>`).join('')
     +`<button class="btn btn-outline" style="width:100%;justify-content:center;border-style:dashed" onclick="showCustomIdentity()">Otro (nuevo integrante)</button>`;
   document.getElementById('identity-modal').style.display='flex';
 }
-async function setIdentity(name){
-  // Si alguien intenta tomar el nombre del administrador, debe probar el PIN.
-  // Esto impide tanto los permisos como que firme puntos de vista como Eduardo.
-  if(esNombreAdmin(name) && !adminUnlocked()){
-    const ok=await verificarPinAdmin();
-    if(!ok) return;                          // sin PIN no puede usar ese nombre
-  }
+function setIdentity(name){
   currentUser=name;
   localStorage.setItem('lot-user',name);
   document.getElementById('identity-modal').style.display='none';
@@ -2044,7 +1232,6 @@ async function renderPresence(){
 
 // Al cargar: si no hay usuario registrado, pedirlo
 window.addEventListener('DOMContentLoaded',()=>{
-  initVinSamples();
   if(!currentUser){ showIdentityModal(); }
   else { heartbeat(); renderPresence(); }
 });
