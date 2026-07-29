@@ -73,7 +73,7 @@ ${carfaxText.substring(0, 14000)}`;
   try {
     const { lot, year, make, model, vin, titleType, auction, miles, milesStatus,
             damages, dashLights, dashCustom, observations, mechanicalStatus,
-            offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente, esMoto } = fields;
+            offerMin, offerMax, buyNow, reservePrice, offerNotes, copartGo, externalLot, tituloAusente, fechaFuturo, excelente, impecable, esMoto } = fields;
 
     const REPORT_LINK = 'https://t.me/reporteexpressbot';
 
@@ -208,6 +208,12 @@ ${carfaxText.substring(0, 14000)}`;
       ? 'Este vehículo posee un título Certificate of Destruction (Junk), lo que significa que JAMÁS podrá circular legalmente en las carreteras de Estados Unidos. Solo puede utilizarse para chatarra o venta de piezas.'
       : '';
 
+    // ---- BILL OF SALE (texto exacto aprobado, determinista) ----
+    const esBillOfSale = titleType === 'Bill of Sale';
+    const billOfSaleText = esBillOfSale
+      ? 'La subasta no posee el título del vehículo y entrega un Bill of Sale. Con ese documento el cliente deberá tramitar un título nuevo en el DMV de su estado.'
+      : '';
+
     // ---- TOGGLES ----
     const tituloAusenteText = tituloAusente
       ? `En cuanto al título: ${auction} no posee el título actualmente. Le da al vendedor 30 días hábiles para que sea enviado a la yarda y luego ellos deben enviárnoslo a FL.`
@@ -240,6 +246,23 @@ ${carfaxText.substring(0, 14000)}`;
       ? excelentePool[Math.floor(Math.random() * excelentePool.length)]
       : '';
 
+    // ---- IMPECABLE ESTADO (enfoque en lo que se ve EN LAS FOTOS) ----
+    const impecableVariantsSinDanos = [
+      'El vehículo en las fotos se ve impecablemente bien, no se aprecian daños estéticos. Excelente opción de compra.',
+      'En las imágenes el vehículo luce impecable, sin daños estéticos visibles. Una muy buena oportunidad de compra.',
+      'Según las fotos, el vehículo se ve impecable, sin golpes ni daños apreciables en la carrocería. Excelente opción para adquirir.',
+      'El vehículo se aprecia impecable en las fotos, sin daños estéticos a la vista. Una compra muy recomendable.'
+    ];
+    const impecableVariantsConDanos = [
+      'Fuera del daño indicado, en las fotos el vehículo se ve impecablemente bien, sin otros daños estéticos apreciables. Buena opción de compra.',
+      'Más allá del daño señalado, en las imágenes el vehículo luce impecable, sin otros daños visibles. Una buena oportunidad.',
+      'Aparte del daño mencionado, el vehículo se ve impecable en las fotos, sin otros daños estéticos. Opción recomendable.'
+    ];
+    const impecablePool = (damageList.length > 0 || hasMechDamage) ? impecableVariantsConDanos : impecableVariantsSinDanos;
+    const impecableText = impecable
+      ? impecablePool[Math.floor(Math.random() * impecablePool.length)]
+      : '';
+
     // ---- OFERTA (números con formato de miles) ----
     const fmt = n => {
       const num = parseFloat(String(n).replace(/,/g, ''));
@@ -262,11 +285,28 @@ ${carfaxText.substring(0, 14000)}`;
       'Clean': 'no fue declarado pérdida total por la aseguradora',
       'Salvage': 'el daño fue lo suficientemente severo para que la aseguradora lo declarara pérdida total',
       'Rebuilt': 'fue reconstruido tras haber tenido un título salvage y aprobó la inspección estatal',
+      'Bill of Sale': 'la subasta no posee el título y entrega un Bill of Sale',
       'Parts Only': 'solo puede usarse para piezas, no puede registrarse para circular',
       'Certificate of Destruction / Junk': 'no puede circular legalmente, solo sirve para chatarra o piezas'
     };
 
-    const prompt = `Eres un broker de subastas de vehículos. Redacta SOLO el primer párrafo de un análisis, en español, en una a dos oraciones. Texto plano, sin markdown, sin emojis.
+    const prompt = esBillOfSale
+      ? `Eres un broker de subastas de vehículos. Redacta SOLO el primer párrafo de un análisis, en español, en una a dos oraciones. Texto plano, sin markdown, sin emojis.
+${esMoto ? '\nIMPORTANTE: Este lote es una MOTOCICLETA. Refiérete a ella como motocicleta o moto, NUNCA como "vehículo" genérico. NUNCA menciones airbags ni transmisión automática.\n' : ''}
+IMPORTANTE: Varía SIEMPRE la estructura y el vocabulario. Cada párrafo debe sonar diferente al anterior.
+
+Datos:
+- Daños: ${damageClean || 'ninguno especificado'}
+${miles ? `- Millas: ${miles} ${(milesStatus||'').toLowerCase()}` : '- Millas: no especificadas (NO las menciones)'}
+
+Reglas:
+- NO menciones el título ni el tipo de título en absoluto. El tema del título se agrega por separado, no lo toques.
+- Afirma los daños con seguridad. Menciónalos de forma natural: "daño trasero" (no "daño en el trasero"), "granizo" como "daño por granizo". Para varios: "daño frontal y lateral".
+- Puedes mencionar el número de millas como dato, pero NUNCA opines sobre si el kilometraje es alto o bajo.
+- NO inventes datos ni agregues frases de relleno. NUNCA hables de historial ni reportes previos.
+- NO menciones fecha de subasta, luces, ni nada que no esté en los datos.
+- Devuelve SOLO ese párrafo, nada más.`
+      : `Eres un broker de subastas de vehículos. Redacta SOLO el primer párrafo de un análisis, en español, en una a dos oraciones. Texto plano, sin markdown, sin emojis.
 ${esMoto ? '\nIMPORTANTE: Este lote es una MOTOCICLETA. Refiérete a ella como motocicleta o moto, NUNCA como "vehículo" genérico de cuatro ruedas. NUNCA menciones airbags, transmisión automática, ni nada que las motos no tengan.\n' : ''}
 
 IMPORTANTE: Varía SIEMPRE la estructura y el vocabulario. Cada vez que generes este párrafo debe sonar diferente al anterior — cambia el orden de las ideas, usa sinónimos, varía cómo introduces el título y los daños. Nunca repitas la misma redacción.
@@ -386,6 +426,7 @@ REGLAS ESTRICTAS:
       : [
       firstParagraph,
       milesEvalText,
+      billOfSaleText,
       mechDamageText,
       damageHistoryText,
       tituloAusenteText,
@@ -396,6 +437,7 @@ REGLAS ESTRICTAS:
       externalLotText,
       fechaFuturoText,
       excelenteText,
+      impecableText,
       lightsBlock,
       mechText,
       obsText,
