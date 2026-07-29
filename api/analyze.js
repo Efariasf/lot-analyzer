@@ -90,7 +90,8 @@ ${carfaxText.substring(0, 14000)}`;
       'All Over': 'daños generalizados en varias áreas del vehículo',
       'Minor Dent/Scratches': 'abolladuras y rayones menores',
       'Normal Wear': 'desgaste normal por uso',
-      'Undercarriage': 'daño en los bajos (undercarriage)'
+      'Undercarriage': 'daño en los bajos (undercarriage)',
+      'Top/Roof': 'daño en la parte superior del vehículo (techo)'
     };
     const damageClean = damageListForAI.map(d => damageDisplay[d] || d.toLowerCase()).join(', ');
     const mechDamageVariants = [
