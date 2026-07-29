@@ -204,7 +204,7 @@ textarea{resize:none;height:52px}
           <select id="title-type">
             <option value="">Tipo de título...</option>
             <option>Clean</option><option>Salvage</option><option>Rebuilt</option>
-            <option>Parts Only</option><option>Certificate of Destruction / Junk</option>
+            <option>Bill of Sale</option><option>Parts Only</option><option>Certificate of Destruction / Junk</option>
           </select>
           <select id="auction">
             <option value="">Subasta...</option>
@@ -225,7 +225,8 @@ textarea{resize:none;height:52px}
           <button id="btn-externallot" class="toggle-btn" onclick="toggleFlag('externallot')">Lote Externo</button>
           <button id="btn-tituloausente" class="toggle-btn" onclick="toggleFlag('tituloausente')">Título Ausente</button>
           <button id="btn-fechafuturo" class="toggle-btn" onclick="toggleFlag('fechafuturo')">Fecha Futuro</button>
-          <button id="btn-excelente" class="toggle-btn" onclick="toggleFlag('excelente')">Excelente Estado</button>
+          <button id="btn-excelente" class="toggle-btn" onclick="toggleExcelente()">Excelente Estado</button>
+          <button id="btn-impecable" class="toggle-btn" onclick="toggleImpecable()">Impecable Estado</button>
         </div>
 
 
@@ -423,7 +424,11 @@ textarea{resize:none;height:52px}
           <p>Vehículo que fue salvage, se reparó y pasó la inspección estatal. Puede circular legalmente. La marca "Rebuilt" es permanente y acompaña al vehículo en cada venta futura. El seguro suele ser más limitado y el valor de reventa es típicamente 20-40% menor que un clean equivalente.</p>
         </details>
         <details class="guia-item">
-          <summary>Parts Only / Bill of Sale</summary>
+          <summary>Bill of Sale</summary>
+          <p>La subasta no posee el título del vehículo y entrega un Bill of Sale. Con ese documento el cliente deberá tramitar un título nuevo en el DMV de su estado.</p>
+        </details>
+        <details class="guia-item">
+          <summary>Parts Only</summary>
           <p>No otorga propiedad para circular: el vehículo jamás podrá registrarse. Solo sirve para piezas, uso fuera de carretera o exportación (verificar reglas del estado emisor).</p>
         </details>
         <details class="guia-item">
@@ -671,6 +676,18 @@ function toggleFlag(flag){
   document.getElementById('btn-'+flag).classList.toggle('active');
 }
 
+// Excelente e Impecable son mutuamente excluyentes (no repetir la misma idea)
+function toggleExcelente(){
+  const ex=document.getElementById('btn-excelente');
+  ex.classList.toggle('active');
+  if(ex.classList.contains('active')) document.getElementById('btn-impecable').classList.remove('active');
+}
+function toggleImpecable(){
+  const im=document.getElementById('btn-impecable');
+  im.classList.toggle('active');
+  if(im.classList.contains('active')) document.getElementById('btn-excelente').classList.remove('active');
+}
+
 // Motocicleta: las motos no tienen airbag
 function toggleMoto(){
   const btn=document.getElementById('btn-moto');
@@ -905,6 +922,7 @@ async function generateAnalysis(){
         tituloAusente:document.getElementById('btn-tituloausente').classList.contains('active'),
         fechaFuturo:document.getElementById('btn-fechafuturo').classList.contains('active'),
         excelente:document.getElementById('btn-excelente').classList.contains('active'),
+        impecable:document.getElementById('btn-impecable').classList.contains('active'),
         esMoto:document.getElementById('btn-moto').classList.contains('active')
       }})
     });
