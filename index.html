@@ -829,25 +829,34 @@ async function generateAnalysis(){
   ['client-name','client-source','vin','title-type','auction','miles-status'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.borderColor='';
   });
+
+  // Modo Fecha Futuro: el vehículo no está disponible aún, solo se avisa al cliente.
+  // No se piden millas, título, VIN, etc.
+  const esFechaFuturo=document.getElementById('btn-fechafuturo').classList.contains('active');
+
   // Validaciones obligatorias
   const clientName=get('client-name').trim();
   if(!clientName){ flag('client-name','Escribe el nombre del cliente antes de generar.'); return; }
   if(!get('client-source')){ flag('client-source','Selecciona el origen del cliente (CRM o WhatsApp).'); return; }
-  if(!get('vin').trim()){ flag('vin','Coloca el VIN del vehículo.'); return; }
-  if(!get('title-type')){ flag('title-type','Selecciona el tipo de título.'); return; }
-  if(!get('auction')){ flag('auction','Selecciona la subasta (Copart, IAAI o Manheim).'); return; }
-  if(!get('miles-status')){ flag('miles-status','Selecciona el tipo de millas (Actuales, No actuales o Exentas).'); return; }
-  // Validar rango de oferta coherente
-  const oMin=get('offer-min').trim(), oMax=get('offer-max').trim();
-  ['offer-min','offer-max'].forEach(id=>{const el=document.getElementById(id); if(el) el.style.borderColor='';});
-  if(oMin && oMax && parseFloat(oMax) < parseFloat(oMin)){
-    flag('offer-max','El monto máximo no puede ser menor que el mínimo.');
-    document.getElementById('offer-min').style.borderColor='var(--danger)';
-    return;
-  }
-  if((oMin && !oMax) || (!oMin && oMax)){
-    flag(oMin?'offer-max':'offer-min','Completa ambos montos de la oferta (mínimo y máximo).');
-    return;
+
+  if(!esFechaFuturo){
+    // Validaciones completas solo si NO es fecha futuro
+    if(!get('vin').trim()){ flag('vin','Coloca el VIN del vehículo.'); return; }
+    if(!get('title-type')){ flag('title-type','Selecciona el tipo de título.'); return; }
+    if(!get('auction')){ flag('auction','Selecciona la subasta (Copart, IAAI o Manheim).'); return; }
+    if(!get('miles-status')){ flag('miles-status','Selecciona el tipo de millas (Actuales, No actuales o Exentas).'); return; }
+    // Validar rango de oferta coherente
+    const oMin=get('offer-min').trim(), oMax=get('offer-max').trim();
+    ['offer-min','offer-max'].forEach(id=>{const el=document.getElementById(id); if(el) el.style.borderColor='';});
+    if(oMin && oMax && parseFloat(oMax) < parseFloat(oMin)){
+      flag('offer-max','El monto máximo no puede ser menor que el mínimo.');
+      document.getElementById('offer-min').style.borderColor='var(--danger)';
+      return;
+    }
+    if((oMin && !oMax) || (!oMin && oMax)){
+      flag(oMin?'offer-max':'offer-min','Completa ambos montos de la oferta (mínimo y máximo).');
+      return;
+    }
   }
   hideError('error-gen');
   const body=document.getElementById('output-body');
