@@ -151,6 +151,35 @@ ${carfaxText.substring(0, 14000)}`;
     };
     const milesWarning = milesMap[milesStatus] || '';
 
+    // ---- EVALUACIÓN DE MILLAJE (determinista) ----
+    // Compara las millas contra el promedio anual esperado según el año del vehículo.
+    // Solo corre si las millas son "Actuales" (con TMU o Exentas el número no es confiable).
+    let milesEvalText = '';
+    const milesNum = miles ? parseInt(String(miles).replace(/[^\d]/g, ''), 10) : NaN;
+    const yearNum = year ? parseInt(String(year).replace(/[^\d]/g, ''), 10) : NaN;
+    const esActuales = milesStatus === 'Actuales';
+    if (esActuales && !isNaN(milesNum) && milesNum > 0 && !isNaN(yearNum)) {
+      const currentYear = new Date().getFullYear();
+      const edad = Math.max(1, currentYear - yearNum); // mínimo 1 año
+      const perYear = esMoto ? 3000 : 13500; // promedio anual esperado
+      const esperado = perYear * edad;
+      const ratio = milesNum / esperado;
+      const fmtMi = milesNum.toLocaleString('en-US');
+      const fmtProm = esperado.toLocaleString('en-US');
+
+      if (ratio >= 1.8) {
+        milesEvalText = esMoto
+          ? `Con ${fmtMi} millas, el kilometraje es muy elevado para una motocicleta ${yearNum}, cuyo estimado habitual sería de unas ${fmtProm} millas. Suele deberse a uso intensivo en mensajería o recorridos largos, y conviene considerar el desgaste acumulado en el motor, la transmisión y la suspensión.`
+          : `Con ${fmtMi} millas, el kilometraje es muy elevado para un vehículo ${yearNum}, cuyo estimado habitual sería de unas ${fmtProm} millas. Es común en vehículos de flota o transporte, y conviene considerar el desgaste adicional en el motor, la transmisión y la suspensión.`;
+      } else if (ratio >= 1.3) {
+        milesEvalText = `Con ${fmtMi} millas, el kilometraje está por encima del promedio para un ${esMoto ? 'motocicleta' : 'vehículo'} ${yearNum}, cuyo estimado habitual sería de unas ${fmtProm} millas. No es alarmante, pero conviene considerar el desgaste adicional acumulado.`;
+      } else if (ratio <= 0.6) {
+        milesEvalText = `Con ${fmtMi} millas, el kilometraje está por debajo del promedio para un ${esMoto ? 'motocicleta' : 'vehículo'} ${yearNum} (estimado habitual de unas ${fmtProm} millas), lo que representa un punto a favor de la unidad.`;
+      } else {
+        milesEvalText = `Con ${fmtMi} millas, el kilometraje está acorde a lo esperado para un ${esMoto ? 'motocicleta' : 'vehículo'} ${yearNum}, cercano al promedio habitual de unas ${fmtProm} millas.`;
+      }
+    }
+
     // ---- SALVAGE WARNING (solo Clean) ----
     const isTitleClean = titleType === 'Clean';
     const hasHail = damageList.includes('Granizo');
@@ -254,6 +283,7 @@ Reglas:
 - Menciona los daños tal como están escritos, de forma natural: si dice "daño trasero" escribe "daño trasero" (NO "daño en el trasero"), si dice "granizo" escribe "daño por granizo". Para varios: "daño frontal y lateral".
 - NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar", "ofrece un atractivo precio de compra", "sin otros daños reportados", "su historial no presenta registros" o "puede necesitar reparaciones". NUNCA hables de historial ni reportes previos, no tenemos esa información.
 - NO menciones fecha de subasta, luces, ni nada que no esté en los datos.
+- Puedes mencionar el número de millas como dato, pero NUNCA opines sobre si el kilometraje es alto, bajo, elevado o bueno — esa evaluación se agrega por separado. Solo menciona la cifra si aplica.
 - Devuelve SOLO ese párrafo, nada más.`;
 
     // Modo "solo fecha futuro": lote sin datos reales (no eligieron título).
@@ -355,6 +385,7 @@ REGLAS ESTRICTAS:
       ? [ fechaFuturoText, obsText ].filter(Boolean)
       : [
       firstParagraph,
+      milesEvalText,
       mechDamageText,
       damageHistoryText,
       tituloAusenteText,
