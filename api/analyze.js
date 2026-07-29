@@ -188,9 +188,10 @@ ${carfaxText.substring(0, 14000)}`;
     const externalLotText = externalLot
       ? `Este es un Lote Externo: el vehículo no se encuentra físicamente en una ubicación de ${auction}. Está en una ubicación designada para previsualizar y retirar indicada en el lote.`
       : '';
+    const auctionRef = auction || 'la subasta';
     const fechaFuturoText = fechaFuturo
-      ? `Es posible que ${auction} haya realizado un cambio reciente en la fecha de subasta. Actualmente en nuestra plataforma puede aparecer una fecha estimada, pero si en ${auction} el lote figura como "Future" o "Upcoming Lot", significa que la subasta aún no tiene una fecha confirmada, generalmente porque están pendientes documentos o el título del vehículo. Le recomendamos verificar directamente en ${auction}. Una vez que la documentación esté completa, se asignará una fecha de subasta oficial y el lote estará disponible para ofertar.`
-      : '';
+      ? `Es posible que ${auctionRef} haya realizado un cambio reciente en la fecha de subasta. Actualmente en nuestra plataforma puede aparecer una fecha estimada, pero si en ${auctionRef} el lote figura como "Future" o "Upcoming Lot", significa que la subasta aún no tiene una fecha confirmada, generalmente porque están pendientes documentos o el título del vehículo. Le recomendamos verificar directamente en ${auctionRef}. Una vez que la documentación esté completa, se asignará una fecha de subasta oficial y el lote estará disponible para ofertar.`
+      : ''
 
     // Variantes de "excelente estado": si hay daños marcados, usa versiones que no contradigan
     const excelenteVariantsSinDanos = [
@@ -254,8 +255,13 @@ Reglas:
 - NO menciones fecha de subasta, luces, ni nada que no esté en los datos.
 - Devuelve SOLO ese párrafo, nada más.`;
 
-    // Ambas llamadas a Groq en PARALELO para mayor velocidad
-    const firstParagraphPromise = fetch('https://api.groq.com/openai/v1/chat/completions', {
+    // Modo "solo fecha futuro": lote sin datos reales (no eligieron título).
+    // No llamamos a la IA para el primer párrafo, para no inventar nada.
+    const soloFechaFuturo = fechaFuturo && !titleType;
+
+    const firstParagraphPromise = soloFechaFuturo
+      ? Promise.resolve(null)
+      : fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
       body: JSON.stringify({
@@ -307,11 +313,14 @@ REGLAS ESTRICTAS:
 
     const [groqRes, obsRes, offerNotesRes] = await Promise.all([firstParagraphPromise, obsPromise, offerNotesPromise]);
 
-    const data = await groqRes.json();
-    if (!groqRes.ok) return res.status(500).json({ error: data?.error?.message || 'Error de Groq' });
-    let firstParagraph = (data?.choices?.[0]?.message?.content || '').trim();
-    // Limpiar guiones, viñetas o caracteres sueltos al inicio
-    firstParagraph = firstParagraph.replace(/^[\s\-–—•*>]+/, '').trim();
+    let firstParagraph = '';
+    if (groqRes) {
+      const data = await groqRes.json();
+      if (!groqRes.ok) return res.status(500).json({ error: data?.error?.message || 'Error de Groq' });
+      firstParagraph = (data?.choices?.[0]?.message?.content || '').trim();
+      // Limpiar guiones, viñetas o caracteres sueltos al inicio
+      firstParagraph = firstParagraph.replace(/^[\s\-–—•*>]+/, '').trim();
+    }
 
     let obsText = '';
     if (obsRes) {
@@ -341,7 +350,9 @@ REGLAS ESTRICTAS:
     const vehParts = [year, (make||'').toUpperCase(), (model||'').toUpperCase()].filter(Boolean).join(' ');
     const header = vehParts ? `${lot} - ${vehParts}` : `${lot}`;
 
-    const blocks = [
+    const blocks = soloFechaFuturo
+      ? [ fechaFuturoText, obsText ].filter(Boolean)
+      : [
       firstParagraph,
       mechDamageText,
       damageHistoryText,
@@ -356,12 +367,12 @@ REGLAS ESTRICTAS:
       lightsBlock,
       mechText,
       obsText,
-    ].filter(Boolean);
+    ].filter(Boolean)
 
-    const offerBlock = [offerText, buyNowText, reserveText, offerNotesText].filter(Boolean).join('\n');
+    const offerBlock = soloFechaFuturo ? '' : [offerText, buyNowText, reserveText, offerNotesText].filter(Boolean).join('\n');
 
-    const footer = `VIN: ${vin}
-Solicite su REPORTE aquí:
+    const vinLine = (vin && vin.trim()) ? `VIN: ${vin}\n` : '';
+    const footer = `${vinLine}Solicite su REPORTE aquí:
 ${REPORT_LINK}
 
 Es siempre recomendable revisar el Reporte de Carfax para verificar el tipo de título, millas, servicios realizados, accidentes reportados, y propietarios anteriores.
