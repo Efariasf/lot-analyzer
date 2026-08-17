@@ -561,6 +561,25 @@ REGLAS ESTRICTAS:
       }
     }
 
+    // ---- VERIFICACIÓN: ¿el modelo mencionó los daños? ----
+    // Mismo problema visto con el título: a veces omite los daños del párrafo
+    // aunque estén en los datos. Si damageClean existe, al menos UNO de los
+    // daños individuales debe aparecer mencionado; si no, se agregan de forma determinista.
+    if (damageClean) {
+      const piezasDano = damageClean.split(', ').map(p => p.trim()).filter(Boolean);
+      const textoLower = firstParagraph.toLowerCase();
+      const mencionaAlgunDano = piezasDano.some(p => textoLower.includes(p.toLowerCase()));
+      if (!mencionaAlgunDano) {
+        const danoFallbackVariants = [
+          `Presenta ${damageClean}.`,
+          `El vehículo presenta ${damageClean}.`,
+          `Se reporta ${damageClean}.`
+        ];
+        const danoFallback = danoFallbackVariants[Math.floor(Math.random() * danoFallbackVariants.length)];
+        firstParagraph = firstParagraph ? `${firstParagraph} ${danoFallback}` : danoFallback;
+      }
+    }
+
     let obsText = '';
     if (obsEsTrivial) {
       // Texto trivial (un número, símbolos): se muestra tal cual, sin pasar por IA.
