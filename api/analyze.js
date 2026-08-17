@@ -171,7 +171,7 @@ ${carfaxText.substring(0, 14000)}`;
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openai/gpt-oss-120b',
           messages: [{ role: 'user', content: carfaxPrompt }],
           max_tokens: 2000,
           temperature: 0.4
@@ -454,7 +454,7 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 300,
         temperature: 1.0
@@ -472,7 +472,7 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
           body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
+            model: 'openai/gpt-oss-120b',
             messages: [{ role: 'user', content: `Eres un broker profesional de subastas de vehículos. Reescribe la siguiente observación en español con redacción profesional y fluida, corrigiendo ortografía y acentos, manteniendo exactamente el mismo significado y sin inventar información nueva.
 
 OBSERVACIÓN: "${obsRaw}"
@@ -494,7 +494,7 @@ Reglas:
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
           body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
+            model: 'openai/gpt-oss-120b',
             messages: [{ role: 'user', content: `Eres un broker de subastas de vehículos (Copart, IAAI, Manheim). Mejora la redacción de esta nota sobre la oferta de un lote, en español, de forma profesional y breve.
 
 NOTA DEL BROKER: "${offerNotes}"
