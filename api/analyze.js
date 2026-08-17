@@ -540,6 +540,25 @@ REGLAS ESTRICTAS:
       .replace(/,\s*,/g, ',')
       .trim();
 
+    // ---- VERIFICACIÓN: ¿el modelo mencionó el título? ----
+    // Algunos modelos a veces omiten el título por completo (visto con openai/gpt-oss-120b).
+    // Si titleType existe y NO es Bill of Sale ni modo solo-fecha-futuro, el título es
+    // información obligatoria: si el párrafo no lo menciona, se inserta de forma determinista.
+    if (titleType && !esBillOfSale && !soloFechaFuturo) {
+      const mencionaTitulo = firstParagraph.toLowerCase().includes(titleType.toLowerCase())
+        || firstParagraph.toLowerCase().includes('título')
+        || firstParagraph.toLowerCase().includes('titulo');
+      if (!mencionaTitulo) {
+        const tituloFallbackVariants = [
+          `La subasta indica título ${titleType}, lo que según ${auction || 'la subasta'}, dicho título refiere que ${titleExplain[titleType] || ''}.`,
+          `El lote figura con título ${titleType}, lo que de acuerdo a ${auction || 'la subasta'}, esta clasificación refiere que ${titleExplain[titleType] || ''}.`,
+          `${auction || 'La subasta'} reporta título ${titleType}, lo que según la subasta, dicha condición refiere que ${titleExplain[titleType] || ''}.`
+        ];
+        const tituloFallback = tituloFallbackVariants[Math.floor(Math.random() * tituloFallbackVariants.length)];
+        firstParagraph = firstParagraph ? `${tituloFallback} ${firstParagraph}` : tituloFallback;
+      }
+    }
+
     let obsText = '';
     if (obsEsTrivial) {
       // Texto trivial (un número, símbolos): se muestra tal cual, sin pasar por IA.
