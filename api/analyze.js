@@ -220,7 +220,12 @@ ${carfaxText.substring(0, 14000)}`;
       'Minor Dent/Scratches': 'abolladuras y rayones menores',
       'Normal Wear': 'desgaste normal por uso',
       'Undercarriage': 'daño en los bajos (undercarriage)',
-      'Top/Roof': 'daño en la parte superior del vehículo (techo)'
+      'Top/Roof': 'daño en la parte superior del vehículo (techo)',
+      'Granizo': 'daño por granizo',
+      'Vandalismo': 'daño por vandalismo',
+      'Fuego': 'daño por fuego',
+      'Inundación/Agua': 'daño por inundación/agua',
+      'Volcado': 'daño por volcadura'
     };
     const damageClean = damageList.map(d => damageDisplay[d] || d.toLowerCase()).join(', ');
     const damageHistoryVariants = [
@@ -442,7 +447,7 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
 - Ejemplos de la oración completa BIEN construida (fuente mencionada una sola vez): "Copart reporta Certificado de Título Clean, lo que refiere que no fue declarado pérdida total por la aseguradora." / "La subasta indica Certificado de Título Salvage, lo que según la subasta, dicha clasificación refiere que el vehículo habría sufrido un daño suficientemente severo para ser declarado pérdida total." (en este segundo ejemplo "la subasta" solo se dijo una vez en total, aunque aparezca la palabra dos veces se refiere al mismo momento gramatical de atribución, evita esto también si suena repetitivo).
 - Nunca afirmes el significado del título como un hecho propio: solo repetimos la información de la subasta, no la verificamos nosotros.`}
 - Afirma los daños con seguridad, nunca digas "sugiere" o "podría tener daños".
-- Menciona los daños tal como están escritos, de forma natural: si dice "daño trasero" escribe "daño trasero" (NO "daño en el trasero"), si dice "granizo" escribe "daño por granizo". Para varios: "daño frontal y lateral".
+- Menciona los daños EXACTAMENTE tal como están escritos en la lista de datos, ya vienen en redacción natural (ej. "daño trasero", "daño por granizo"). NO los reformules ni los abrevies. Para varios: únelos con "y" de forma natural.
 - NO inventes datos ni agregues frases de relleno como "es beneficioso al vender", "proporciona una visión clara", "es un factor importante a considerar", "ofrece un atractivo precio de compra", "sin otros daños reportados", "su historial no presenta registros" o "puede necesitar reparaciones". NUNCA hables de historial ni reportes previos, no tenemos esa información.
 - Menciona las millas SOLO como dato numérico. NO opines si son altas, bajas, elevadas o acordes, NO las compares con el promedio ni con el año del vehículo: esa evaluación se agrega automáticamente por separado.
 - NO menciones fecha de subasta, luces, ni nada que no esté en los datos.
