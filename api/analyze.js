@@ -561,7 +561,20 @@ REGLAS ESTRICTAS:
       }
     }
 
-    // ---- VERIFICACIÓN: ¿el modelo mencionó los daños? ----
+    // ---- COBERTURA LEGAL: el título mostrado por la subasta puede no ser el final ----
+    // A veces la aseguradora reporta una pérdida total que aún no se refleja en el
+    // sistema de la subasta (NMVTIS puede tardar en actualizarse). Esto deja constancia
+    // por escrito con el cliente desde la cotización, sin importar qué diga la IA.
+    // No aplica a Bill of Sale (no hay título aún) ni a Certificate of Destruction (ya es el peor caso).
+    const aplicaCoberturaTitulo = titleType && !esBillOfSale && !isDestruction && !soloFechaFuturo;
+    const titleCoverageVariants = [
+      `La información de ${auction || 'la subasta'} suele ser correcta, pero en algunos casos puede variar, por lo que recomendamos siempre revisar el Reporte de Carfax para validar el tipo de título.`,
+      `Aunque la información de ${auction || 'la subasta'} suele ser precisa, en ocasiones puede haber variaciones, así que recomendamos revisar el Reporte de Carfax para confirmar el tipo de título.`,
+      `Recomendamos revisar el Reporte de Carfax para validar el tipo de título, ya que aunque la información de ${auction || 'la subasta'} suele ser correcta, en algunos casos puede variar.`
+    ];
+    const titleCoverageText = aplicaCoberturaTitulo
+      ? titleCoverageVariants[Math.floor(Math.random() * titleCoverageVariants.length)]
+      : '';
     // Mismo problema visto con el título: a veces omite los daños del párrafo
     // aunque estén en los datos. Si damageClean existe, al menos UNO de los
     // daños individuales debe aparecer mencionado; si no, se agregan de forma determinista.
@@ -626,6 +639,7 @@ REGLAS ESTRICTAS:
       : [
       billOfSaleText,
       firstParagraph,
+      titleCoverageText,
       mechDamageText,
       damageHistoryText,
       tituloAusenteText,
