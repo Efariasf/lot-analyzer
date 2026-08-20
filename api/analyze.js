@@ -487,6 +487,8 @@ Reglas:
 - Devuelve SOLO la observación reescrita, sin comillas, sin preámbulo y sin explicar lo que hiciste.
 - Debe sonar mejor redactada que el original, no una copia literal.
 - Una o dos oraciones como máximo.
+- Mantén la MISMA PERSONA GRAMATICAL Y TIEMPO VERBAL del original. Si el original dice "creo que", "pienso que", "me parece que" (primera persona, presente), NO lo cambies a tercera persona ni a pasado (NUNCA "consideró que", "él pensó que"). Conserva la voz tal cual la escribió el broker.
+- NUNCA modifiques números, cifras o cantidades que el usuario haya escrito (precios, montos, rangos). Escríbelos EXACTAMENTE igual, dígito por dígito, sin agregar comas, puntos ni espacios que no estaban en el original.
 - Si el original expresa una posibilidad o sospecha, consérvala como tal (no la afirmes como un hecho).` }],
             max_tokens: 150,
             temperature: 0.6
@@ -610,6 +612,14 @@ REGLAS ESTRICTAS:
         // usamos la observación original tal cual para no perder el dato.
         const metaObs = /(no hay (texto|nada)|nada que mejorar|no requiere|no se puede mejorar|no es necesario|solo un n[uú]mero|no aplica|aqu[ií] (est[aá]|tienes))/i.test(obsText);
         if (!obsText || metaObs) obsText = obsRaw;
+        else {
+          // Red de seguridad: verificar que ningún número del original se haya alterado
+          // (el modelo a veces reformatea cifras, ej. "13500" -> "13 500"). Si algún
+          // número original no aparece igual en el resultado, usamos el texto original.
+          const numerosOriginal = obsRaw.match(/\d+/g) || [];
+          const numerosAlterados = numerosOriginal.some(n => !obsText.includes(n));
+          if (numerosAlterados) obsText = obsRaw;
+        }
       } else {
         obsText = obsRaw;
       }
