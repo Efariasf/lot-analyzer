@@ -633,23 +633,21 @@ REGLAS ESTRICTAS:
     } else if (obsRes) {
       const obsData = await obsRes.json();
       if (obsRes.ok) {
-        obsText = (obsData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
-        // Red de seguridad: si el modelo comenta en vez de reescribir, o falla,
-        // usamos la observación original tal cual para no perder el dato.
-        const metaObs = /(no hay (texto|nada)|nada que mejorar|no requiere|no se puede mejorar|no es necesario|solo un n[uú]mero|no aplica|aqu[ií] (est[aá]|tienes))/i.test(obsText);
-        if (!obsText || metaObs) obsText = obsRaw;
-        else {
-          // Red de seguridad: verificar que ningún número del original se haya alterado
-          // (el modelo a veces reformatea cifras, ej. "13500" -> "13 500"). Si algún
-          // número original no aparece igual en el resultado, usamos el texto original.
-          const numerosOriginal = obsRaw.match(/\d+/g) || [];
-          const numerosAlterados = numerosOriginal.some(n => !obsText.includes(n));
-          if (numerosAlterados) obsText = obsRaw;
-        }
-        // Red de seguridad: si el "mejorado" quedó casi idéntico al original
-        // (el modelo copió en vez de reescribir), se le pide un segundo intento
+        const numerosOriginal = obsRaw.match(/\d+/g) || [];
+        const metaObsRegex = /(no hay (texto|nada)|nada que mejorar|no requiere|no se puede mejorar|no es necesario|solo un n[uú]mero|no aplica|aqu[ií] (est[aá]|tienes))/i;
+
+        let candidato = (obsData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
+        const metaObs = metaObsRegex.test(candidato);
+        // Red de seguridad: verificar que ningún número del original se haya alterado
+        // (el modelo a veces reformatea cifras, ej. "13500" -> "13 500").
+        const numerosAlterados = numerosOriginal.some(n => !candidato.includes(n));
+        obsText = (candidato && !metaObs && !numerosAlterados) ? candidato : obsRaw;
+
+        // Red de seguridad: si el resultado quedó casi idéntico al original —ya sea
+        // porque el modelo lo copió literal, o porque tuvimos que caer al original
+        // por alguna de las validaciones de arriba— se le pide un segundo intento
         // más firme. Solo aplica a observaciones con contenido real que mejorar.
-        if (obsText && obsText !== obsRaw && obsRaw.length >= 20) {
+        if (obsRaw.length >= 20) {
           const parecido = similarityRatio(obsRaw, obsText);
           if (parecido >= 0.85) {
             try {
@@ -675,7 +673,7 @@ Reglas:
               if (retryRes.ok) {
                 const retryData = await retryRes.json();
                 const retryText = (retryData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
-                const retryMetaObs = /(no hay (texto|nada)|nada que mejorar|no requiere|no se puede mejorar|no es necesario|solo un n[uú]mero|no aplica|aqu[ií] (est[aá]|tienes))/i.test(retryText);
+                const retryMetaObs = metaObsRegex.test(retryText);
                 const retryNumerosAlterados = numerosOriginal.some(n => !retryText.includes(n));
                 if (retryText && !retryMetaObs && !retryNumerosAlterados) obsText = retryText;
               }
