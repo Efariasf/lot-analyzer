@@ -479,19 +479,24 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
           body: JSON.stringify({
             model: 'openai/gpt-oss-120b',
-            messages: [{ role: 'user', content: `Eres un broker profesional de subastas de vehículos. Reescribe la siguiente observación en español con redacción profesional y fluida, corrigiendo ortografía y acentos, manteniendo exactamente el mismo significado y sin inventar información nueva.
+            messages: [{ role: 'user', content: `Eres un broker profesional de subastas de vehículos. Tu tarea es TRANSFORMAR la siguiente observación informal en una versión profesional, fluida y bien redactada: mejora la estructura de la oración, los conectores y el vocabulario. No te limites a corregir ortografía — mejora la redacción de verdad.
 
-OBSERVACIÓN: "${obsRaw}"
+OBSERVACIÓN ORIGINAL: "${obsRaw}"
+
+Ejemplo del nivel de transformación esperado:
+Original: "el carro se ve bien pero tiene un golpe en la puerta que no se nota mucho"
+Mejorado: "El vehículo se aprecia en buen estado general, con un golpe leve en la puerta que resulta poco perceptible."
 
 Reglas:
+- Mejora la redacción de forma notoria: reestructura la oración, mejora conectores y vocabulario. NO entregues una copia casi idéntica del original — ese es el error más común, evítalo.
+- No inventes información nueva ni elimines información que el broker sí mencionó.
+- Mantén la MISMA PERSONA GRAMATICAL Y TIEMPO VERBAL en expresiones de opinión: si el original dice "creo que", "pienso que", "me parece que" (primera persona, presente), consérvalo en primera persona (NUNCA lo cambies a tercera persona ni a pasado, por ejemplo nunca "consideró que", "él pensó que").
+- Los números, cifras y cantidades que escribió el broker deben quedar EXACTAMENTE igual, dígito por dígito, sin agregar comas, puntos ni espacios que no estaban en el original.
+- Si el original expresa una posibilidad o sospecha, consérvala como tal (no la afirmes como un hecho).
 - Devuelve SOLO la observación reescrita, sin comillas, sin preámbulo y sin explicar lo que hiciste.
-- Debe sonar mejor redactada que el original, no una copia literal.
-- Una o dos oraciones como máximo.
-- Mantén la MISMA PERSONA GRAMATICAL Y TIEMPO VERBAL del original. Si el original dice "creo que", "pienso que", "me parece que" (primera persona, presente), NO lo cambies a tercera persona ni a pasado (NUNCA "consideró que", "él pensó que"). Conserva la voz tal cual la escribió el broker.
-- NUNCA modifiques números, cifras o cantidades que el usuario haya escrito (precios, montos, rangos). Escríbelos EXACTAMENTE igual, dígito por dígito, sin agregar comas, puntos ni espacios que no estaban en el original.
-- Si el original expresa una posibilidad o sospecha, consérvala como tal (no la afirmes como un hecho).` }],
+- Una o dos oraciones como máximo.` }],
             max_tokens: 150,
-            temperature: 0.6
+            temperature: 0.7
           })
         })
       : Promise.resolve(null);
