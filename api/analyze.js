@@ -8,7 +8,7 @@ function similarityRatio(a, b) {
   if (!s1 || !s2) return 0;
   if (s1 === s2) return 1;
   const m = s1.length, n = s2.length;
-  if (m > 400 || n > 400) return 0; // observaciones muy largas: no vale la pena comparar, se asume distinto
+  if (m > 2000 || n > 2000) return 0; // caso extremo improbable: observaciones normales nunca llegan aquí
   const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
   for (let i = 0; i <= m; i++) dp[i][0] = i;
   for (let j = 0; j <= n; j++) dp[0][j] = j;
