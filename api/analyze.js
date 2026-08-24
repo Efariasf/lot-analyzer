@@ -1,5 +1,26 @@
 import crypto from 'node:crypto';
 
+// Mide qué tan parecidos son dos textos (0 = totalmente distintos, 1 = idénticos).
+// Se usa para detectar cuando la IA "mejora" un texto casi sin cambiarlo.
+function similarityRatio(a, b) {
+  const normalize = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const s1 = normalize(a), s2 = normalize(b);
+  if (!s1 || !s2) return 0;
+  if (s1 === s2) return 1;
+  const m = s1.length, n = s2.length;
+  if (m > 400 || n > 400) return 0; // observaciones muy largas: no vale la pena comparar, se asume distinto
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = s1[i - 1] === s2[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  const maxLen = Math.max(m, n);
+  return maxLen === 0 ? 1 : 1 - dp[m][n] / maxLen;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -624,6 +645,44 @@ REGLAS ESTRICTAS:
           const numerosOriginal = obsRaw.match(/\d+/g) || [];
           const numerosAlterados = numerosOriginal.some(n => !obsText.includes(n));
           if (numerosAlterados) obsText = obsRaw;
+        }
+        // Red de seguridad: si el "mejorado" quedó casi idéntico al original
+        // (el modelo copió en vez de reescribir), se le pide un segundo intento
+        // más firme. Solo aplica a observaciones con contenido real que mejorar.
+        if (obsText && obsText !== obsRaw && obsRaw.length >= 20) {
+          const parecido = similarityRatio(obsRaw, obsText);
+          if (parecido >= 0.85) {
+            try {
+              const retryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+                body: JSON.stringify({
+                  model: 'openai/gpt-oss-120b',
+                  messages: [{ role: 'user', content: `Tu intento anterior de reescribir esta observación quedó casi idéntico al original — eso está PROHIBIDO. Reescríbela de nuevo, esta vez con una reestructuración notablemente distinta: cambia el orden de las ideas, usa conectores y vocabulario diferentes. NO la copies.
+
+OBSERVACIÓN ORIGINAL: "${obsRaw}"
+TU INTENTO ANTERIOR (muy parecido, no lo repitas): "${obsText}"
+
+Reglas:
+- Los números, cifras y montos deben quedar EXACTAMENTE igual, dígito por dígito.
+- Mantén la misma persona gramatical (si dice "creo que", consérvalo en primera persona).
+- No inventes ni elimines información.
+- Devuelve SOLO la observación reescrita, sin comillas ni preámbulo. Una o dos oraciones máximo.` }],
+                  max_tokens: 150,
+                  temperature: 0.8
+                })
+              });
+              if (retryRes.ok) {
+                const retryData = await retryRes.json();
+                const retryText = (retryData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
+                const retryMetaObs = /(no hay (texto|nada)|nada que mejorar|no requiere|no se puede mejorar|no es necesario|solo un n[uú]mero|no aplica|aqu[ií] (est[aá]|tienes))/i.test(retryText);
+                const retryNumerosAlterados = numerosOriginal.some(n => !retryText.includes(n));
+                if (retryText && !retryMetaObs && !retryNumerosAlterados) obsText = retryText;
+              }
+            } catch (e) {
+              // Si el reintento falla, nos quedamos con el resultado del primer intento.
+            }
+          }
         }
       } else {
         obsText = obsRaw;
