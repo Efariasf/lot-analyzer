@@ -12,11 +12,20 @@ function extractContent(data) {
   let text = (msg.content || '').trim();
   // Si el modelo dejó content vacío pero puso algo en reasoning, usamos eso.
   if (!text && msg.reasoning) text = String(msg.reasoning).trim();
-  // Quitar bloques de razonamiento <think>...</think> si vienen incrustados.
+  // Quitar bloques de razonamiento <think>...</think> completos (si vienen incrustados).
   text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-  // Si quedó una etiqueta de apertura sin cerrar, tomar lo que sigue.
-  const thinkOpen = text.lastIndexOf('</think>');
-  if (thinkOpen !== -1) text = text.slice(thinkOpen + '</think>'.length).trim();
+  // Si quedó una etiqueta de cierre </think>, tomar solo lo que viene DESPUÉS.
+  const closeIdx = text.lastIndexOf('</think>');
+  if (closeIdx !== -1) text = text.slice(closeIdx + '</think>'.length).trim();
+  // Si quedó una etiqueta de apertura <think> sin cerrar (el modelo se cortó razonando),
+  // no hay respuesta útil: descartar todo lo que sigue.
+  const openIdx = text.indexOf('<think>');
+  if (openIdx !== -1) text = text.slice(0, openIdx).trim();
+  // Algunos modelos escriben el razonamiento como texto plano con marcadores tipo
+  // "Here's a thinking process" o encabezados en **negrita**. Si detectamos ese patrón,
+  // el contenido no es utilizable como observación limpia.
+  const pareceRazonamiento = /thinking process|deconstruct original|apply rules|\*\*(analyze|task|role|rules|output)/i.test(text);
+  if (pareceRazonamiento) return '';
   // Quitar comillas envolventes.
   text = text.replace(/^["']|["']$/g, '').trim();
   return text;
@@ -520,6 +529,7 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
           body: JSON.stringify({
             model: 'qwen/qwen3.6-27b',
+            reasoning_effort: 'none',
             messages: [{ role: 'user', content: `Eres un broker profesional de subastas de vehículos. Tu tarea es TRANSFORMAR la siguiente observación informal en una versión profesional, fluida y bien redactada: mejora la estructura de la oración, los conectores y el vocabulario. No te limites a corregir ortografía — mejora la redacción de verdad.
 
 OBSERVACIÓN ORIGINAL: "${obsRaw}"
@@ -676,6 +686,7 @@ REGLAS ESTRICTAS:
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
                 body: JSON.stringify({
                   model: 'qwen/qwen3.6-27b',
+            reasoning_effort: 'none',
                   messages: [{ role: 'user', content: `Tu intento anterior de reescribir esta observación quedó casi idéntico al original — eso está PROHIBIDO. Reescríbela de nuevo, esta vez con una reestructuración notablemente distinta: cambia el orden de las ideas, usa conectores y vocabulario diferentes. NO la copies.
 
 OBSERVACIÓN ORIGINAL: "${obsRaw}"
