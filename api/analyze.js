@@ -271,8 +271,13 @@ ${carfaxText.substring(0, 14000)}`;
       'Normal Wear': 'desgaste normal por uso',
       'Undercarriage': 'daño en los bajos (undercarriage)',
       'Top/Roof': 'daño en la parte superior del vehículo (techo)',
+      'Llantas/Ruedas': 'daño en las llantas o ruedas',
+      'Cristales/Vidrios': 'daño en los cristales o vidrios',
+      'Interior': 'daño en el interior del vehículo',
+      'Piezas faltantes': 'piezas faltantes en el vehículo',
       'Granizo': 'daño por granizo',
       'Vandalismo': 'daño por vandalismo',
+      'Airbags explotados': 'airbags desplegados (explotados)',
       'Fuego': 'daño por fuego',
       'Inundación/Agua': 'daño por inundación/agua',
       'Volcado': 'daño por volcadura'
