@@ -2,6 +2,26 @@ import crypto from 'node:crypto';
 
 // Mide qué tan parecidos son dos textos (0 = totalmente distintos, 1 = idénticos).
 // Se usa para detectar cuando la IA "mejora" un texto casi sin cambiarlo.
+// Extrae el texto de la respuesta de Groq de forma robusta.
+// Algunos modelos de razonamiento devuelven el contenido junto con su "pensamiento"
+// (envuelto en etiquetas <think>...</think>) o dejan message.content vacío y ponen
+// el texto en message.reasoning. Esta función cubre esos casos.
+function extractContent(data) {
+  const msg = data?.choices?.[0]?.message;
+  if (!msg) return '';
+  let text = (msg.content || '').trim();
+  // Si el modelo dejó content vacío pero puso algo en reasoning, usamos eso.
+  if (!text && msg.reasoning) text = String(msg.reasoning).trim();
+  // Quitar bloques de razonamiento <think>...</think> si vienen incrustados.
+  text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  // Si quedó una etiqueta de apertura sin cerrar, tomar lo que sigue.
+  const thinkOpen = text.lastIndexOf('</think>');
+  if (thinkOpen !== -1) text = text.slice(thinkOpen + '</think>'.length).trim();
+  // Quitar comillas envolventes.
+  text = text.replace(/^["']|["']$/g, '').trim();
+  return text;
+}
+
 function similarityRatio(a, b) {
   const normalize = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
   const s1 = normalize(a), s2 = normalize(b);
@@ -499,7 +519,7 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
           body: JSON.stringify({
-            model: 'openai/gpt-oss-120b',
+            model: 'qwen/qwen3.6-27b',
             messages: [{ role: 'user', content: `Eres un broker profesional de subastas de vehículos. Tu tarea es TRANSFORMAR la siguiente observación informal en una versión profesional, fluida y bien redactada: mejora la estructura de la oración, los conectores y el vocabulario. No te limites a corregir ortografía — mejora la redacción de verdad.
 
 OBSERVACIÓN ORIGINAL: "${obsRaw}"
@@ -516,7 +536,7 @@ Reglas:
 - Si el original expresa una posibilidad o sospecha, consérvala como tal (no la afirmes como un hecho).
 - Devuelve SOLO la observación reescrita, sin comillas, sin preámbulo y sin explicar lo que hiciste.
 - Una o dos oraciones como máximo.` }],
-            max_tokens: 150,
+            max_tokens: 800,
             temperature: 0.7
           })
         })
@@ -636,7 +656,7 @@ REGLAS ESTRICTAS:
         const numerosOriginal = obsRaw.match(/\d+/g) || [];
         const metaObsRegex = /(no hay (texto|nada)|nada que mejorar|no requiere|no se puede mejorar|no es necesario|solo un n[uú]mero|no aplica|aqu[ií] (est[aá]|tienes))/i;
 
-        let candidato = (obsData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
+        let candidato = extractContent(obsData);
         const metaObs = metaObsRegex.test(candidato);
         // Red de seguridad: verificar que ningún número del original se haya alterado
         // (el modelo a veces reformatea cifras, ej. "13500" -> "13 500").
@@ -655,7 +675,7 @@ REGLAS ESTRICTAS:
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
                 body: JSON.stringify({
-                  model: 'openai/gpt-oss-120b',
+                  model: 'qwen/qwen3.6-27b',
                   messages: [{ role: 'user', content: `Tu intento anterior de reescribir esta observación quedó casi idéntico al original — eso está PROHIBIDO. Reescríbela de nuevo, esta vez con una reestructuración notablemente distinta: cambia el orden de las ideas, usa conectores y vocabulario diferentes. NO la copies.
 
 OBSERVACIÓN ORIGINAL: "${obsRaw}"
@@ -666,13 +686,13 @@ Reglas:
 - Mantén la misma persona gramatical (si dice "creo que", consérvalo en primera persona).
 - No inventes ni elimines información.
 - Devuelve SOLO la observación reescrita, sin comillas ni preámbulo. Una o dos oraciones máximo.` }],
-                  max_tokens: 150,
+                  max_tokens: 800,
                   temperature: 0.8
                 })
               });
               if (retryRes.ok) {
                 const retryData = await retryRes.json();
-                const retryText = (retryData?.choices?.[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
+                const retryText = extractContent(retryData);
                 const retryMetaObs = metaObsRegex.test(retryText);
                 const retryNumerosAlterados = numerosOriginal.some(n => !retryText.includes(n));
                 if (retryText && !retryMetaObs && !retryNumerosAlterados) obsText = retryText;
