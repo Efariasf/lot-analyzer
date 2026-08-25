@@ -82,11 +82,13 @@ textarea{resize:none;height:52px}
 
 /* DAMAGE */
 .damage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
-.dmg{display:flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:3px 5px;cursor:pointer;transition:.15s}
+.dmg{display:flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:3px 5px;cursor:pointer;transition:.15s;min-height:32px}
 .dmg:hover{border-color:var(--accent)}
 .dmg input[type=checkbox]{accent-color:var(--accent);width:12px;height:12px;cursor:pointer;flex-shrink:0}
 .dmg span{font-size:10.5px;color:var(--text);line-height:1.15}
 .dmg.checked{border-color:var(--accent);background:rgba(232,255,77,.07)}
+.dmg-cat{grid-column:1/-1;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0 1px;padding-left:2px}
+.dmg-cat:first-child{margin-top:0}
 
 /* MECH */
 .mech-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:4px}
@@ -252,25 +254,29 @@ textarea{resize:none;height:52px}
           <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 8px" onclick="openTemplates()">⊞ Plantillas</button>
         </div>
         <div class="damage-grid" id="damage-grid">
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Granizo"><span>Granizo</span></label>
+          <div class="dmg-cat">Impacto y colisión</div>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño frontal"><span>Daño frontal</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño trasero"><span>Daño trasero</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Daño lateral"><span>Daño lateral</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Top/Roof"><span>Top/Roof</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Undercarriage"><span>Undercarriage</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Volcado"><span>Volcado</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="All Over"><span>All Over</span></label>
+          <div class="dmg-cat">Elementos y causas</div>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Granizo"><span>Granizo</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Inundación/Agua"><span>Inundación/Agua</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Fuego"><span>Fuego</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Vandalismo"><span>Vandalismo</span></label>
+          <div class="dmg-cat">Partes específicas</div>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Airbags explotados"><span>Airbags explotados</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Mecánico"><span>Mecánico</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Undercarriage"><span>Undercarriage</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Minor Dent/Scratches"><span>Minor Dent/Scratches</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Normal Wear"><span>Normal Wear</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Top/Roof"><span>Top/Roof</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Llantas/Ruedas"><span>Llantas/Ruedas</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Cristales/Vidrios"><span>Cristales/Vidrios</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Interior"><span>Interior</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Piezas faltantes"><span>Piezas faltantes</span></label>
-          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="All Over"><span>All Over</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Mecánico"><span>Mecánico</span></label>
+          <div class="dmg-cat">Condición general</div>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Minor Dent/Scratches"><span>Minor Dent/Scratches</span></label>
+          <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Normal Wear"><span>Normal Wear</span></label>
           <label class="dmg" onclick="toggleDamage(this)"><input type="checkbox" value="Damage History"><span>Damage History</span></label>
         </div>
       </div>
