@@ -2051,7 +2051,7 @@ function saveCustomIdentity(){
 async function heartbeat(){
   if(!supa||!currentUser)return;
   try{
-    await supa.from('lot_presence').upsert({author:currentUser,last_seen:new Date().toISOString()});
+    await supa.from('lot_presence').upsert({author:currentUser,last_seen:new Date().toISOString()},{onConflict:'author'});
   }catch(e){ /* silencioso */ }
 }
 async function renderPresence(){
@@ -2062,15 +2062,17 @@ async function renderPresence(){
     const now=Date.now();
     // Activos = vistos en los últimos 90 segundos
     const active=(data||[]).filter(p=>now-new Date(p.last_seen).getTime()<90000).map(p=>p.author);
+    // Quitar duplicados por si la tabla llegó a guardar filas repetidas
+    const unicos=[...new Set(active)];
     const ind=document.getElementById('presence-indicator');
     if(!ind)return;
-    if(active.length===0){ ind.innerHTML=''; return; }
-    const others=active.filter(a=>a!==currentUser);
+    if(unicos.length===0){ ind.innerHTML=''; return; }
+    const others=unicos.filter(a=>a!==currentUser);
     const dot='<span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block"></span>';
     if(others.length===0){
       ind.innerHTML=`${dot} Solo tú en línea`;
     }else{
-      ind.innerHTML=`${dot} En línea: ${active.join(', ')}`;
+      ind.innerHTML=`${dot} En línea: ${unicos.join(', ')}`;
     }
   }catch(e){ /* silencioso */ }
 }
@@ -2082,9 +2084,13 @@ window.addEventListener('DOMContentLoaded',()=>{
   else { heartbeat(); renderPresence(); }
 });
 
-// Latido cada 30s + refresco de presencia cada 20s
-setInterval(()=>{ heartbeat(); },30000);
+// Latido cada 30s (y refresca la lista al instante tras cada latido)
+setInterval(()=>{ heartbeat().then(renderPresence); },30000);
 setInterval(()=>{ renderPresence(); },20000);
+// Refrescar también cuando el usuario vuelve a la pestaña
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){ heartbeat().then(renderPresence); }
+});
 
 function showToast(msg){
   const t=document.getElementById('toast');
