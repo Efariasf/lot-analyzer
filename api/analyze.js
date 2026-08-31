@@ -293,11 +293,14 @@ ${carfaxText.substring(0, 14000)}`;
       : '';
 
     // ---- ESTADO MECÁNICO ----
+    // Si es Lote Externo, el vehículo no está en la subasta, así que la verificación
+    // la hace "el vendedor externo", no Copart/IAAI/Manheim.
+    const quienVerifica = externalLot ? 'El vendedor externo' : auction;
     const mechMap = {
       'no-enciende': 'El vehículo no enciende.',
-      'solo-enciende': `${auction} verificó que el motor enciende, sin embargo no se confirma si el vehículo rueda.`,
-      'enciende-no-rueda': `${auction} verificó que el motor enciende, sin embargo el vehículo no rueda, lo que podría indicar algún tipo de falla mecánica como transmisión u otro problema relacionado.`,
-      'enciende-rueda': `${auction} verificó que el motor enciende y la transmisión engrana.`
+      'solo-enciende': `${quienVerifica} verificó que el motor enciende, sin embargo no se confirma si el vehículo rueda.`,
+      'enciende-no-rueda': `${quienVerifica} verificó que el motor enciende, sin embargo el vehículo no rueda, lo que podría indicar algún tipo de falla mecánica como transmisión u otro problema relacionado.`,
+      'enciende-rueda': `${quienVerifica} verificó que el motor enciende y la transmisión engrana.`
     };
     const mechText = mechMap[mechanicalStatus] || '';
 
