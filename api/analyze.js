@@ -536,7 +536,7 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
           body: JSON.stringify({
-            model: 'llama-3.1-8b-instant',
+            model: 'openai/gpt-oss-120b',
             messages: [{ role: 'user', content: `Eres un broker profesional de subastas de vehículos. Tu tarea es TRANSFORMAR la siguiente observación informal en una versión profesional, fluida y bien redactada: mejora la estructura de la oración, los conectores y el vocabulario. No te limites a corregir ortografía — mejora la redacción de verdad.
 
 OBSERVACIÓN ORIGINAL: "${obsRaw}"
@@ -553,7 +553,7 @@ Reglas:
 - Si el original expresa una posibilidad o sospecha, consérvala como tal (no la afirmes como un hecho).
 - Devuelve SOLO la observación reescrita, sin comillas, sin preámbulo y sin explicar lo que hiciste.
 - Una o dos oraciones como máximo.` }],
-            max_tokens: 800,
+            max_tokens: 2000,
             temperature: 0.7
           })
         })
@@ -680,11 +680,29 @@ REGLAS ESTRICTAS:
         const numerosAlterados = numerosOriginal.some(n => !candidato.includes(n));
         obsText = (candidato && !metaObs && !numerosAlterados) ? candidato : obsRaw;
 
+        // MODO DIAGNÓSTICO: si la observación empieza con "DEBUG ", devolvemos
+        // qué pasó exactamente, para poder ver por qué no mejora.
+        if (obsRaw.toUpperCase().startsWith('DEBUG')) {
+          const diag = [
+            '=== DIAGNÓSTICO DE OBSERVACIONES ===',
+            'Modelo: openai/gpt-oss-120b',
+            'Tu texto: ' + obsRaw,
+            'content del modelo: ' + JSON.stringify(obsData?.choices?.[0]?.message?.content || '(vacío)'),
+            'reasoning del modelo: ' + JSON.stringify((obsData?.choices?.[0]?.message?.reasoning || '(no hay)').slice(0,200)),
+            'finish_reason: ' + (obsData?.choices?.[0]?.finish_reason || '?'),
+            'candidato extraído: ' + JSON.stringify(candidato),
+            'metaObs detectado: ' + metaObs,
+            'numerosAlterados: ' + numerosAlterados,
+            'resultado final: ' + JSON.stringify(obsText)
+          ].join('\n');
+          obsText = diag;
+        }
+
         // Red de seguridad: si el resultado quedó casi idéntico al original —ya sea
         // porque el modelo lo copió literal, o porque tuvimos que caer al original
         // por alguna de las validaciones de arriba— se le pide un segundo intento
         // más firme. Solo aplica a observaciones con contenido real que mejorar.
-        if (obsRaw.length >= 20) {
+        if (obsRaw.length >= 20 && !obsRaw.toUpperCase().startsWith('DEBUG')) {
           const parecido = similarityRatio(obsRaw, obsText);
           if (parecido >= 0.85) {
             try {
@@ -692,7 +710,7 @@ REGLAS ESTRICTAS:
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
                 body: JSON.stringify({
-                  model: 'llama-3.1-8b-instant',
+                  model: 'openai/gpt-oss-120b',
                   messages: [{ role: 'user', content: `Tu intento anterior de reescribir esta observación quedó casi idéntico al original — eso está PROHIBIDO. Reescríbela de nuevo, esta vez con una reestructuración notablemente distinta: cambia el orden de las ideas, usa conectores y vocabulario diferentes. NO la copies.
 
 OBSERVACIÓN ORIGINAL: "${obsRaw}"
@@ -703,7 +721,7 @@ Reglas:
 - Mantén la misma persona gramatical (si dice "creo que", consérvalo en primera persona).
 - No inventes ni elimines información.
 - Devuelve SOLO la observación reescrita, sin comillas ni preámbulo. Una o dos oraciones máximo.` }],
-                  max_tokens: 800,
+                  max_tokens: 2000,
                   temperature: 0.8
                 })
               });
@@ -720,7 +738,12 @@ Reglas:
           }
         }
       } else {
-        obsText = obsRaw;
+        // La llamada de observaciones falló (error de Groq).
+        if (obsRaw.toUpperCase().startsWith('DEBUG')) {
+          obsText = '=== DIAGNÓSTICO ===\nLa llamada al modelo FALLÓ.\nStatus: ' + obsRes.status + '\nError: ' + JSON.stringify(obsData?.error || obsData).slice(0,300);
+        } else {
+          obsText = obsRaw;
+        }
       }
     }
 
