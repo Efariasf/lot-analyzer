@@ -536,8 +536,7 @@ ${esBillOfSale ? `- CASO ESPECIAL (Bill of Sale): NO menciones el título, NO us
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
           body: JSON.stringify({
-            model: 'qwen/qwen3.6-27b',
-            reasoning_effort: 'none',
+            model: 'llama-3.1-8b-instant',
             messages: [{ role: 'user', content: `Eres un broker profesional de subastas de vehículos. Tu tarea es TRANSFORMAR la siguiente observación informal en una versión profesional, fluida y bien redactada: mejora la estructura de la oración, los conectores y el vocabulario. No te limites a corregir ortografía — mejora la redacción de verdad.
 
 OBSERVACIÓN ORIGINAL: "${obsRaw}"
@@ -693,8 +692,7 @@ REGLAS ESTRICTAS:
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
                 body: JSON.stringify({
-                  model: 'qwen/qwen3.6-27b',
-            reasoning_effort: 'none',
+                  model: 'llama-3.1-8b-instant',
                   messages: [{ role: 'user', content: `Tu intento anterior de reescribir esta observación quedó casi idéntico al original — eso está PROHIBIDO. Reescríbela de nuevo, esta vez con una reestructuración notablemente distinta: cambia el orden de las ideas, usa conectores y vocabulario diferentes. NO la copies.
 
 OBSERVACIÓN ORIGINAL: "${obsRaw}"
